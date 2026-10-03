@@ -12,6 +12,25 @@ public partial class MainWindow : Window
         InitializeComponent();
         FitToWorkArea();
         Loaded += OnLoaded;
+        StateChanged += (_, _) => UpdateMaximizeButton();
+    }
+
+    private void Minimize_Click(object sender, RoutedEventArgs e) =>
+        WindowState = WindowState.Minimized;
+
+    private void Maximize_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+    }
+
+    private void Close_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void UpdateMaximizeButton()
+    {
+        if (MaximizeButton is not null)
+            MaximizeButton.Content = WindowState == WindowState.Maximized ? "❐" : "□";
     }
 
     private void FitToWorkArea()
