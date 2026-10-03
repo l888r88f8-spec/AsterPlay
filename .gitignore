@@ -1,0 +1,15 @@
+bin/
+obj/
+dist/
+.vs/
+.idea/
+*.user
+*.suo
+*.cache
+*.log
+third_party/mpv/*.dll
+third_party/mpv/RUNTIME-SOURCE.txt
+!third_party/mpv/README.md
+
+tools/dotnet/*
+!tools/dotnet/README.md
