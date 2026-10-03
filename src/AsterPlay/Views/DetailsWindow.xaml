@@ -1,0 +1,42 @@
+<Window x:Class="AsterPlay.Views.DetailsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Details" Width="1040" Height="700"
+        WindowStartupLocation="CenterOwner"
+        Background="#08080C">
+    <Grid>
+        <Image Source="{Binding BackdropUrl}" Stretch="UniformToFill" Opacity="0.38"/>
+        <Rectangle>
+            <Rectangle.Fill>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Color="#5508080C" Offset="0"/>
+                    <GradientStop Color="#FF08080C" Offset="0.78"/>
+                </LinearGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+        <Grid Margin="46">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="260"/>
+                <ColumnDefinition Width="36"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Border CornerRadius="14" ClipToBounds="True" Height="390" VerticalAlignment="Bottom">
+                <Image Source="{Binding PosterUrl}" Stretch="UniformToFill"/>
+            </Border>
+            <StackPanel Grid.Column="2" VerticalAlignment="Bottom">
+                <TextBlock Text="{Binding Title}" Foreground="White"
+                           FontSize="46" FontWeight="Bold" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding MetaLine}" Foreground="#E8EBF1"
+                           FontSize="15" Margin="0,14,0,0"/>
+                <TextBlock Text="{Binding Overview}" Foreground="#D4D8E0"
+                           FontSize="16" LineHeight="27"
+                           TextWrapping="Wrap" Margin="0,18,0,0"
+                           MaxHeight="210"/>
+                <Button Content="Close" Width="110" Margin="0,24,0,0"
+                        HorizontalAlignment="Left"
+                        Style="{StaticResource GlassButton}"
+                        Click="Close_Click"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
