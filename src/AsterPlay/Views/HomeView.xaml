@@ -1,0 +1,289 @@
+<UserControl x:Class="AsterPlay.Views.HomeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True"
+             TextOptions.TextFormattingMode="Display"
+             TextOptions.TextRenderingMode="ClearType">
+    <UserControl.Resources>
+        <Style x:Key="HeroAction" TargetType="Button" BasedOn="{StaticResource GlassButton}">
+            <Setter Property="Margin" Value="0,0,12,0"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="MinHeight" Value="46"/>
+        </Style>
+        <Style x:Key="LibraryTab" TargetType="Button">
+            <Setter Property="Foreground" Value="#CCD1DB"/>
+            <Setter Property="Background" Value="#18FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#25FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="15,9"/>
+            <Setter Property="Margin" Value="0,0,9,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="11" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#CC3EA6FF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#003EA6FF"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="#08080C">
+        <ScrollViewer x:Name="MainScrollViewer"
+                      VerticalScrollBarVisibility="Hidden"
+                      HorizontalScrollBarVisibility="Disabled"
+                      CanContentScroll="False"
+                      PreviewMouseWheel="MainScrollViewer_PreviewMouseWheel">
+            <StackPanel>
+                <Grid Height="620" ClipToBounds="True">
+                    <Image Source="{Binding CurrentHero.BackdropUrl}"
+                           Stretch="UniformToFill"/>
+
+                    <Rectangle>
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                <GradientStop Color="#E808080C" Offset="0"/>
+                                <GradientStop Color="#A008080C" Offset="0.32"/>
+                                <GradientStop Color="#1808080C" Offset="0.68"/>
+                                <GradientStop Color="#0008080C" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
+
+                    <Rectangle VerticalAlignment="Bottom" Height="260">
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                                <GradientStop Color="#0008080C" Offset="0"/>
+                                <GradientStop Color="#B008080C" Offset="0.65"/>
+                                <GradientStop Color="#FF08080C" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
+
+                    <Grid Margin="48,28,48,42">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <DockPanel Grid.Row="0" LastChildFill="False">
+                            <ItemsControl ItemsSource="{Binding Libraries}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Style="{StaticResource LibraryTab}"
+                                                Tag="{Binding}" Click="LibraryTab_Click">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Items.Count, StringFormat={}{0}}" Margin="8,0,0,0"
+                                                           Opacity="0.7"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <Button DockPanel.Dock="Right" Margin="22,0,0,0"
+                                    Style="{StaticResource GlassButton}"
+                                    Content="Sign out" Click="Logout_Click"/>
+                        </DockPanel>
+
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel VerticalAlignment="Bottom"
+                                        MaxWidth="620"
+                                        HorizontalAlignment="Stretch">
+                                <TextBlock Text="{Binding CurrentLibrary.Name}"
+                                           Foreground="#6DB9FF" FontSize="13"
+                                           FontWeight="Bold"
+                                           Margin="0,0,0,12"/>
+                                <TextBlock Text="{Binding CurrentHero.Title}"
+                                           Foreground="White" FontSize="48"
+                                           FontWeight="Bold" TextWrapping="Wrap"
+                                           LineHeight="56"
+                                           MaxHeight="190"/>
+                                <TextBlock Text="{Binding CurrentHero.MetaLine}"
+                                           Foreground="#EEF0F5" FontSize="14"
+                                           FontWeight="SemiBold" Margin="0,16,0,0"/>
+                                <TextBlock Text="{Binding CurrentHero.Overview}"
+                                           Foreground="#D7DBE4" FontSize="15"
+                                           LineHeight="26" TextWrapping="Wrap"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxHeight="82" Margin="0,14,0,0"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,24,0,0">
+                                    <Button Style="{StaticResource HeroAction}"
+                                            Background="White" Foreground="#0A0A0F"
+                                            Content="▶  Play" Click="Play_Click"/>
+                                    <Button Style="{StaticResource HeroAction}"
+                                            Content="{Binding CurrentHero.FavoriteLabel}"
+                                            Click="Favorite_Click"/>
+                                    <Button Style="{StaticResource HeroAction}"
+                                            Content="ⓘ  Details" Click="Details_Click"/>
+                                </StackPanel>
+
+                                <ItemsControl ItemsSource="{Binding CurrentLibrary.Items}"
+                                              Margin="0,26,0,0">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Height="4" Margin="0,0,8,0" CornerRadius="2">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Width" Value="22"/>
+                                                        <Setter Property="Background" Value="#55FFFFFF"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                <Setter Property="Width" Value="36"/>
+                                                                <Setter Property="Background" Value="White"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                            <ItemsControl Grid.Column="1"
+                                          ItemsSource="{Binding CurrentLibrary.Items}"
+                                          VerticalAlignment="Bottom">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Tag="{Binding}" Click="HeroThumb_Click"
+                                                Padding="0" Margin="8,0,0,0"
+                                                Background="Transparent"
+                                                BorderThickness="0" Cursor="Hand">
+                                            <Border CornerRadius="8" BorderThickness="2">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="BorderBrush" Value="Transparent"/>
+                                                        <Setter Property="Opacity" Value="0.52"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                <Setter Property="BorderBrush" Value="#3EA6FF"/>
+                                                                <Setter Property="Opacity" Value="1"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <Image Source="{Binding BackdropUrl}"
+                                                       Width="92" Height="52"
+                                                       Stretch="UniformToFill"/>
+                                            </Border>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </Grid>
+                </Grid>
+
+                <StackPanel Margin="42,6,42,60">
+                    <TextBlock Text="继续观看" Foreground="White"
+                               FontSize="23" FontWeight="SemiBold" Margin="0,18,0,14"/>
+                    <ScrollViewer HorizontalScrollBarVisibility="Hidden"
+                                  VerticalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding ResumeItems}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Width="260" Margin="0,0,16,0">
+                                        <Border Height="146" CornerRadius="10"
+                                                Background="#15151C" ClipToBounds="True">
+                                            <Grid>
+                                                <Image Source="{Binding BackdropUrl}"
+                                                       Stretch="UniformToFill"/>
+                                                <ProgressBar Value="{Binding PlayedPercentage, Mode=OneWay}"
+                                                             Maximum="100" Height="4"
+                                                             VerticalAlignment="Bottom"/>
+                                            </Grid>
+                                        </Border>
+                                        <TextBlock Text="{Binding ResumeTitle}" Foreground="#F5F6F8"
+                                                   FontSize="16" FontWeight="SemiBold"
+                                                   Margin="3,8,3,0" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <TextBlock Text="最新媒体" Foreground="White"
+                               FontSize="23" FontWeight="SemiBold" Margin="0,30,0,14"/>
+                    <ScrollViewer HorizontalScrollBarVisibility="Hidden"
+                                  VerticalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding LatestItems}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Width="168" Margin="0,0,16,0">
+                                        <Border Height="245" CornerRadius="10"
+                                                Background="#15151C" ClipToBounds="True">
+                                            <Image Source="{Binding PosterUrl}"
+                                                   Stretch="UniformToFill"/>
+                                        </Border>
+                                        <TextBlock Text="{Binding Title}" Foreground="#F5F6F8"
+                                                   FontSize="16" FontWeight="SemiBold"
+                                                   Margin="3,8,3,0"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border x:Name="LoadingOverlay" Background="#E608080C"
+                Visibility="Visible">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="AsterPlay" Foreground="White"
+                           FontSize="38" FontWeight="Bold"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="Loading your library…" Foreground="#9299A6"
+                           Margin="0,10,0,0"/>
+                <ProgressBar IsIndeterminate="True" Width="220" Height="3"
+                             Margin="0,18,0,0"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
