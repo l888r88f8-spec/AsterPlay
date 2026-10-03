@@ -10,7 +10,19 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        FitToWorkArea();
         Loaded += OnLoaded;
+    }
+
+    private void FitToWorkArea()
+    {
+        var workArea = SystemParameters.WorkArea;
+
+        Width = Math.Min(Width, workArea.Width * 0.90);
+        Height = Math.Min(Height, workArea.Height * 0.90);
+
+        Left = workArea.Left + (workArea.Width - Width) / 2;
+        Top = workArea.Top + (workArea.Height - Height) / 2;
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
