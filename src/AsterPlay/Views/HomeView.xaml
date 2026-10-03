@@ -48,7 +48,7 @@
                       CanContentScroll="False"
                       PreviewMouseWheel="MainScrollViewer_PreviewMouseWheel">
             <StackPanel>
-                <Grid Height="620" ClipToBounds="True">
+                <Grid x:Name="HeroRoot" Height="620" ClipToBounds="True">
                     <Image Source="{Binding CurrentHero.BackdropUrl}"
                            Stretch="UniformToFill"/>
 
@@ -73,7 +73,7 @@
                         </Rectangle.Fill>
                     </Rectangle>
 
-                    <Grid Margin="48,28,48,42">
+                    <Grid x:Name="HeroLayout" Margin="48,28,48,42">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
@@ -108,25 +108,27 @@
                         <Grid Grid.Row="1">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition x:Name="HeroThumbColumn" Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
-                            <StackPanel VerticalAlignment="Bottom"
+                            <StackPanel x:Name="HeroInfoPanel"
+                                        VerticalAlignment="Bottom"
                                         MaxWidth="620"
                                         HorizontalAlignment="Stretch">
                                 <TextBlock Text="{Binding CurrentLibrary.Name}"
                                            Foreground="#6DB9FF" FontSize="13"
                                            FontWeight="Bold"
                                            Margin="0,0,0,12"/>
-                                <TextBlock Text="{Binding CurrentHero.Title}"
+                                <TextBlock x:Name="HeroTitle"
+                                           Text="{Binding CurrentHero.Title}"
                                            Foreground="White" FontSize="48"
                                            FontWeight="Bold" TextWrapping="Wrap"
-                                           LineHeight="56"
-                                           MaxHeight="190"/>
+                                           LineHeight="56"/>
                                 <TextBlock Text="{Binding CurrentHero.MetaLine}"
                                            Foreground="#EEF0F5" FontSize="14"
                                            FontWeight="SemiBold" Margin="0,16,0,0"/>
-                                <TextBlock Text="{Binding CurrentHero.Overview}"
+                                <TextBlock x:Name="HeroOverview"
+                                           Text="{Binding CurrentHero.Overview}"
                                            Foreground="#D7DBE4" FontSize="15"
                                            LineHeight="26" TextWrapping="Wrap"
                                            TextTrimming="CharacterEllipsis"
@@ -170,41 +172,47 @@
                                 </ItemsControl>
                             </StackPanel>
 
-                            <ItemsControl Grid.Column="1"
-                                          ItemsSource="{Binding CurrentLibrary.Items}"
+                            <ScrollViewer x:Name="HeroThumbScroller"
+                                          Grid.Column="1"
+                                          MaxWidth="500"
+                                          HorizontalScrollBarVisibility="Hidden"
+                                          VerticalScrollBarVisibility="Disabled"
                                           VerticalAlignment="Bottom">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <StackPanel Orientation="Horizontal"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Button Tag="{Binding}" Click="HeroThumb_Click"
-                                                Padding="0" Margin="8,0,0,0"
-                                                Background="Transparent"
-                                                BorderThickness="0" Cursor="Hand">
-                                            <Border CornerRadius="8" BorderThickness="2">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="BorderBrush" Value="Transparent"/>
-                                                        <Setter Property="Opacity" Value="0.52"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                                <Setter Property="BorderBrush" Value="#3EA6FF"/>
-                                                                <Setter Property="Opacity" Value="1"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Border.Style>
-                                                <Image Source="{Binding BackdropUrl}"
-                                                       Width="92" Height="52"
-                                                       Stretch="UniformToFill"/>
-                                            </Border>
-                                        </Button>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                                <ItemsControl x:Name="HeroThumbRail"
+                                              ItemsSource="{Binding CurrentLibrary.Items}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Tag="{Binding}" Click="HeroThumb_Click"
+                                                    Padding="0" Margin="8,0,0,0"
+                                                    Background="Transparent"
+                                                    BorderThickness="0" Cursor="Hand">
+                                                <Border CornerRadius="8" BorderThickness="2">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="BorderBrush" Value="Transparent"/>
+                                                            <Setter Property="Opacity" Value="0.52"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                    <Setter Property="BorderBrush" Value="#3EA6FF"/>
+                                                                    <Setter Property="Opacity" Value="1"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <Image Source="{Binding BackdropUrl}"
+                                                           Width="92" Height="52"
+                                                           Stretch="UniformToFill"/>
+                                                </Border>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
                         </Grid>
                     </Grid>
                 </Grid>
