@@ -121,7 +121,8 @@
                                  Focusable="False"
                                  Panel.ZIndex="5"/>
 
-        <Border VerticalAlignment="Top"
+        <Border x:Name="TopInfoPanel"
+                VerticalAlignment="Top"
                 Height="118"
                 Panel.ZIndex="24">
             <Border.Background>

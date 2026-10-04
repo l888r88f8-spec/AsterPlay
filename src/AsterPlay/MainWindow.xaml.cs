@@ -227,8 +227,9 @@ public partial class MainWindow : Window
 
     private void SetNavigationVisible(bool visible)
     {
-        Sidebar.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-        SidebarColumn.Width = visible ? new GridLength(220) : new GridLength(0);
+        BottomNavigation.Visibility = visible
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     private void SetActiveNavigation(string section)

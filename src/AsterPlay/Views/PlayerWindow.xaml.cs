@@ -440,6 +440,9 @@ public partial class PlayerWindow : UserControl
 
         if (ControlsPanel.Visibility != Visibility.Visible ||
             ControlsPanel.IsMouseOver ||
+            TopInfoPanel.IsMouseOver ||
+            MoreSettingsPanel.IsMouseOver ||
+            DiagnosticsPanel.IsMouseOver ||
             _trackMenuOpen)
         {
             return;
@@ -473,15 +476,22 @@ public partial class PlayerWindow : UserControl
             return;
 
         _lastControlsActivityUtc = DateTime.UtcNow;
+        TopInfoPanel.Visibility = Visibility.Visible;
         ControlsPanel.Visibility = Visibility.Visible;
         PlayerRoot.Cursor = Cursors.Arrow;
     }
 
     private void HideControls()
     {
-        if (ControlsPanel.IsMouseOver)
+        if (ControlsPanel.IsMouseOver ||
+            TopInfoPanel.IsMouseOver ||
+            MoreSettingsPanel.IsMouseOver ||
+            DiagnosticsPanel.IsMouseOver)
+        {
             return;
+        }
 
+        TopInfoPanel.Visibility = Visibility.Collapsed;
         ControlsPanel.Visibility = Visibility.Collapsed;
         MoreSettingsPanel.Visibility = Visibility.Collapsed;
         PlayerRoot.Cursor = Cursors.None;
@@ -1911,7 +1921,18 @@ public partial class PlayerWindow : UserControl
             launch.SeasonNumber is int season &&
             launch.EpisodeNumber is int episode)
         {
-            return $"S{season:00}E{episode:00} · {launch.Title}";
+            var episodeCode = $"S{season:00}E{episode:00}";
+            var episodeTitle = (launch.Title ?? "").Trim();
+
+            while (episodeTitle.StartsWith(episodeCode, StringComparison.OrdinalIgnoreCase))
+            {
+                episodeTitle = episodeTitle[episodeCode.Length..]
+                    .TrimStart(' ', '·', '-', '—', ':', '：');
+            }
+
+            return string.IsNullOrWhiteSpace(episodeTitle)
+                ? episodeCode
+                : $"{episodeCode} · {episodeTitle}";
         }
 
         if (!string.IsNullOrWhiteSpace(launch.OriginalTitle) &&
