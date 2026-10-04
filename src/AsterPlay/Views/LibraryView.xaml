@@ -10,8 +10,8 @@
         <Style x:Key="LibraryInput" TargetType="Control">
             <Setter Property="Height" Value="36"/>
             <Setter Property="Foreground" Value="#F1F3F7"/>
-            <Setter Property="Background" Value="#18FFFFFF"/>
-            <Setter Property="BorderBrush" Value="#30FFFFFF"/>
+            <Setter Property="Background" Value="#2AFFFFFF"/>
+            <Setter Property="BorderBrush" Value="{StaticResource LiquidGlassSoftEdgeBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -73,7 +73,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#CC3EA6FF"/>
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#D2BBDFFF"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -82,18 +82,21 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Background="#08080C">
+    <Grid Background="Transparent">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0"
-                Background="#0E0E14"
-                BorderBrush="#20FFFFFF"
-                BorderThickness="0,0,0,1"
-                Padding="32,24,32,20">
+        <controls:LiquidGlassPanel Grid.Row="0"
+                                       Margin="24,18,24,0"
+                                       Padding="26,22"
+                                       CornerRadius="28"
+                                       Background="#82171E2A"
+                                       BorderBrush="{StaticResource LiquidGlassEdgeBrush}"
+                                       BloomOpacity="0.30"
+                                       GlareOpacity="0.24">
             <StackPanel>
                 <DockPanel LastChildFill="False">
                     <StackPanel DockPanel.Dock="Left">
@@ -183,12 +186,12 @@
                             Click="Apply_Click"/>
                 </WrapPanel>
             </StackPanel>
-        </Border>
+        </controls:LiquidGlassPanel>
 
         <Grid Grid.Row="1">
             <ScrollViewer VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled"
-                          Padding="32,24,20,24">
+                          Padding="32,24,20,132">
                 <ItemsControl ItemsSource="{Binding Items}"
                               KeyboardNavigation.DirectionalNavigation="Contained"
                               KeyboardNavigation.TabNavigation="Continue">
@@ -215,8 +218,8 @@
                                             Height="250"
                                             CornerRadius="11"
                                             ClipToBounds="True"
-                                            Background="#17171E"
-                                            BorderBrush="#22FFFFFF"
+                                            Background="#171B24"
+                                            BorderBrush="{StaticResource LiquidGlassSoftEdgeBrush}"
                                             BorderThickness="1">
                                         <Grid>
                                             <controls:CachedImage SourceUrl="{Binding PosterUrl}"
@@ -242,7 +245,7 @@
 
                                             <Border x:Name="HoverInfo"
                                                     VerticalAlignment="Bottom"
-                                                    Background="#D9090910"
+                                                    Background="#C6171D27"
                                                     Padding="10,9"
                                                     Opacity="0">
                                                 <StackPanel>
@@ -290,7 +293,7 @@
                 </ItemsControl>
             </ScrollViewer>
 
-            <Border Background="#08080C"
+            <Border Background="#D807090D"
                     Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}"
                     IsHitTestVisible="False">
                 <StackPanel HorizontalAlignment="Center"
@@ -311,7 +314,7 @@
             </Border>
 
             <Border x:Name="LoadingOverlay"
-                    Background="#E008080C"
+                    Background="#E007090D"
                     Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}">
                 <StackPanel HorizontalAlignment="Center"
                             VerticalAlignment="Center">
@@ -335,11 +338,14 @@
             </Border>
         </Grid>
 
-        <Border Grid.Row="2"
-                Background="#0E0E14"
-                BorderBrush="#20FFFFFF"
-                BorderThickness="0,1,0,0"
-                Padding="32,14">
+        <controls:LiquidGlassPanel Grid.Row="2"
+                                       Margin="24,8,24,96"
+                                       Padding="22,12"
+                                       CornerRadius="22"
+                                       Background="#80171E2A"
+                                       BorderBrush="{StaticResource LiquidGlassSoftEdgeBrush}"
+                                       BloomOpacity="0.24"
+                                       GlareOpacity="0.20">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -369,6 +375,6 @@
                         IsEnabled="{Binding CanGoNext}"
                         Click="Next_Click"/>
             </Grid>
-        </Border>
-    </Grid>
+        </controls:LiquidGlassPanel>
+</Grid>
 </UserControl>
