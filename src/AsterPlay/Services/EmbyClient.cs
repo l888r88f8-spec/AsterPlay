@@ -146,6 +146,8 @@ public sealed class EmbyClient
 
     public async Task<PlaybackLaunch> GetPlayableStreamAsync(EmbyItem source)
     {
+        PlaybackLog.Write("Emby", $"Resolve playback: sourceId={source.Id}, type={source.Type}, name={source.Name}, resumeTicks={source.UserData?.PlaybackPositionTicks ?? 0}");
+
         var playable = source;
         if (string.Equals(source.Type, "Series", StringComparison.OrdinalIgnoreCase))
         {
@@ -154,6 +156,7 @@ public sealed class EmbyClient
                 "&Fields=Overview,Genres,ProductionYear,CommunityRating,RunTimeTicks,UserData");
             playable = next.Items.FirstOrDefault()
                        ?? throw new InvalidOperationException("No playable next episode was found for this series.");
+            PlaybackLog.Write("Emby", $"Series resolved to episode: itemId={playable.Id}, name={playable.Name}");
         }
 
         using var req = CreateRequest(
@@ -165,10 +168,19 @@ public sealed class EmbyClient
         });
 
         using var response = await _http.SendAsync(req);
+        PlaybackLog.Write("Emby", $"PlaybackInfo response: status={(int)response.StatusCode} {response.ReasonPhrase}");
         await EnsureSuccess(response, "PlaybackInfo request failed");
 
         var info = await response.Content.ReadFromJsonAsync<PlaybackInfoResponse>(_json)
                    ?? throw new InvalidOperationException("PlaybackInfo was empty.");
+
+        PlaybackLog.Write("Emby", $"PlaybackInfo: playSessionId={info.PlaySessionId}, mediaSources={info.MediaSources.Count}");
+        for (var i = 0; i < info.MediaSources.Count; i++)
+        {
+            var candidate = info.MediaSources[i];
+            PlaybackLog.Write("Emby",
+                $"MediaSource[{i}]: id={candidate.Id}, container={candidate.Container}, supportsDirectPlay={candidate.SupportsDirectPlay}, directStreamUrl={candidate.DirectStreamUrl}");
+        }
 
         var media = info.MediaSources.FirstOrDefault()
                     ?? throw new InvalidOperationException("No media source is available.");
@@ -177,6 +189,7 @@ public sealed class EmbyClient
         // use Emby's static video stream endpoint instead of preferring DirectStreamUrl.
         var url = WithToken(
             $"/Videos/{Esc(playable.Id)}/stream?static=true&mediaSourceId={Esc(media.Id)}");
+        PlaybackLog.Write("Emby", $"Selected source: itemId={playable.Id}, mediaSourceId={media.Id}, url={url}");
 
         var title = playable.IndexNumber is > 0
             ? playable.ParentIndexNumber is > 0
@@ -234,6 +247,8 @@ public sealed class EmbyClient
         });
 
         using var response = await _http.SendAsync(req);
+        PlaybackLog.Write("EmbyReport",
+            $"{eventName}: status={(int)response.StatusCode}, itemId={launch.ItemId}, positionTicks={positionTicks}, paused={isPaused}, volume={volume:0.##}");
         await EnsureSuccess(response, "Playback session update failed");
     }
 
