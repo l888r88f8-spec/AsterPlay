@@ -9,10 +9,19 @@ public sealed partial class MainWindow : Window
 
     public MainWindow()
     {
+        StartupDiagnostics.Write("MainWindow constructor: entered");
+        StartupDiagnostics.Write("MainWindow constructor: before InitializeComponent");
         InitializeComponent();
+        StartupDiagnostics.Write("MainWindow constructor: after InitializeComponent");
+
         ExtendsContentIntoTitleBar = true;
+        StartupDiagnostics.Write("MainWindow constructor: ExtendsContentIntoTitleBar set");
+
         SetTitleBar(AppTitleBar);
+        StartupDiagnostics.Write("MainWindow constructor: SetTitleBar complete");
+
         LoadSharedCoreState();
+        StartupDiagnostics.Write("MainWindow constructor: shared core state loaded");
     }
 
     private void LoadSharedCoreState()
