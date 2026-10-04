@@ -4,6 +4,8 @@
              UseLayoutRounding="True"
              SnapsToDevicePixels="True">
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+
         <Style x:Key="LibraryInput" TargetType="Control">
             <Setter Property="Height" Value="36"/>
             <Setter Property="Foreground" Value="#F1F3F7"/>
@@ -207,7 +209,7 @@
 
             <Border x:Name="LoadingOverlay"
                     Background="#9908080C"
-                    Visibility="{Binding IsLoading, Converter={x:Static BooleanToVisibilityConverter.Instance}}">
+                    Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}">
             </Border>
         </Grid>
 
