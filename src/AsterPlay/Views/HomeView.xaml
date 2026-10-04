@@ -267,6 +267,68 @@
                 </Grid>
 
                 <StackPanel Margin="42,6,42,60">
+                    <TextBlock Text="媒体库"
+                               Foreground="White"
+                               FontSize="23"
+                               FontWeight="SemiBold"
+                               Margin="0,18,0,14"/>
+                    <ItemsControl ItemsSource="{Binding Libraries}" Margin="0,0,0,16">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Tag="{Binding}"
+                                        Click="OpenLibrary_Click"
+                                        Width="220"
+                                        Height="86"
+                                        Margin="0,0,14,14"
+                                        Padding="0"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Cursor="Hand">
+                                    <Border CornerRadius="16"
+                                            Background="#15161B"
+                                            BorderBrush="#18FFFFFF"
+                                            BorderThickness="1"
+                                            Padding="18">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="42"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Width="36" Height="36"
+                                                    CornerRadius="11"
+                                                    Background="#220A84FF"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="▦"
+                                                           Foreground="#73B9FF"
+                                                           FontSize="18"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1"
+                                                        Margin="12,0,0,0"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}"
+                                                           Foreground="White"
+                                                           FontWeight="SemiBold"
+                                                           FontSize="14"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Items.Count, StringFormat={}{0} 个首页项目}"
+                                                           Foreground="#737A86"
+                                                           FontSize="11"
+                                                           Margin="0,5,0,0"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
                     <TextBlock Text="继续观看" Foreground="White"
                                FontSize="23" FontWeight="SemiBold" Margin="0,18,0,14"/>
                     <ScrollViewer HorizontalScrollBarVisibility="Hidden"
