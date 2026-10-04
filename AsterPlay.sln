@@ -4,6 +4,10 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AsterPlay", "src\AsterPlay\AsterPlay.csproj", "{F2D550D3-48CA-46D4-A91C-07ED6D0E572B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AsterPlay.Core", "src\AsterPlay.Core\AsterPlay.Core.csproj", "{65AA70A8-AB48-4DEB-84FD-3B3E45F19001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AsterPlay.WinUI", "src\AsterPlay.WinUI\AsterPlay.WinUI.csproj", "{3F94D3EE-925B-4D57-B634-C3A9815C6B02}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -14,5 +18,13 @@ Global
 		{F2D550D3-48CA-46D4-A91C-07ED6D0E572B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F2D550D3-48CA-46D4-A91C-07ED6D0E572B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F2D550D3-48CA-46D4-A91C-07ED6D0E572B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{65AA70A8-AB48-4DEB-84FD-3B3E45F19001}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{65AA70A8-AB48-4DEB-84FD-3B3E45F19001}.Debug|Any CPU.Build.0 = Debug|x64
+		{65AA70A8-AB48-4DEB-84FD-3B3E45F19001}.Release|Any CPU.ActiveCfg = Release|x64
+		{65AA70A8-AB48-4DEB-84FD-3B3E45F19001}.Release|Any CPU.Build.0 = Release|x64
+		{3F94D3EE-925B-4D57-B634-C3A9815C6B02}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{3F94D3EE-925B-4D57-B634-C3A9815C6B02}.Debug|Any CPU.Build.0 = Debug|x64
+		{3F94D3EE-925B-4D57-B634-C3A9815C6B02}.Release|Any CPU.ActiveCfg = Release|x64
+		{3F94D3EE-925B-4D57-B634-C3A9815C6B02}.Release|Any CPU.Build.0 = Release|x64
 	EndGlobalSection
 EndGlobal
