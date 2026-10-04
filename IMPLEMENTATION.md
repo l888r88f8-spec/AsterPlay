@@ -535,6 +535,8 @@ Windows x64 self-contained publish 已通过。Step 5 需使用真实电影数�
 
 ## Step 6：剧集详情、季和集
 
+> 状态：已实现，待真实服务器验收（2026-10-04）
+
 ### 目标
 
 建立完整的 Series -> Season -> Episode 浏览与播放链路。
@@ -578,6 +580,25 @@ GetPlayableStreamAsync()
 ```text
 剧集 -> 选择季 -> 选择集 -> 播放
 ```
+
+### 实现说明
+
+已实现：
+
+- Series 详情页直接调用 `GetSeasonsAsync(seriesId)`
+- Season 下拉切换
+- 默认优先选择第一个正常季度，避免 Specials/Season 0 抢占默认选择
+- 切换季度后调用 `GetEpisodesAsync(seriesId, seasonId)`
+- Episode 列表显示 SxxExx、标题、缩略图、简介和时长
+- Episode 显示播放进度、已播放状态
+- 有续播位置时按钮显示“继续播放”
+- 已播放 Episode 进度显示为 100%
+- Series 顶部隐藏旧的通用播放/从头播放按钮，避免走 Series -> NextUp 推断
+- Episode 播放直接把具体 Episode Item 传给 `GetPlayableStreamAsync()`
+- 保留 Series 收藏、海报、Backdrop、简介、演员、标签等通用详情
+- Windows x64 self-contained publish 已通过
+
+真实服务器验收重点：Season 顺序、Specials、Episode 编号、缩略图、播放进度和具体 Episode 播放。
 
 ---
 
@@ -1094,9 +1115,11 @@ Step 1 已完成：
 Step 2 已完成。
 Step 3 已完成。
 Step 4 已完成。
+Step 5 已实现，待真实服务器验收。
+Step 6 已实现，待真实服务器验收。
 
 当前下一项实际开发任务：
 
 ```text
-Step 5：完整电影详情页
+Step 7：媒体库、搜索与筛选
 ```
