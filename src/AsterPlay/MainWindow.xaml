@@ -49,6 +49,15 @@
             </Setter>
         </Style>
 
+        <Style x:Key="CaptionNavButton"
+               TargetType="Button"
+               BasedOn="{StaticResource CaptionButton}">
+            <Setter Property="Width" Value="82"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#BFC4CE"/>
+        </Style>
+
         <Style x:Key="CloseCaptionButton"
                TargetType="Button"
                BasedOn="{StaticResource CaptionButton}">
@@ -70,6 +79,8 @@
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="82"/>
+                    <ColumnDefinition Width="82"/>
                     <ColumnDefinition Width="46"/>
                     <ColumnDefinition Width="46"/>
                     <ColumnDefinition Width="46"/>
@@ -82,18 +93,32 @@
                            FontSize="13"
                            FontWeight="SemiBold"/>
 
-                <Button Grid.Column="1"
+                <Button x:Name="HomeNavButton"
+                        Grid.Column="1"
+                        Style="{StaticResource CaptionNavButton}"
+                        Content="首页"
+                        Visibility="Collapsed"
+                        Click="HomeNav_Click"/>
+
+                <Button x:Name="LibraryNavButton"
+                        Grid.Column="2"
+                        Style="{StaticResource CaptionNavButton}"
+                        Content="媒体库"
+                        Visibility="Collapsed"
+                        Click="LibraryNav_Click"/>
+
+                <Button Grid.Column="3"
                         Style="{StaticResource CaptionButton}"
                         Content="—"
                         Click="Minimize_Click"/>
 
                 <Button x:Name="MaximizeButton"
-                        Grid.Column="2"
+                        Grid.Column="4"
                         Style="{StaticResource CaptionButton}"
                         Content="□"
                         Click="Maximize_Click"/>
 
-                <Button Grid.Column="3"
+                <Button Grid.Column="5"
                         Style="{StaticResource CloseCaptionButton}"
                         Content="✕"
                         Click="Close_Click"/>
