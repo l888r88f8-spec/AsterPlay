@@ -58,27 +58,30 @@ public partial class HomeView : UserControl
         _viewModel.Dispose();
     }
 
-    private void EmbyClient_PlaybackStateChanged(object? sender, EventArgs e)
+    private void EmbyClient_PlaybackStateChanged(
+        object? sender,
+        PlaybackStateChangedEventArgs e)
     {
         if (!Dispatcher.CheckAccess())
         {
             Dispatcher.BeginInvoke(
                 DispatcherPriority.Background,
-                new Action(() => _ = RefreshResumeAfterPlaybackAsync()));
+                new Action(() => _ = RefreshResumeAfterPlaybackAsync(e)));
             return;
         }
 
-        _ = RefreshResumeAfterPlaybackAsync();
+        _ = RefreshResumeAfterPlaybackAsync(e);
     }
 
-    private async Task RefreshResumeAfterPlaybackAsync()
+    private async Task RefreshResumeAfterPlaybackAsync(PlaybackStateChangedEventArgs e)
     {
         try
         {
-            await _viewModel.RefreshResumeAsync();
+            await _viewModel.RefreshResumeAsync(e.ItemId, e.PositionTicks);
             PlaybackLog.Write(
                 "Home",
-                $"Continue Watching refreshed after playback update; items={_viewModel.ResumeItems.Count}");
+                $"Continue Watching refreshed after playback update; itemId={e.ItemId}, " +
+                $"positionTicks={e.PositionTicks}, event={e.EventName}, items={_viewModel.ResumeItems.Count}");
         }
         catch (Exception ex)
         {
