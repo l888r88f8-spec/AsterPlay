@@ -22,17 +22,53 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="Transparent">
+                        <Border Background="Transparent"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="CardScale" ScaleX="1" ScaleY="1"/>
+                            </Border.RenderTransform>
                             <ContentPresenter/>
                         </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="1.025"
+                                                             Duration="0:0:0.16"/>
+                                            <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="1.025"
+                                                             Duration="0:0:0.16"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="1"
+                                                             Duration="0:0:0.16"/>
+                                            <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="1"
+                                                             Duration="0:0:0.16"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
         <Style x:Key="LibraryTab" TargetType="Button">
             <Setter Property="Foreground" Value="#CCD1DB"/>
-            <Setter Property="Background" Value="#18FFFFFF"/>
-            <Setter Property="BorderBrush" Value="#25FFFFFF"/>
+            <Setter Property="Background" Value="#24FFFFFF"/>
+            <Setter Property="BorderBrush" Value="{StaticResource LiquidGlassSoftEdgeBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="15,9"/>
             <Setter Property="Margin" Value="0,0,9,0"/>
@@ -48,8 +84,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#CC3EA6FF"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#003EA6FF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#764A9EEA"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#AFC7E8FF"/>
                                 <Setter Property="Foreground" Value="White"/>
                             </DataTrigger>
                         </ControlTemplate.Triggers>
@@ -59,7 +95,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Background="#08080C">
+    <Grid Background="Transparent">
         <ScrollViewer x:Name="MainScrollViewer"
                       VerticalScrollBarVisibility="Hidden"
                       HorizontalScrollBarVisibility="Disabled"
@@ -86,7 +122,7 @@
                             <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
                                 <GradientStop Color="#0008080C" Offset="0"/>
                                 <GradientStop Color="#B008080C" Offset="0.65"/>
-                                <GradientStop Color="#FF08080C" Offset="1"/>
+                                <GradientStop Color="#E407090D" Offset="1"/>
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
@@ -266,7 +302,7 @@
                     </Grid>
                 </Grid>
 
-                <StackPanel Margin="42,6,42,60">
+                <StackPanel Margin="42,6,42,132">
                     <TextBlock Text="媒体库"
                                Foreground="White"
                                FontSize="23"
@@ -289,11 +325,14 @@
                                         Background="Transparent"
                                         BorderThickness="0"
                                         Cursor="Hand">
-                                    <Border CornerRadius="16"
-                                            Background="#15161B"
-                                            BorderBrush="#18FFFFFF"
-                                            BorderThickness="1"
-                                            Padding="18">
+                                    <controls:LiquidGlassPanel CornerRadius="18"
+                                                                  Padding="18"
+                                                                  Background="#7D171E2A"
+                                                                  BorderBrush="{StaticResource LiquidGlassSoftEdgeBrush}"
+                                                                  BloomOpacity="0.28"
+                                                                  GlareOpacity="0.24"
+                                                                  EdgeLightOpacity="0.55"
+                                                                  IsInteractive="True">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="42"/>
@@ -323,7 +362,7 @@
                                                            Margin="0,5,0,0"/>
                                             </StackPanel>
                                         </Grid>
-                                    </Border>
+                                    </controls:LiquidGlassPanel>
                                 </Button>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -345,8 +384,10 @@
                                             Style="{StaticResource MediaCardButton}"
                                             Tag="{Binding}" Click="ResumeCard_Click">
                                         <StackPanel>
-                                            <Border Height="146" CornerRadius="10"
-                                                    Background="#15151C" ClipToBounds="True">
+                                            <Border Height="146" CornerRadius="14"
+                                                    Background="#151B24" ClipToBounds="True"
+                                                    BorderBrush="{StaticResource LiquidGlassSoftEdgeBrush}"
+                                                    BorderThickness="1">
                                                 <Grid>
                                                     <controls:CachedImage SourceUrl="{Binding BackdropUrl}"
                                                            Stretch="UniformToFill"/>
@@ -381,8 +422,10 @@
                                             Style="{StaticResource MediaCardButton}"
                                             Tag="{Binding}" Click="LatestCard_Click">
                                         <StackPanel>
-                                            <Border Height="245" CornerRadius="10"
-                                                    Background="#15151C" ClipToBounds="True">
+                                            <Border Height="245" CornerRadius="14"
+                                                    Background="#151B24" ClipToBounds="True"
+                                                    BorderBrush="{StaticResource LiquidGlassSoftEdgeBrush}"
+                                                    BorderThickness="1">
                                                 <controls:CachedImage SourceUrl="{Binding PosterUrl}"
                                                        Stretch="UniformToFill"/>
                                             </Border>
@@ -400,7 +443,7 @@
             </StackPanel>
         </ScrollViewer>
 
-        <Border x:Name="LoadingOverlay" Background="#E608080C"
+        <Border x:Name="LoadingOverlay" Background="#E007090D"
                 Visibility="Visible">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <TextBlock Text="AsterPlay" Foreground="White"
