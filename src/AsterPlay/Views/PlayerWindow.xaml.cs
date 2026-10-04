@@ -29,6 +29,8 @@ public partial class PlayerWindow : Window
     private int _seekRequestVersion;
     private double? _serverSeekUiTargetSeconds;
     private double? _danmakuSeekTargetSeconds;
+    private double? _danmakuSeekLastTimelineSeconds;
+    private int _danmakuSeekResumeSamples;
     private int _lastFramebuffer;
     private int _lastFramebufferWidth;
     private int _lastFramebufferHeight;
@@ -466,14 +468,13 @@ public partial class PlayerWindow : Window
                 ? PositionSlider.Maximum
                 : Math.Max(0, currentAbsolute + seconds));
 
-        _danmakuSeekTargetSeconds = targetAbsolute;
-
         if (_launch.RequiresServerSeek)
         {
             SeekAbsoluteFromTimeline(targetAbsolute);
             return;
         }
 
+        BeginDanmakuSeekSuppression(targetAbsolute);
         _mpv.Seek(seconds);
         SyncDanmakuPoc();
         ShowControls();
@@ -563,7 +564,7 @@ public partial class PlayerWindow : Window
             0,
             PositionSlider.Maximum > 0 ? PositionSlider.Maximum : requestedAbsolute);
 
-        _danmakuSeekTargetSeconds = requestedAbsolute;
+        BeginDanmakuSeekSuppression(requestedAbsolute);
 
         if (_launch.RequiresServerSeek)
         {
@@ -667,7 +668,7 @@ public partial class PlayerWindow : Window
 
             PlaybackLog.Error("PlayerSeek", ex);
             _serverSeekUiTargetSeconds = null;
-            _danmakuSeekTargetSeconds = null;
+            CancelDanmakuSeekSuppression();
             StatusBlock.Text = "跳转失败，继续当前播放";
 
             var currentAbsolute =
@@ -983,6 +984,43 @@ public partial class PlayerWindow : Window
         ShowControls();
     }
 
+    private void BeginDanmakuSeekSuppression(double targetSeconds)
+    {
+        _danmakuSeekTargetSeconds = targetSeconds;
+        _danmakuSeekLastTimelineSeconds = null;
+        _danmakuSeekResumeSamples = 0;
+
+        if (!_danmakuPocVisible)
+            return;
+
+        DanmakuPocOverlay.SetSuppressed(true);
+        PlaybackLog.Write(
+            "DanmakuPoC",
+            $"Hidden for seek: target={targetSeconds:0.###}");
+    }
+
+    private void CancelDanmakuSeekSuppression()
+    {
+        _danmakuSeekTargetSeconds = null;
+        _danmakuSeekLastTimelineSeconds = null;
+        _danmakuSeekResumeSamples = 0;
+
+        if (!_danmakuPocVisible || _mpv is null || !_playbackLoaded)
+        {
+            DanmakuPocOverlay.SetSuppressed(false);
+            return;
+        }
+
+        var timelineSeconds =
+            _timelineOffsetSeconds + Math.Max(0, _mpv.PositionSeconds);
+
+        DanmakuPocOverlay.Synchronize(
+            timelineSeconds,
+            _mpv.IsPaused || _mpv.IsBuffering,
+            _mpv.Speed);
+        DanmakuPocOverlay.SetSuppressed(false);
+    }
+
     private void SyncDanmakuPoc()
     {
         if (!_danmakuPocVisible || _mpv is null || !_playbackLoaded)
@@ -993,29 +1031,52 @@ public partial class PlayerWindow : Window
 
         if (_danmakuSeekTargetSeconds is double seekTarget)
         {
-            var offsetSettled =
-                Math.Abs(_timelineOffsetSeconds - seekTarget) <= 0.75 ||
-                !_launch.UsesServerStartOffset;
-            var timelineSettled =
-                Math.Abs(timelineSeconds - seekTarget) <= 0.75;
+            DanmakuPocOverlay.SetSuppressed(true);
 
-            if (!offsetSettled || !timelineSettled)
+            if (_mpv.IsPaused || _mpv.IsBuffering)
             {
-                DanmakuPocOverlay.Synchronize(
-                    seekTarget,
-                    paused: true,
-                    _mpv.Speed);
+                _danmakuSeekLastTimelineSeconds = timelineSeconds;
+                _danmakuSeekResumeSamples = 0;
                 return;
             }
 
+            var nearTarget = Math.Abs(timelineSeconds - seekTarget) <= 1.5;
+            var advancing =
+                _danmakuSeekLastTimelineSeconds is double previousTimeline &&
+                timelineSeconds - previousTimeline >= 0.03;
+
+            _danmakuSeekLastTimelineSeconds = timelineSeconds;
+
+            if (nearTarget && advancing)
+                _danmakuSeekResumeSamples++;
+            else
+                _danmakuSeekResumeSamples = 0;
+
+            // Require two consecutive advancing samples near the seek target.
+            // At the 250 ms sync cadence this keeps the barrage hidden until
+            // actual playback has resumed, so no intermediate clock alignment
+            // is ever visible to the user.
+            if (_danmakuSeekResumeSamples < 2)
+                return;
+
             PlaybackLog.Write(
                 "DanmakuPoC",
-                $"Seek timeline settled: target={seekTarget:0.###}, timeline={timelineSeconds:0.###}, " +
+                $"Shown after seek playback resumed: target={seekTarget:0.###}, timeline={timelineSeconds:0.###}, " +
                 $"offset={_timelineOffsetSeconds:0.###}, mpvPos={mpvPosition:0.###}");
 
             _danmakuSeekTargetSeconds = null;
+            _danmakuSeekLastTimelineSeconds = null;
+            _danmakuSeekResumeSamples = 0;
+
+            DanmakuPocOverlay.Synchronize(
+                timelineSeconds,
+                paused: false,
+                _mpv.Speed);
+            DanmakuPocOverlay.SetSuppressed(false);
+            return;
         }
 
+        DanmakuPocOverlay.SetSuppressed(false);
         DanmakuPocOverlay.Synchronize(
             timelineSeconds,
             _mpv.IsPaused || _mpv.IsBuffering,

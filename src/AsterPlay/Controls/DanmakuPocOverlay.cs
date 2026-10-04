@@ -12,9 +12,6 @@ public sealed class DanmakuPocOverlay : FrameworkElement
     private const double TopPadding = 24;
     private const double LaneHeight = 30;
     private const double FontSize = 22;
-    private const double HardResyncThresholdSeconds = 1.25;
-    private const double ClockCorrectionGain = 0.75;
-    private const double MaxClockCorrectionPerSecond = 0.08;
 
     private static readonly Typeface Typeface = new(
         new FontFamily("Segoe UI"),
@@ -34,11 +31,10 @@ public sealed class DanmakuPocOverlay : FrameworkElement
     private readonly Dictionary<long, FormattedText> _textCache = [];
 
     private bool _active;
+    private bool _suppressed;
     private bool _paused = true;
-    private bool _hasTimelineSample;
     private double _sampleTimelineSeconds;
     private double _speed = 1;
-    private double _clockCorrectionPerSecond;
     private long _sampleTimestamp = Stopwatch.GetTimestamp();
     private double _cachedPixelsPerDip;
     private int _activeCount;
@@ -70,9 +66,9 @@ public sealed class DanmakuPocOverlay : FrameworkElement
             _renderCount = 0;
             _lastFrameMilliseconds = 0;
             _peakFrameMilliseconds = 0;
-            _hasTimelineSample = false;
-            _clockCorrectionPerSecond = 0;
-            Visibility = Visibility.Visible;
+            Visibility = _suppressed
+                ? Visibility.Collapsed
+                : Visibility.Visible;
             CompositionTarget.Rendering += CompositionTarget_Rendering;
         }
         else
@@ -80,10 +76,24 @@ public sealed class DanmakuPocOverlay : FrameworkElement
             CompositionTarget.Rendering -= CompositionTarget_Rendering;
             Visibility = Visibility.Collapsed;
             _activeCount = 0;
-            _hasTimelineSample = false;
-            _clockCorrectionPerSecond = 0;
             _textCache.Clear();
         }
+
+        InvalidateVisual();
+    }
+
+    public void SetSuppressed(bool suppressed)
+    {
+        if (_suppressed == suppressed)
+            return;
+
+        _suppressed = suppressed;
+        Visibility = _active && !_suppressed
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        if (_suppressed)
+            _activeCount = 0;
 
         InvalidateVisual();
     }
@@ -96,53 +106,10 @@ public sealed class DanmakuPocOverlay : FrameworkElement
         if (!double.IsFinite(speed))
             speed = 1;
 
-        var targetTimelineSeconds = Math.Max(0, timelineSeconds);
-        var targetSpeed = Math.Clamp(speed, 0.25, 4);
-        var now = Stopwatch.GetTimestamp();
-
-        if (!_hasTimelineSample)
-        {
-            ResetClock(targetTimelineSeconds, paused, targetSpeed, now);
-            return;
-        }
-
-        var estimatedTimelineSeconds = GetInterpolatedTimelineSeconds(now);
-
-        _sampleTimelineSeconds = estimatedTimelineSeconds;
-        _sampleTimestamp = now;
-        _speed = targetSpeed;
-
-        if (paused)
-        {
-            // Pause and seek-hold are explicit timeline anchors. Snap once to
-            // the requested media time, then keep the overlay completely still.
-            _sampleTimelineSeconds = targetTimelineSeconds;
-            _paused = true;
-            _clockCorrectionPerSecond = 0;
-            return;
-        }
-
-        _paused = false;
-
-        var errorSeconds = targetTimelineSeconds - estimatedTimelineSeconds;
-
-        if (Math.Abs(errorSeconds) >= HardResyncThresholdSeconds)
-        {
-            // A true discontinuity (initial external jump, server replacement,
-            // etc.) should be handled once, not re-applied on every 250 ms
-            // synchronization sample.
-            _sampleTimelineSeconds = targetTimelineSeconds;
-            _clockCorrectionPerSecond = 0;
-            return;
-        }
-
-        // Small mpv sampling error is corrected by very slightly changing the
-        // local media clock rate. This keeps x positions continuous instead of
-        // snapping the entire barrage left/right every synchronization sample.
-        _clockCorrectionPerSecond = Math.Clamp(
-            errorSeconds * ClockCorrectionGain,
-            -MaxClockCorrectionPerSecond,
-            MaxClockCorrectionPerSecond);
+        _sampleTimelineSeconds = Math.Max(0, timelineSeconds);
+        _paused = paused;
+        _speed = Math.Clamp(speed, 0.25, 4);
+        _sampleTimestamp = Stopwatch.GetTimestamp();
     }
 
     public DanmakuPocMetrics GetMetrics()
@@ -164,7 +131,7 @@ public sealed class DanmakuPocOverlay : FrameworkElement
     {
         base.OnRender(drawingContext);
 
-        if (!_active || RenderSize.Width <= 0 || RenderSize.Height <= 0)
+        if (!_active || _suppressed || RenderSize.Width <= 0 || RenderSize.Height <= 0)
             return;
 
         var frameStarted = Stopwatch.GetTimestamp();
@@ -236,41 +203,19 @@ public sealed class DanmakuPocOverlay : FrameworkElement
 
     private void CompositionTarget_Rendering(object? sender, EventArgs e)
     {
-        if (_active)
+        if (_active && !_suppressed)
             InvalidateVisual();
     }
 
-    private double GetInterpolatedTimelineSeconds() =>
-        GetInterpolatedTimelineSeconds(Stopwatch.GetTimestamp());
-
-    private double GetInterpolatedTimelineSeconds(long timestamp)
+    private double GetInterpolatedTimelineSeconds()
     {
         if (_paused)
             return _sampleTimelineSeconds;
 
         var elapsedSeconds =
-            (timestamp - _sampleTimestamp) / (double)Stopwatch.Frequency;
-        var correctedSpeed = Math.Max(
-            0.01,
-            _speed + _clockCorrectionPerSecond);
+            (Stopwatch.GetTimestamp() - _sampleTimestamp) / (double)Stopwatch.Frequency;
 
-        return Math.Max(
-            0,
-            _sampleTimelineSeconds + (elapsedSeconds * correctedSpeed));
-    }
-
-    private void ResetClock(
-        double timelineSeconds,
-        bool paused,
-        double speed,
-        long timestamp)
-    {
-        _sampleTimelineSeconds = timelineSeconds;
-        _paused = paused;
-        _speed = speed;
-        _clockCorrectionPerSecond = 0;
-        _sampleTimestamp = timestamp;
-        _hasTimelineSample = true;
+        return Math.Max(0, _sampleTimelineSeconds + (elapsedSeconds * _speed));
     }
 
     private FormattedText GetOrCreateText(long slot, double bornAt, double pixelsPerDip)
