@@ -1110,7 +1110,7 @@ Step 12 验收完成，允许进入 Step 13。
 
 ## Step 13：完整弹幕系统
 
-> 状态：进行中，正式架构、设置 UI 与真实数据源接入已实现，待真实源运行验收（2026-10-04）
+> 状态：进行中，正式架构、设置 UI 与 LogVar 数据源已实现，待真实 LogVar 运行验收（2026-10-04）
 
 ### 前提
 
@@ -1168,34 +1168,31 @@ DanmakuFilter
   - `DanmakuContext`
   - `DanmakuSettings`
 - 新增 `IDanmakuSource` 数据源抽象，真实弹幕来源可以独立接入，不与播放器或渲染器耦合。
-- 新增 `DanmakuService`，负责根据当前配置选择并加载弹幕文档。
-- 弹幕数据源支持三种模式：
-  - `BuiltInDanmakuSource`：内置测试源，用于离线验证渲染和调度。
-  - `DandanPlayDanmakuSource`：直连“弹弹play开放弹幕网络”。
-  - `LogVarDanmakuSource`：连接用户自建 LogVar 弹幕服务器。
-- 新增“弹幕源”配置窗口：
-  - 内置测试源
-  - 弹弹play开放弹幕网络
-  - LogVar 自建源
-- LogVar 配置填写基础服务器地址：
-  - 例如 `http://192.168.1.10:9321`
-  - 如果服务配置了 TOKEN，可填写 `https://域名/TOKEN`
-  - 客户端自动追加标准 `/api/v2/...` 路径，不要求用户填写具体接口。
-- LogVar 当前使用标准链路：
-  1. `POST /api/v2/match`
-  2. 取得 `episodeId`
-  3. `GET /api/v2/comment/{episodeId}?format=json&duration=true`
-- 弹弹play直连使用官方 `/api/v2/match` 与 `/api/v2/comment/{episodeId}`，请求采用 AppId / AppSecret 的签名验证模式。
-- 弹弹play AppSecret 使用 Windows DPAPI（CurrentUser）加密后持久化，不写入明文配置。
-- 弹幕源配置保存于：
+- 新增 `DanmakuService`，当前生产数据源只保留 `LogVarDanmakuSource`。
+- 已移除：
+  - 弹弹play数据源及 AppId / AppSecret 配置。
+  - 内置测试 / 本地弹幕源。
+- 播放器“LogVar”配置窗口只保留：
+  - 服务器地址，例如 `http://192.168.1.10:9321`
+  - 可选 Access Token
+- 配置方式参考 qEmby 的 LogVar / `danmu_api` 逻辑：
+  - 服务器基础地址与 Access Token 分开保存。
+  - 客户端负责把 Token 作为服务器路径段插入，再追加 `/api/v2/...`。
+  - 用户不需要手写具体 API 路径。
+- Access Token 使用 Windows DPAPI（CurrentUser）加密持久化。
+- LogVar 配置保存于：
   `%LOCALAPPDATA%\AsterPlay\danmaku-source.json`
-- Emby 剧集播放元数据会传入弹幕匹配上下文；剧集优先构造 `SeriesName SxxExx` 形式进行自动匹配，电影或无剧集元数据时使用当前标题。
-- 已实现弹弹play / LogVar 通用弹幕解析：
-  - `p` 时间、模式、颜色
-  - `m` 弹幕正文
-  - LogVar 可选 `t` 时间字段
-  - 模式 1 / 4 / 5 映射为滚动 / 底部 / 顶部
-  - 应用匹配结果中的 `shift` 时间偏移
+- Emby 会把标题、原始标题、剧集名、季 / 集、ItemType、媒体 Path 与真实文件名传入弹幕匹配上下文。
+- 自动匹配流程参考 qEmy：
+  1. 优先使用真实媒体文件名调用 `POST /api/v2/match`。
+  2. 如果文件名匹配失败或置信度不足，则使用剧名 / 季 / 集调用 `GET /api/v2/search/episodes`。
+  3. 对候选进行标题、季、集评分，剧集阈值 72，电影阈值 62。
+  4. 选中 `episodeId` 后调用 `GET /api/v2/comment/{episodeId}?format=json&duration=true`。
+- LogVar 弹幕解析兼容：
+  - `p`：时间、模式、颜色。
+  - `m` / `text` / `content`：弹幕正文。
+  - `t` / `time`：没有 `p` 时的时间字段。
+  - 模式 1 / 4 / 5 映射为滚动 / 底部 / 顶部。
 - PoC Overlay 已升级为正式 `DanmakuOverlay`，旧 `DanmakuPocOverlay.cs` 已移除。
 - 正式 Overlay 支持：
   - 滚动弹幕
@@ -1229,10 +1226,10 @@ DanmakuFilter
 下一阶段：
 
 - 使用实际 LogVar 服务器地址进行运行时验收：
-  - 自动匹配是否准确
-  - TOKEN 路径部署是否正常
-  - 实际弹幕数量 / 颜色 / 顶部 / 底部类型是否正确
-- 使用有效弹弹play AppId / AppSecret 验证官方签名请求、302 弹幕加速跳转和 `withRelated=true`。
+  - 真实文件名 `/match` 是否命中。
+  - 文件名不命中时 `/search/episodes` 是否能正确回退匹配。
+  - Access Token 路径部署是否正常。
+  - 实际弹幕数量 / 颜色 / 顶部 / 底部类型是否正确。
 - 自动匹配存在多个候选或匹配错误时，增加手动选择 / 重新匹配 UI。
 - 增加屏蔽词、用户屏蔽、密度控制、防重叠与性能限制。
 - 对真实大弹幕量继续做长时间运行验收。
