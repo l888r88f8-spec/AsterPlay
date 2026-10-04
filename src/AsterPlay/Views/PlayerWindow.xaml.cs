@@ -23,6 +23,9 @@ public partial class PlayerWindow : Window
     private readonly DanmakuService _danmakuService = new();
     private readonly CancellationTokenSource _danmakuLoadCts = new();
     private DanmakuSettings _danmakuSettings = DanmakuSettingsStore.Load();
+    private DanmakuSourceSettings _danmakuSourceSettings =
+        DanmakuSourceSettingsStore.Load();
+    private int _danmakuLoadVersion;
     private double _timelineOffsetSeconds;
 
     private MpvClient? _mpv;
@@ -975,21 +978,33 @@ public partial class PlayerWindow : Window
                 ? _launch.RunTimeTicks.Value / 10_000_000d
                 : 0;
 
+            var loadVersion = ++_danmakuLoadVersion;
             var document = await _danmakuService.LoadAsync(
                 new DanmakuContext(
                     _launch.ItemId,
                     _launch.Title,
-                    durationSeconds),
+                    durationSeconds,
+                    _launch.SeriesName,
+                    _launch.SeasonNumber,
+                    _launch.EpisodeNumber),
+                _danmakuSourceSettings,
                 _danmakuLoadCts.Token);
 
-            if (_stopHandled || _danmakuLoadCts.IsCancellationRequested)
+            if (_stopHandled ||
+                _danmakuLoadCts.IsCancellationRequested ||
+                loadVersion != _danmakuLoadVersion)
+            {
                 return;
+            }
 
             DanmakuOverlay.SetDocument(document);
 
             PlaybackLog.Write(
                 "Danmaku",
                 $"Document ready: source={document.SourceName}, comments={document.Comments.Count}");
+
+            if (document.Comments.Count == 0)
+                StatusBlock.Text = $"弹幕：{document.SourceName} 未匹配到弹幕";
         }
         catch (OperationCanceledException)
         {
@@ -1005,6 +1020,43 @@ public partial class PlayerWindow : Window
 
     private void DanmakuSettings_Click(object sender, RoutedEventArgs e) =>
         OpenDanmakuSettingsMenu();
+
+    private void DanmakuSource_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new DanmakuSourceSettingsWindow(
+            _danmakuSourceSettings)
+        {
+            Owner = this
+        };
+
+        if (dialog.ShowDialog() != true || dialog.Result is null)
+            return;
+
+        _danmakuSourceSettings = dialog.Result;
+        DanmakuSourceSettingsStore.Save(_danmakuSourceSettings);
+
+        StatusBlock.Text =
+            $"弹幕源：{FormatDanmakuSourceName(_danmakuSourceSettings.SourceKind)}，正在重新加载…";
+
+        DanmakuOverlay.SetDocument(
+            new DanmakuDocument(
+                FormatDanmakuSourceName(_danmakuSourceSettings.SourceKind),
+                Array.Empty<DanmakuComment>()));
+
+        _ = LoadDanmakuAsync();
+        ShowControls();
+    }
+
+    private static string FormatDanmakuSourceName(
+        DanmakuSourceKind kind) =>
+        kind switch
+        {
+            DanmakuSourceKind.DandanPlay =>
+                "弹弹play开放弹幕网络",
+            DanmakuSourceKind.LogVar =>
+                "LogVar",
+            _ => "内置测试源"
+        };
 
     private void OpenDanmakuSettingsMenu()
     {
