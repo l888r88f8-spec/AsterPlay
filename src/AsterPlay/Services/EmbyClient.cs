@@ -2,6 +2,7 @@ using System.Text;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AsterPlay.Models;
+using AsterPlay.Services.Playback;
 
 namespace AsterPlay.Services;
 
@@ -314,15 +315,28 @@ public sealed class EmbyClient
         using var req = CreateRequest(
             HttpMethod.Post,
             $"/Items/{Esc(playable.Id)}/PlaybackInfo?UserId={Esc(UserId)}");
-        req.Content = JsonContent.Create(new
+
+        var playbackRequest = new PlaybackInfoRequestPayload
         {
-            UserId,
+            UserId = UserId,
             StartTimeTicks = resumeTicks,
             IsPlayback = true,
             EnableDirectPlay = true,
             EnableDirectStream = true,
-            EnableTranscoding = true
-        });
+            EnableTranscoding = true,
+            AllowVideoStreamCopy = true,
+            AllowAudioStreamCopy = true,
+            AllowInterlacedVideoStreamCopy = true,
+            DeviceProfile = PlaybackProfile.CreateDeviceProfile()
+        };
+
+        PlaybackLog.Write(
+            "PlaybackProfile",
+            $"Request profile: directPlayProfiles={playbackRequest.DeviceProfile.DirectPlayProfiles.Count}, " +
+            $"transcodingProfiles={playbackRequest.DeviceProfile.TranscodingProfiles.Count}, " +
+            $"subtitleProfiles={playbackRequest.DeviceProfile.SubtitleProfiles.Count}, bitrateCap=none");
+
+        req.Content = JsonContent.Create(playbackRequest, options: _json);
 
         using var response = await _http.SendAsync(req);
         PlaybackLog.Write("Emby",
@@ -340,61 +354,112 @@ public sealed class EmbyClient
             PlaybackLog.Write("Emby",
                 $"MediaSource[{i}]: id={candidate.Id}, container={candidate.Container}, " +
                 $"directPlay={candidate.SupportsDirectPlay}, directStream={candidate.SupportsDirectStream}, " +
-                $"transcode={candidate.SupportsTranscoding}, transcodingUrl={candidate.TranscodingUrl}");
+                $"transcode={candidate.SupportsTranscoding}, " +
+                $"directStreamUrl={PlaybackLog.Redact(candidate.DirectStreamUrl)}, " +
+                $"transcodingUrl={PlaybackLog.Redact(candidate.TranscodingUrl)}, " +
+                $"transcodingContainer={candidate.TranscodingContainer}, subProtocol={candidate.TranscodingSubProtocol}");
         }
 
-        var media = info.MediaSources.FirstOrDefault()
-                    ?? throw new InvalidOperationException("No media source is available.");
+        var decision = PlaybackDecisionSelector.Select(
+            info.MediaSources,
+            requiresServerStartOffset: resumeTicks > 0);
+
+        var media = decision.MediaSource;
 
         var playSessionId = string.IsNullOrWhiteSpace(info.PlaySessionId)
             ? Guid.NewGuid().ToString("N")
             : info.PlaySessionId;
+
+        PlaybackLog.Write("PlaybackDecision",
+            $"kind={decision.Kind}, playMethod={decision.PlayMethod}, mediaSourceId={media.Id}, " +
+            $"container={media.Container}, reason={decision.Reason}");
 
         PlaybackLog.Write("Emby",
             $"Playback session: playSessionId={playSessionId} (shared by stream/start/progress/stop)");
 
         string url;
         bool usesServerStartOffset;
-        string playMethod;
+        var playMethod = decision.PlayMethod;
 
-        if (resumeTicks > 0)
+        switch (decision.Kind)
         {
-            // Resume is performed by Emby, not by mpv. The returned stream starts at
-            // the requested point, while mpv's local timeline starts from zero.
-            usesServerStartOffset = true;
-
-            if (!string.IsNullOrWhiteSpace(media.TranscodingUrl))
-            {
-                url = AppendToken(Combine(media.TranscodingUrl));
-                playMethod = "Transcode";
-                PlaybackLog.Write("Emby", "Resume strategy: negotiated TranscodingUrl");
-            }
-            else
-            {
-                var container = media.Container.Trim().TrimStart('.');
-                if (string.IsNullOrWhiteSpace(container))
-                    container = "mp4";
-
+            case PlaybackDecisionKind.DirectPlay:
+                usesServerStartOffset = false;
                 url = WithToken(
-                    $"/Videos/{Esc(playable.Id)}/stream.{Esc(container)}" +
-                    $"?MediaSourceId={Esc(media.Id)}" +
-                    $"&PlaySessionId={Esc(playSessionId)}" +
-                    $"&StartTimeTicks={resumeTicks}" +
-                    $"&DeviceId={Esc(DeviceId)}");
-                playMethod = "DirectStream";
-                PlaybackLog.Write("Emby",
-                    "Resume strategy: dynamic stream with StartTimeTicks (stream copy/direct stream)");
-            }
-        }
-        else
-        {
-            usesServerStartOffset = false;
-            playMethod = "DirectPlay";
-            url = WithToken(
-                $"/Videos/{Esc(playable.Id)}/stream?static=true" +
-                $"&MediaSourceId={Esc(media.Id)}" +
-                $"&PlaySessionId={Esc(playSessionId)}");
-            PlaybackLog.Write("Emby", "Playback strategy: static direct stream");
+                    $"/Videos/{Esc(playable.Id)}/stream?static=true" +
+                    $"&MediaSourceId={Esc(media.Id)}" +
+                    $"&PlaySessionId={Esc(playSessionId)}");
+                PlaybackLog.Write("PlaybackDecision", "URL strategy: static DirectPlay stream");
+                break;
+
+            case PlaybackDecisionKind.DirectStream:
+                usesServerStartOffset = resumeTicks > 0;
+
+                if (!string.IsNullOrWhiteSpace(media.DirectStreamUrl))
+                {
+                    url = Combine(media.DirectStreamUrl);
+
+                    if (resumeTicks > 0)
+                    {
+                        url = AppendQueryParameter(
+                            url,
+                            "StartTimeTicks",
+                            resumeTicks.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    }
+
+                    url = AppendToken(url);
+                    PlaybackLog.Write(
+                        "PlaybackDecision",
+                        "URL strategy: negotiated DirectStreamUrl");
+                }
+                else
+                {
+                    var container = media.Container.Trim().TrimStart('.');
+                    if (string.IsNullOrWhiteSpace(container))
+                        container = "mp4";
+
+                    var directStreamPath =
+                        $"/Videos/{Esc(playable.Id)}/stream.{Esc(container)}" +
+                        $"?MediaSourceId={Esc(media.Id)}" +
+                        $"&PlaySessionId={Esc(playSessionId)}" +
+                        $"&DeviceId={Esc(DeviceId)}";
+
+                    if (resumeTicks > 0)
+                        directStreamPath += $"&StartTimeTicks={resumeTicks}";
+
+                    url = WithToken(directStreamPath);
+                    PlaybackLog.Write(
+                        "PlaybackDecision",
+                        "URL strategy: dynamic DirectStream endpoint");
+                }
+                break;
+
+            case PlaybackDecisionKind.Transcode:
+                if (string.IsNullOrWhiteSpace(media.TranscodingUrl))
+                {
+                    throw new InvalidOperationException(
+                        "Emby selected transcoding but did not return a TranscodingUrl.");
+                }
+
+                usesServerStartOffset = resumeTicks > 0;
+                url = Combine(media.TranscodingUrl);
+
+                if (resumeTicks > 0)
+                {
+                    url = AppendQueryParameter(
+                        url,
+                        "StartTimeTicks",
+                        resumeTicks.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                }
+
+                url = AppendToken(url);
+                PlaybackLog.Write(
+                    "PlaybackDecision",
+                    $"URL strategy: negotiated TranscodingUrl ({media.TranscodingContainer}/{media.TranscodingSubProtocol})");
+                break;
+
+            default:
+                throw new InvalidOperationException("Unsupported playback decision.");
         }
 
         PlaybackLog.Write("Emby",
