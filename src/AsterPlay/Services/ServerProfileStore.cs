@@ -30,7 +30,7 @@ public static class ServerProfileStore
 
             var json = File.ReadAllText(FilePath);
             return JsonSerializer.Deserialize<List<ServerProfile>>(json, JsonOptions)
-                   ?? Array.Empty<ServerProfile>();
+                   ?? new List<ServerProfile>();
         }
         catch (Exception ex)
         {
