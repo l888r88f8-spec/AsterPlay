@@ -9,10 +9,15 @@ public static class PlaybackLog
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "AsterPlay", "logs");
 
-    private static readonly string SessionPath =
-        Path.Combine(DirectoryPath, $"playback-{DateTime.Now:yyyyMMdd-HHmmss}.log");
+    private static readonly string LogFilePath =
+        Path.Combine(DirectoryPath, "playback.log");
 
-    public static string LogPath => SessionPath;
+    private static readonly string SessionStartedAt =
+        DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+
+    private static bool _sessionHeaderWritten;
+
+    public static string LogPath => LogFilePath;
 
     public static void Write(string area, string message)
     {
@@ -20,8 +25,19 @@ public static class PlaybackLog
         {
             Directory.CreateDirectory(DirectoryPath);
             var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{area}] {Redact(message)}{Environment.NewLine}";
+
             lock (Sync)
-                File.AppendAllText(SessionPath, line);
+            {
+                if (!_sessionHeaderWritten)
+                {
+                    File.AppendAllText(
+                        LogFilePath,
+                        $"{Environment.NewLine}========== AsterPlay session {SessionStartedAt} =========={Environment.NewLine}");
+                    _sessionHeaderWritten = true;
+                }
+
+                File.AppendAllText(LogFilePath, line);
+            }
         }
         catch
         {
