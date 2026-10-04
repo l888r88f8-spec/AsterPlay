@@ -1,0 +1,83 @@
+name: Windows release build
+
+on:
+  push:
+    branches:
+      - main
+      - step14-release-hardening
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: windows-release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Bootstrap pinned portable .NET 8 SDK
+        shell: cmd
+        run: bootstrap-dotnet.cmd
+
+      - name: Build self-contained Windows x64 package
+        shell: pwsh
+        run: .\build-windows.ps1
+
+      - name: Verify release package
+        shell: pwsh
+        run: |
+          $publish = Join-Path $PWD "dist\AsterPlay"
+          $required = @(
+            "AsterPlay.exe",
+            "libmpv-2.dll",
+            "coreclr.dll",
+            "hostfxr.dll",
+            "hostpolicy.dll",
+            "RUNTIME-SOURCE.txt",
+            "BUILD-INFO.txt"
+          )
+
+          foreach ($name in $required) {
+            $path = Join-Path $publish $name
+            if (-not (Test-Path $path)) {
+              throw "Missing release file: $name"
+            }
+          }
+
+          $runtime = Get-Content -Raw (Join-Path $publish "RUNTIME-SOURCE.txt")
+          if ($runtime -notmatch [Regex]::Escape("mpv-dev-lgpl-x86_64-20260929-git-b4b5d69a44.7z")) {
+            throw "Release package does not contain the pinned libmpv build."
+          }
+
+          if ($runtime -notmatch [Regex]::Escape("8c80c506cf95f403d8a2b9d672d5f88d965885666f25c850f711a06b9510dfc8")) {
+            throw "Pinned libmpv checksum metadata is missing."
+          }
+
+          Write-Host "Windows release package verification passed."
+
+      - name: Smoke start packaged app
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD "dist\AsterPlay\AsterPlay.exe"
+          $process = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 5
+
+          if ($process.HasExited) {
+            throw "AsterPlay exited during startup smoke test with code $($process.ExitCode)."
+          }
+
+          Stop-Process -Id $process.Id -Force
+          Write-Host "Packaged AsterPlay started successfully and stayed alive for 5 seconds."
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: AsterPlay-win-x64
+          path: dist/AsterPlay
+          if-no-files-found: error

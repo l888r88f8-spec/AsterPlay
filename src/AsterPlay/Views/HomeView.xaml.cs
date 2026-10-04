@@ -35,15 +35,29 @@ public partial class HomeView : UserControl
 
         ApplyResponsiveHeroLayout(ActualWidth);
         LoadingOverlay.Visibility = Visibility.Visible;
+        var loadTimer = System.Diagnostics.Stopwatch.StartNew();
 
         try
         {
             await _viewModel.InitializeAsync();
-            LoadingOverlay.Visibility = Visibility.Collapsed;
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "AsterPlay", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(
+                UserError.GetMessage(ex, "加载首页"),
+                "AsterPlay",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+        finally
+        {
+            LoadingOverlay.Visibility = Visibility.Collapsed;
+            loadTimer.Stop();
+            PlaybackLog.Write(
+                "Performance",
+                $"Home initial load: {loadTimer.Elapsed.TotalMilliseconds:0} ms, " +
+                $"libraries={_viewModel.Libraries.Count}, resume={_viewModel.ResumeItems.Count}, latest={_viewModel.LatestItems.Count}, " +
+                $"workingSet={Environment.WorkingSet / 1024d / 1024d:0.0} MB, managed={GC.GetTotalMemory(false) / 1024d / 1024d:0.0} MB");
         }
     }
 
@@ -177,7 +191,7 @@ public partial class HomeView : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Playback", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(UserError.GetMessage(ex, "播放"), "Playback", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -189,7 +203,7 @@ public partial class HomeView : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Favorite", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(UserError.GetMessage(ex, "更新收藏"), "Favorite", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

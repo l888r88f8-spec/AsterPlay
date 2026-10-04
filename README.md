@@ -18,7 +18,7 @@ AsterPlay is a native Windows desktop client for Emby, built with **C# / .NET 8 
 
 - UI: WPF on .NET 8
 - Emby API: HttpClient
-- Player: libmpv hosted in a native Win32 child window
+- Player: libmpv Render API rendered into the WPF OpenGL surface
 - Session data: %LOCALAPPDATA%\AsterPlay\session.json
 - Build: local Windows build, no Qt/CMake/MSYS2 required
 
@@ -31,7 +31,7 @@ bootstrap-dotnet.cmd
 build-windows.cmd
 ```
 
-The .NET SDK bootstrap is optional if .NET 8 SDK is already installed. If libmpv is missing, the build script downloads a Windows x64 LGPL libmpv development build from the mpv project's GitHub release assets.
+The portable bootstrap installs the pinned .NET SDK 8.0.425; it is optional when a compatible .NET 8 SDK is already installed. The default release build uses a fixed Windows x64 LGPL libmpv package pinned by release, mpv commit and SHA-256. `build-windows.ps1` verifies that pin before publishing; set `ASTERPLAY_MPV_DIR` only when intentionally supplying a different tested runtime.
 
 Output:
 
@@ -39,7 +39,7 @@ Output:
 dist/AsterPlay/
 ```
 
-The published folder is self-contained and does not require .NET to be installed on the target PC.
+The published folder is self-contained and does not require .NET to be installed on the target PC. The build fails if `AsterPlay.exe`, `libmpv-2.dll`, `coreclr.dll`, `hostfxr.dll` or `hostpolicy.dll` is missing, and writes `BUILD-INFO.txt` plus `RUNTIME-SOURCE.txt` into the publish folder.
 
 ## Acknowledgements
 
@@ -47,4 +47,4 @@ AsterPlay originated from a rewrite of ideas explored in [AlanHJ/qEmby](https://
 
 The home-screen visual direction references [Vanvy Emby Suite](https://github.com/micimo13/emby-beautify), implemented natively in WPF rather than injected into Emby's web UI.
 
-libmpv is provided by the [mpv project](https://github.com/mpv-player/mpv) under its applicable license.
+libmpv is provided under its applicable LGPL build license. The pinned Windows runtime is sourced from [zhongfly/mpv-winbuild](https://github.com/zhongfly/mpv-winbuild) and records the corresponding mpv commit in `RUNTIME-SOURCE.txt`.

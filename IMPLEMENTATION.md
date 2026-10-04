@@ -1306,6 +1306,33 @@ Step 13 最终验收完成，允许进入 Step 14。
 
 ## Step 14：发布前收尾
 
+### 2026-10-04 实现进度
+
+已完成代码侧发布收尾：
+
+- libmpv 默认构建已从滚动 `mpv-player/mpv git-release` 改为固定 Windows x64 LGPL 包：
+  - release: `2026-09-29-b4b5d69a44`
+  - mpv commit: `b4b5d69a44e240e4a95c230bb7f018c381f0c5ae`
+  - asset: `mpv-dev-lgpl-x86_64-20260929-git-b4b5d69a44.7z`
+  - SHA-256: `8c80c506cf95f403d8a2b9d672d5f88d965885666f25c850f711a06b9510dfc8`
+- `bootstrap-mpv.ps1` 会验证固定包 SHA-256；默认构建发现旧/非固定 runtime 时会替换，不再静默跟随最新 development build。
+- `bootstrap-dotnet.ps1` 固定 portable .NET SDK 为 `8.0.425`；release CI 按 `bootstrap-dotnet.cmd -> build-windows.ps1` 的干净克隆路径验证。
+- `build-windows.ps1` 增加 self-contained 发布自检，要求 `AsterPlay.exe / libmpv-2.dll / coreclr.dll / hostfxr.dll / hostpolicy.dll` 全部存在，并输出 `BUILD-INFO.txt`、`RUNTIME-SOURCE.txt`。
+- 新增 Windows release GitHub Actions：真实执行 `dotnet publish`、固定 mpv 下载/校验、发布目录验证并上传 `AsterPlay-win-x64` artifact。
+- Emby 错误提示统一区分：网络不可达、请求超时、401/403 登录或 Token 失效、404 媒体不存在、5xx 服务端错误、PlaybackInfo 失败、转码地址缺失。
+- 启动时恢复 session：仅明确 401/403 才清除本地 session；临时网络故障不再误删登录状态。
+- mpv 的 `END_FILE` 错误已回传播放器 UI，可区分普通视频源失败与 Transcode 流失败，同时保留 `playback.log` 诊断路径。
+- 首页 Hero 候选数量限制为 6，缩略图增加暗色标题 Overlay、hover 缩放与键盘焦点状态。
+- 媒体库卡片加入 `VisualStateManager` hover/pressed 动画、键盘焦点描边和方向键导航；右键菜单可直接打开详情。
+- 媒体库加入无结果空状态，以及加载期间的 Skeleton 占位与 indeterminate 进度。
+
+仍需真实 Windows x64 人工验收后才能把 Step 14 标记为最终完成：
+
+- 干净机器从 `git clone -> bootstrap-dotnet.cmd -> build-windows.cmd` 的完整路径。
+- 实际启动、登录、DirectPlay / DirectStream / Transcode、续播/拖动、状态同步、弹幕长时间播放。
+- 大媒体库滚动、图片内存、页面切换、长时间播放、状态上报和 Overlay 的人工性能观察；必要时根据真实数据再调参数。
+
+
 ### libmpv
 
 当前开发阶段使用 mpv git-release。

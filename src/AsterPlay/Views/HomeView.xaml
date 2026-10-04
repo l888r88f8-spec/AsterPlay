@@ -197,7 +197,9 @@
                                           VerticalScrollBarVisibility="Disabled"
                                           VerticalAlignment="Bottom">
                                 <ItemsControl x:Name="HeroThumbRail"
-                                              ItemsSource="{Binding CurrentLibrary.Items}">
+                                              ItemsSource="{Binding CurrentLibrary.Items}"
+                                              KeyboardNavigation.DirectionalNavigation="Cycle"
+                                              KeyboardNavigation.TabNavigation="Continue">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <StackPanel Orientation="Horizontal"/>
@@ -209,7 +211,14 @@
                                                     Padding="0" Margin="8,0,0,0"
                                                     Background="Transparent"
                                                     BorderThickness="0" Cursor="Hand">
-                                                <Border CornerRadius="8" BorderThickness="2">
+                                                <Border Width="92" Height="52"
+                                                        CornerRadius="8"
+                                                        BorderThickness="2"
+                                                        ClipToBounds="True"
+                                                        RenderTransformOrigin="0.5,0.5">
+                                                    <Border.RenderTransform>
+                                                        <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                                    </Border.RenderTransform>
                                                     <Border.Style>
                                                         <Style TargetType="Border">
                                                             <Setter Property="BorderBrush" Value="Transparent"/>
@@ -219,12 +228,34 @@
                                                                     <Setter Property="BorderBrush" Value="#3EA6FF"/>
                                                                     <Setter Property="Opacity" Value="1"/>
                                                                 </DataTrigger>
+                                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=IsMouseOver}" Value="True">
+                                                                    <Setter Property="Opacity" Value="1"/>
+                                                                    <Setter Property="RenderTransform">
+                                                                        <Setter.Value>
+                                                                            <ScaleTransform ScaleX="1.06" ScaleY="1.06"/>
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=IsKeyboardFocusWithin}" Value="True">
+                                                                    <Setter Property="BorderBrush" Value="White"/>
+                                                                    <Setter Property="Opacity" Value="1"/>
+                                                                </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
-                                                    <controls:CachedImage SourceUrl="{Binding BackdropUrl}"
-                                                           Width="92" Height="52"
-                                                           Stretch="UniformToFill"/>
+                                                    <Grid>
+                                                        <controls:CachedImage SourceUrl="{Binding BackdropUrl}"
+                                                               Stretch="UniformToFill"/>
+                                                        <Border VerticalAlignment="Bottom"
+                                                                Background="#B0000000"
+                                                                Padding="5,2">
+                                                            <TextBlock Text="{Binding Title}"
+                                                                       Foreground="White"
+                                                                       FontSize="9"
+                                                                       FontWeight="SemiBold"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </Border>
+                                                    </Grid>
                                                 </Border>
                                             </Button>
                                         </DataTemplate>

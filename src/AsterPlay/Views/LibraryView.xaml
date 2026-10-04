@@ -28,9 +28,54 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="Transparent">
+                        <Border x:Name="Chrome"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="2"
+                                CornerRadius="12"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="CardScale" ScaleX="1" ScaleY="1"/>
+                            </Border.RenderTransform>
+
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal"/>
+                                    <VisualState x:Name="MouseOver">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="1.025"
+                                                             Duration="0:0:0.12"/>
+                                            <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="1.025"
+                                                             Duration="0:0:0.12"/>
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Pressed">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="0.985"
+                                                             Duration="0:0:0.06"/>
+                                            <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="0.985"
+                                                             Duration="0:0:0.06"/>
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Disabled"/>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+
                             <ContentPresenter/>
                         </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#CC3EA6FF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -144,7 +189,9 @@
             <ScrollViewer VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled"
                           Padding="32,24,20,24">
-                <ItemsControl ItemsSource="{Binding Items}">
+                <ItemsControl ItemsSource="{Binding Items}"
+                              KeyboardNavigation.DirectionalNavigation="Contained"
+                              KeyboardNavigation.TabNavigation="Continue">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel/>
@@ -157,6 +204,12 @@
                                     Tag="{Binding}"
                                     Style="{StaticResource LibraryCardButton}"
                                     Click="Item_Click">
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="查看详情"
+                                                  Click="ItemContextDetails_Click"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
                                 <StackPanel Width="170">
                                     <Border Width="170"
                                             Height="250"
@@ -186,6 +239,25 @@
                                                        Margin="0,8,8,0"
                                                        Foreground="#FF6B7D"
                                                        FontSize="18"/>
+
+                                            <Border x:Name="HoverInfo"
+                                                    VerticalAlignment="Bottom"
+                                                    Background="#D9090910"
+                                                    Padding="10,9"
+                                                    Opacity="0">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Title}"
+                                                               Foreground="White"
+                                                               FontSize="13"
+                                                               FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding MetaLine}"
+                                                               Foreground="#BDC3CE"
+                                                               FontSize="11"
+                                                               Margin="0,3,0,0"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                            </Border>
                                         </Grid>
                                     </Border>
 
@@ -203,14 +275,63 @@
                                                TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
                             </Button>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=IsMouseOver}"
+                                             Value="True">
+                                    <Setter TargetName="HoverInfo" Property="Opacity" Value="1"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=IsKeyboardFocusWithin}"
+                                             Value="True">
+                                    <Setter TargetName="HoverInfo" Property="Opacity" Value="1"/>
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
 
+            <Border Background="#08080C"
+                    Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}"
+                    IsHitTestVisible="False">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            MaxWidth="420">
+                    <TextBlock Text="这里暂时没有媒体"
+                               Foreground="White"
+                               FontSize="24"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="调整媒体库、类型、年份、收藏或搜索条件后再试。"
+                               Foreground="#9299A6"
+                               FontSize="13"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center"
+                               Margin="0,9,0,0"/>
+                </StackPanel>
+            </Border>
+
             <Border x:Name="LoadingOverlay"
-                    Background="#9908080C"
+                    Background="#E008080C"
                     Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                    <TextBlock Text="正在加载媒体库…"
+                               Foreground="#D9DDE5"
+                               FontSize="14"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,18"/>
+                    <WrapPanel HorizontalAlignment="Center">
+                        <Border Width="120" Height="176" Background="#181820" CornerRadius="10" Margin="5"/>
+                        <Border Width="120" Height="176" Background="#1D1D25" CornerRadius="10" Margin="5"/>
+                        <Border Width="120" Height="176" Background="#22222B" CornerRadius="10" Margin="5"/>
+                        <Border Width="120" Height="176" Background="#1D1D25" CornerRadius="10" Margin="5"/>
+                        <Border Width="120" Height="176" Background="#181820" CornerRadius="10" Margin="5"/>
+                    </WrapPanel>
+                    <ProgressBar IsIndeterminate="True"
+                                 Width="260"
+                                 Height="3"
+                                 Margin="0,18,0,0"/>
+                </StackPanel>
             </Border>
         </Grid>
 

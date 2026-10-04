@@ -106,6 +106,7 @@ public sealed class LibrarySectionViewModel : INotifyPropertyChanged
 
 public sealed class HomeViewModel : INotifyPropertyChanged, IDisposable
 {
+    private const int HeroItemLimit = 6;
     private readonly EmbyClient _client;
     private readonly DispatcherTimer _heroTimer;
     private LibrarySectionViewModel? _currentLibrary;
@@ -165,7 +166,7 @@ public sealed class HomeViewModel : INotifyPropertyChanged, IDisposable
         foreach (var view in visibleViews)
         {
             var section = new LibrarySectionViewModel { Id = view.Id, Name = view.Name };
-            var items = await _client.GetLibraryLatestAsync(view.Id, 8);
+            var items = await _client.GetLibraryLatestAsync(view.Id, HeroItemLimit);
             foreach (var item in items.Where(x => !string.IsNullOrWhiteSpace(x.Id)))
                 section.Items.Add(new MediaCardViewModel(_client, item));
 
@@ -182,7 +183,7 @@ public sealed class HomeViewModel : INotifyPropertyChanged, IDisposable
         if (Libraries.Count == 0 && LatestItems.Count > 0)
         {
             var fallback = new LibrarySectionViewModel { Id = "latest", Name = "Latest" };
-            foreach (var item in LatestItems.Take(8))
+            foreach (var item in LatestItems.Take(HeroItemLimit))
                 fallback.Items.Add(item);
             Libraries.Add(fallback);
         }

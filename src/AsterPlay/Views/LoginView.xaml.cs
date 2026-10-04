@@ -29,7 +29,7 @@ public partial class LoginView : UserControl
         }
         catch (Exception ex)
         {
-            MessageBlock.Text = ex.Message;
+            MessageBlock.Text = UserError.GetMessage(ex, "登录");
         }
         finally
         {

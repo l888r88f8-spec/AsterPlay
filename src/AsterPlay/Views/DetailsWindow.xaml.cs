@@ -32,6 +32,7 @@ public partial class DetailsWindow : Window
     {
         LoadingOverlay.Visibility = Visibility.Visible;
         SetActionsEnabled(false);
+        var loadTimer = System.Diagnostics.Stopwatch.StartNew();
 
         try
         {
@@ -65,7 +66,7 @@ public partial class DetailsWindow : Window
         catch (Exception ex)
         {
             MessageBox.Show(
-                ex.Message,
+                UserError.GetMessage(ex, "加载详情"),
                 "Details",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -73,6 +74,11 @@ public partial class DetailsWindow : Window
         }
         finally
         {
+            loadTimer.Stop();
+            PlaybackLog.Write(
+                "Performance",
+                $"Details load: {loadTimer.Elapsed.TotalMilliseconds:0} ms, itemId={_item.Id}, type={_item.Type}, " +
+                $"workingSet={Environment.WorkingSet / 1024d / 1024d:0.0} MB, managed={GC.GetTotalMemory(false) / 1024d / 1024d:0.0} MB");
             SetActionsEnabled(true);
         }
     }
@@ -202,7 +208,7 @@ public partial class DetailsWindow : Window
         {
             SeriesStatusBlock.Text = $"{season.Title} · 加载失败";
             MessageBox.Show(
-                ex.Message,
+                UserError.GetMessage(ex, "加载剧集"),
                 "Episodes",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -236,7 +242,7 @@ public partial class DetailsWindow : Window
         catch (Exception ex)
         {
             MessageBox.Show(
-                ex.Message,
+                UserError.GetMessage(ex, "播放"),
                 "Playback",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -265,7 +271,7 @@ public partial class DetailsWindow : Window
         catch (Exception ex)
         {
             MessageBox.Show(
-                ex.Message,
+                UserError.GetMessage(ex, "播放"),
                 "Playback",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -291,7 +297,7 @@ public partial class DetailsWindow : Window
         catch (Exception ex)
         {
             MessageBox.Show(
-                ex.Message,
+                UserError.GetMessage(ex, "更新收藏"),
                 "Favorite",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
