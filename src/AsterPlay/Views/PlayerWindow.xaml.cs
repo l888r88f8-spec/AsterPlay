@@ -36,6 +36,7 @@ public partial class PlayerWindow : Window
     {
         try
         {
+            PlaybackLog.Write("Player", $"Window loaded: title={_launch.Title}, itemId={_launch.ItemId}, mediaSourceId={_launch.MediaSourceId}, resumeTicks={_launch.ResumePositionTicks}, log={PlaybackLog.LogPath}");
             var resumeSeconds = _launch.ResumePositionTicks / 10_000_000d;
             PlayerHost.Load(_launch.Url, resumeSeconds);
             VolumeSlider.Value = 100;
@@ -60,7 +61,8 @@ public partial class PlayerWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "mpv", MessageBoxButton.OK, MessageBoxImage.Error);
+            PlaybackLog.Error("Player", ex);
+            MessageBox.Show($"{ex.Message}\n\n日志：{PlaybackLog.LogPath}", "mpv", MessageBoxButton.OK, MessageBoxImage.Error);
             Close();
         }
     }
@@ -73,6 +75,9 @@ public partial class PlayerWindow : Window
             duration = _launch.RunTimeTicks.Value / 10_000_000d;
 
         _lastPositionTicks = (long)(position * 10_000_000d);
+
+        PlaybackLog.Write("PlayerState",
+            $"pos={position:0.###}, duration={duration:0.###}, paused={PlayerHost.IsPaused}, buffering={PlayerHost.IsBuffering}, volume={PlayerHost.Volume:0.##}");
 
         _updatingUi = true;
         try
@@ -119,14 +124,16 @@ public partial class PlayerWindow : Window
         {
             await action();
         }
-        catch
+        catch (Exception ex)
         {
+            PlaybackLog.Error("PlaybackReport", ex);
             // Playback must continue even if the server temporarily rejects a progress update.
         }
     }
 
     private void PlayerWindow_Closed(object? sender, EventArgs e)
     {
+        PlaybackLog.Write("Player", $"Window closed at ticks={_lastPositionTicks}");
         _timer.Stop();
         _ = SafeReportAsync(() =>
             _client.ReportPlaybackStoppedAsync(
@@ -138,12 +145,22 @@ public partial class PlayerWindow : Window
 
     private void Pause_Click(object sender, RoutedEventArgs e)
     {
+        PlaybackLog.Write("Player", "Pause button clicked");
         PlayerHost.TogglePause();
         _ = ReportProgressAsync();
     }
 
-    private void Back_Click(object sender, RoutedEventArgs e) => PlayerHost.Seek(-10);
-    private void Forward_Click(object sender, RoutedEventArgs e) => PlayerHost.Seek(10);
+    private void Back_Click(object sender, RoutedEventArgs e)
+    {
+        PlaybackLog.Write("Player", "Seek -10");
+        PlayerHost.Seek(-10);
+    }
+
+    private void Forward_Click(object sender, RoutedEventArgs e)
+    {
+        PlaybackLog.Write("Player", "Seek +10");
+        PlayerHost.Seek(10);
+    }
 
     private void PositionSlider_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
