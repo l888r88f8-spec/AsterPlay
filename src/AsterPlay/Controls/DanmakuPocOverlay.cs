@@ -204,7 +204,7 @@ public sealed class DanmakuPocOverlay : FrameworkElement
         if (_textCache.TryGetValue(slot, out var cached))
             return cached;
 
-        var text = slot % 5 switch
+        var text = (slot % 5) switch
         {
             0 => $"AsterPlay PoC · {FormatTimeline(bornAt)} · WPF Overlay",
             1 => $"Render API + WPF · #{slot:0000}",
