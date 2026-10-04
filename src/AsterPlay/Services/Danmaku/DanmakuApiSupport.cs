@@ -112,7 +112,7 @@ internal static class DanmakuApiSupport
         builder.Query = string.Join(
             "&",
             query
-                .Where(item => !string.IsNullOrWhiteSpace(item.Value))
+                .Where(item => item.Value is not null)
                 .Select(item =>
                     $"{Uri.EscapeDataString(item.Key)}={Uri.EscapeDataString(item.Value!)}"));
 
@@ -171,6 +171,134 @@ internal static class DanmakuApiSupport
         }
 
         return Deduplicate(result);
+    }
+
+    public static IReadOnlyList<DanmakuSeriesMatchCandidate> ParseSeriesSearchCandidates(
+        JsonElement root,
+        DanmakuContext context,
+        string queryText)
+    {
+        var result = new List<DanmakuSeriesMatchCandidate>();
+
+        if (!TryGetArray(root, "animes", out var animes))
+            return result;
+
+        foreach (var animeValue in animes.EnumerateArray())
+        {
+            var animeId = LongField(
+                animeValue,
+                "animeId",
+                "id",
+                "animeID");
+            var animeTitle = StringField(
+                animeValue,
+                "animeTitle",
+                "title",
+                "name");
+
+            if (string.IsNullOrWhiteSpace(animeTitle))
+                continue;
+
+            var animeSeason = ExtractSeasonNumber(animeTitle);
+            var episodes = new List<DanmakuMatchCandidate>();
+
+            if (TryGetArray(animeValue, "episodes", out var episodeArray))
+            {
+                foreach (var episodeValue in episodeArray.EnumerateArray())
+                {
+                    var episodeId = LongField(
+                        episodeValue,
+                        "episodeId",
+                        "id",
+                        "episodeID");
+                    if (episodeId <= 0)
+                        continue;
+
+                    var episodeTitle = StringField(
+                        episodeValue,
+                        "episodeTitle",
+                        "title",
+                        "name");
+
+                    var episodeNumber = IntField(
+                        episodeValue,
+                        -1,
+                        "episodeNumber",
+                        "episode",
+                        "sort");
+
+                    if (episodeNumber <= 0)
+                        episodeNumber = ExtractEpisodeNumber(episodeTitle);
+
+                    var candidate = new DanmakuMatchCandidate(
+                        episodeId,
+                        animeTitle,
+                        episodeTitle,
+                        animeSeason,
+                        episodeNumber,
+                        0,
+                        "manual-series");
+
+                    candidate = candidate with
+                    {
+                        Score = ScoreCandidate(
+                            context,
+                            candidate,
+                            queryText)
+                    };
+
+                    episodes.Add(candidate);
+                }
+            }
+
+            if (episodes.Count == 0)
+                continue;
+
+            var titleScore =
+                TitleScore(
+                    DanmakuApiSupport.IsEpisode(context)
+                        ? context.SeriesName
+                        : context.Title,
+                    animeTitle) * 80d;
+
+            var seasonScore = 0d;
+            if (context.SeasonNumber is > 0)
+            {
+                if (animeSeason == context.SeasonNumber.Value)
+                    seasonScore = 24d;
+                else if (animeSeason > 0)
+                    seasonScore = -30d;
+                else if (context.SeasonNumber.Value == 1)
+                    seasonScore = 5d;
+            }
+
+            var episodeScore = episodes.Max(item => item.Score) * 0.2d;
+            var score = titleScore + seasonScore + episodeScore;
+
+            result.Add(new DanmakuSeriesMatchCandidate(
+                animeId,
+                animeTitle,
+                animeSeason,
+                score,
+                episodes
+                    .OrderBy(item =>
+                        item.EpisodeNumber > 0
+                            ? item.EpisodeNumber
+                            : int.MaxValue)
+                    .ThenBy(item => item.EpisodeTitle)
+                    .ToArray()));
+        }
+
+        return result
+            .GroupBy(item =>
+                item.AnimeId > 0
+                    ? $"id:{item.AnimeId}"
+                    : $"title:{item.AnimeTitle}",
+                StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+                group.OrderByDescending(item => item.Score).First())
+            .OrderByDescending(item => item.Score)
+            .ToArray();
     }
 
     public static IReadOnlyList<DanmakuMatchCandidate> ParseEpisodeSearchCandidates(
@@ -755,6 +883,35 @@ internal static class DanmakuApiSupport
 
         return bool.TryParse(value.ToString(), out var parsed) &&
                parsed;
+    }
+}
+
+public sealed record DanmakuSeriesMatchCandidate(
+    long AnimeId,
+    string AnimeTitle,
+    int SeasonNumber,
+    double Score,
+    IReadOnlyList<DanmakuMatchCandidate> Episodes)
+{
+    public string DisplayTitle => AnimeTitle;
+
+    public string DetailText
+    {
+        get
+        {
+            var parts = new List<string>();
+
+            if (SeasonNumber > 0)
+                parts.Add($"S{SeasonNumber:00}");
+
+            parts.Add($"{Episodes.Count} 集");
+            parts.Add($"评分 {Score:0.#}");
+
+            if (AnimeId > 0)
+                parts.Add($"animeId {AnimeId}");
+
+            return string.Join(" · ", parts);
+        }
     }
 }
 
