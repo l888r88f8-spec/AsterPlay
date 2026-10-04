@@ -14,15 +14,15 @@ public partial class PlayerWindow : Window
     private bool _updatingUi;
     private bool _fullscreen;
     private long _lastPositionTicks;
-    private readonly double _resumeSeconds;
-    private bool _resumeApplied;
+    private readonly double _timelineOffsetSeconds;
 
     public PlayerWindow(EmbyClient client, PlaybackLaunch launch)
     {
         _client = client;
         _launch = launch;
-        _resumeSeconds = Math.Max(0, launch.ResumePositionTicks / 10_000_000d);
-        _resumeApplied = _resumeSeconds <= 0.25;
+        _timelineOffsetSeconds = launch.UsesServerStartOffset
+            ? Math.Max(0, launch.ResumePositionTicks / 10_000_000d)
+            : 0;
 
         InitializeComponent();
 
@@ -40,8 +40,11 @@ public partial class PlayerWindow : Window
     {
         try
         {
-            PlaybackLog.Write("Player", $"Window loaded: title={_launch.Title}, itemId={_launch.ItemId}, mediaSourceId={_launch.MediaSourceId}, resumeTicks={_launch.ResumePositionTicks}, log={PlaybackLog.LogPath}");
-            PlaybackLog.Write("Player", $"Load from start; resume seek will be applied after media is ready: resumeSeconds={_resumeSeconds:0.###}");
+            PlaybackLog.Write("Player",
+                $"Window loaded: title={_launch.Title}, itemId={_launch.ItemId}, mediaSourceId={_launch.MediaSourceId}, " +
+                $"resumeTicks={_launch.ResumePositionTicks}, serverOffset={_launch.UsesServerStartOffset}, " +
+                $"timelineOffset={_timelineOffsetSeconds:0.###}, log={PlaybackLog.LogPath}");
+            PlaybackLog.Write("Player", "mpv loads the server stream from local position 0; no initial mpv seek.");
             PlayerHost.Load(_launch.Url);
             VolumeSlider.Value = 100;
             _lastPositionTicks = _launch.ResumePositionTicks;
@@ -73,23 +76,19 @@ public partial class PlayerWindow : Window
 
     private void PlayerTimer_Tick(object? sender, EventArgs e)
     {
-        var position = Math.Max(0, PlayerHost.PositionSeconds);
-        var duration = PlayerHost.DurationSeconds;
-        if (duration <= 0 && _launch.RunTimeTicks is > 0)
-            duration = _launch.RunTimeTicks.Value / 10_000_000d;
+        var mpvPosition = Math.Max(0, PlayerHost.PositionSeconds);
+        var position = _timelineOffsetSeconds + mpvPosition;
 
-        if (!_resumeApplied && duration > 0)
-        {
-            _resumeApplied = true;
-            PlaybackLog.Write("Player", $"Applying deferred resume seek: {_resumeSeconds:0.###}s");
-            PlayerHost.SeekAbsolute(_resumeSeconds);
-            position = _resumeSeconds;
-        }
+        var duration = _launch.RunTimeTicks is > 0
+            ? _launch.RunTimeTicks.Value / 10_000_000d
+            : _timelineOffsetSeconds + Math.Max(0, PlayerHost.DurationSeconds);
 
         _lastPositionTicks = (long)(position * 10_000_000d);
 
         PlaybackLog.Write("PlayerState",
-            $"pos={position:0.###}, duration={duration:0.###}, paused={PlayerHost.IsPaused}, buffering={PlayerHost.IsBuffering}, volume={PlayerHost.Volume:0.##} | {PlayerHost.DiagnosticState}");
+            $"mpvPos={mpvPosition:0.###}, absolutePos={position:0.###}, offset={_timelineOffsetSeconds:0.###}, " +
+            $"duration={duration:0.###}, paused={PlayerHost.IsPaused}, buffering={PlayerHost.IsBuffering}, " +
+            $"volume={PlayerHost.Volume:0.##} | {PlayerHost.DiagnosticState}");
 
         _updatingUi = true;
         try
@@ -113,7 +112,7 @@ public partial class PlayerWindow : Window
         }
 
         _reportSeconds++;
-        if (_reportSeconds >= 10)
+        if (_reportSeconds >= 5)
         {
             _reportSeconds = 0;
             _ = ReportProgressAsync();
@@ -179,7 +178,13 @@ public partial class PlayerWindow : Window
     private void PositionSlider_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         if (!_updatingUi)
-            PlayerHost.SeekAbsolute(PositionSlider.Value);
+        {
+            var requestedAbsolute = PositionSlider.Value;
+            var localTarget = Math.Max(0, requestedAbsolute - _timelineOffsetSeconds);
+            PlaybackLog.Write("Player",
+                $"Timeline seek: absolute={requestedAbsolute:0.###}, local={localTarget:0.###}, offset={_timelineOffsetSeconds:0.###}");
+            PlayerHost.SeekAbsolute(localTarget);
+        }
     }
 
     private void VolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
