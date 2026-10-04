@@ -32,6 +32,7 @@ public partial class DetailsWindow : Window
     {
         LoadingOverlay.Visibility = Visibility.Visible;
         SetActionsEnabled(false);
+        var loadTimer = System.Diagnostics.Stopwatch.StartNew();
 
         try
         {
@@ -73,6 +74,11 @@ public partial class DetailsWindow : Window
         }
         finally
         {
+            loadTimer.Stop();
+            PlaybackLog.Write(
+                "Performance",
+                $"Details load: {loadTimer.Elapsed.TotalMilliseconds:0} ms, itemId={_item.Id}, type={_item.Type}, " +
+                $"workingSet={Environment.WorkingSet / 1024d / 1024d:0.0} MB, managed={GC.GetTotalMemory(false) / 1024d / 1024d:0.0} MB");
             SetActionsEnabled(true);
         }
     }
