@@ -89,7 +89,7 @@ public partial class PlayerWindow : Window
         _lastPositionTicks = (long)(position * 10_000_000d);
 
         PlaybackLog.Write("PlayerState",
-            $"pos={position:0.###}, duration={duration:0.###}, paused={PlayerHost.IsPaused}, buffering={PlayerHost.IsBuffering}, volume={PlayerHost.Volume:0.##}");
+            $"pos={position:0.###}, duration={duration:0.###}, paused={PlayerHost.IsPaused}, buffering={PlayerHost.IsBuffering}, volume={PlayerHost.Volume:0.##} | {PlayerHost.DiagnosticState}");
 
         _updatingUi = true;
         try
