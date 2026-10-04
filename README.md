@@ -31,7 +31,7 @@ bootstrap-dotnet.cmd
 build-windows.cmd
 ```
 
-The .NET SDK bootstrap is optional if .NET 8 SDK is already installed. The default release build uses a fixed Windows x64 LGPL libmpv package pinned by release, mpv commit and SHA-256. `build-windows.ps1` verifies that pin before publishing; set `ASTERPLAY_MPV_DIR` only when intentionally supplying a different tested runtime.
+The portable bootstrap installs the pinned .NET SDK 8.0.425; it is optional when a compatible .NET 8 SDK is already installed. The default release build uses a fixed Windows x64 LGPL libmpv package pinned by release, mpv commit and SHA-256. `build-windows.ps1` verifies that pin before publishing; set `ASTERPLAY_MPV_DIR` only when intentionally supplying a different tested runtime.
 
 Output:
 
