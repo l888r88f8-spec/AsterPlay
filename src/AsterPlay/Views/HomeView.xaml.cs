@@ -13,6 +13,7 @@ public partial class HomeView : UserControl
     private bool _playbackRefreshSubscribed;
 
     public event EventHandler? LogoutRequested;
+    public event EventHandler? LibraryRequested;
 
     public HomeView(EmbyClient client)
     {
@@ -187,7 +188,7 @@ public partial class HomeView : UserControl
         try
         {
             var launch = await _viewModel.PlayItemAsync(item);
-            new PlayerWindow(_client, launch).Show();
+            PlaybackNavigation.Open(_client, launch);
         }
         catch (Exception ex)
         {
@@ -215,6 +216,9 @@ public partial class HomeView : UserControl
 
     private void ShowDetails(MediaCardViewModel item) =>
         new DetailsWindow(_client, item.Item).ShowDialog();
+
+    private void OpenLibrary_Click(object sender, RoutedEventArgs e) =>
+        LibraryRequested?.Invoke(this, EventArgs.Empty);
 
     private void Logout_Click(object sender, RoutedEventArgs e) =>
         LogoutRequested?.Invoke(this, EventArgs.Empty);

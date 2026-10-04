@@ -1,4 +1,5 @@
-using System.ComponentModel;
+using System.Windows.Media;
+using System.Windows.Shapes;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -12,8 +13,11 @@ using OpenTK.Wpf;
 
 namespace AsterPlay.Views;
 
-public partial class PlayerWindow : Window
+public partial class PlayerWindow : UserControl
 {
+    public event EventHandler? BackRequested;
+    public event Action<PlaybackLaunch>? PlaybackReplacementRequested;
+
     private static readonly double[] Speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
     private readonly EmbyClient _client;
@@ -25,6 +29,7 @@ public partial class PlayerWindow : Window
     private DanmakuSettings _danmakuSettings = DanmakuSettingsStore.Load();
     private DanmakuSourceSettings _danmakuSourceSettings =
         DanmakuSourceSettingsStore.Load();
+    private readonly AppSettings _appSettings = AppSettingsStore.Load();
     private int _danmakuLoadVersion;
     private double _timelineOffsetSeconds;
 
@@ -73,8 +78,18 @@ public partial class PlayerWindow : Window
 
         InitializeComponent();
 
-        Title = $"AsterPlay · {launch.Title}";
-        TitleBlock.Text = launch.Title;
+        TitleBlock.Text = string.IsNullOrWhiteSpace(launch.SeriesName)
+            ? launch.Title
+            : launch.SeriesName;
+        EpisodeTitleBlock.Text = BuildEpisodeSubtitle(launch);
+
+        var episodeNavigationAvailable =
+            !string.IsNullOrWhiteSpace(launch.SeriesId) &&
+            launch.SeasonNumber is not null;
+
+        PreviousEpisodeButton.IsEnabled = episodeNavigationAvailable;
+        NextEpisodeButton.IsEnabled = episodeNavigationAvailable;
+        EpisodeListButton.IsEnabled = episodeNavigationAvailable;
 
         DanmakuOverlay.SetSettings(_danmakuSettings);
 
@@ -88,7 +103,7 @@ public partial class PlayerWindow : Window
         _controlsTimer.Tick += ControlsTimer_Tick;
 
         Loaded += PlayerWindow_Loaded;
-        Closing += PlayerWindow_Closing;
+        Unloaded += PlayerWindow_Unloaded;
     }
 
     private void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
@@ -96,7 +111,7 @@ public partial class PlayerWindow : Window
         try
         {
             PlaybackLog.Write("Player",
-                $"Window loaded: title={_launch.Title}, itemId={_launch.ItemId}, mediaSourceId={_launch.MediaSourceId}, " +
+                $"Player page loaded: title={_launch.Title}, itemId={_launch.ItemId}, mediaSourceId={_launch.MediaSourceId}, " +
                 $"resumeTicks={_launch.ResumePositionTicks}, serverOffset={_launch.UsesServerStartOffset}, " +
                 $"timelineOffset={_timelineOffsetSeconds:0.###}, log={PlaybackLog.LogPath}");
             PlaybackLog.Write("Player",
@@ -134,7 +149,7 @@ public partial class PlayerWindow : Window
                 "libmpv missing",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
-            Close();
+            RequestBack();
         }
         catch (Exception ex)
         {
@@ -144,7 +159,7 @@ public partial class PlayerWindow : Window
                 "player",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
-            Close();
+            RequestBack();
         }
     }
 
@@ -251,7 +266,7 @@ public partial class PlayerWindow : Window
                         "libmpv Render API",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
-                    Close();
+                    RequestBack();
                 }));
         }
     }
@@ -371,9 +386,13 @@ public partial class PlayerWindow : Window
         _updatingUi = true;
         try
         {
+            var snapshot = _mpv?.GetDiagnosticSnapshot();
+
             if (duration > 0)
             {
                 PositionSlider.Maximum = duration;
+                BufferedProgressBar.Maximum = duration;
+                PlayedProgressBar.Maximum = duration;
 
                 if (_serverSeekUiTargetSeconds is null &&
                     !_positionSliderPointerDown &&
@@ -381,6 +400,10 @@ public partial class PlayerWindow : Window
                 {
                     PositionSlider.Value = Math.Clamp(position, 0, duration);
                 }
+
+                PlayedProgressBar.Value = Math.Clamp(position, 0, duration);
+                var bufferedSeconds = Math.Max(0, snapshot?.CacheSeconds ?? 0);
+                BufferedProgressBar.Value = Math.Clamp(position + bufferedSeconds, 0, duration);
             }
 
             if (_serverSeekUiTargetSeconds is null &&
@@ -391,13 +414,15 @@ public partial class PlayerWindow : Window
             }
 
             DurationBlock.Text = duration > 0 ? FormatTime(duration) : "--:--";
-            PauseButton.Content = paused ? "播放" : "暂停";
-            MuteButton.Content = volume <= 0.01 ? "取消静音" : "静音";
+            PauseButton.Content = paused ? "▶" : "⏸";
+            MuteButton.Content = volume <= 0.01 ? "🔇" : "🔊";
             StatusBlock.Text = _serverSeekUiTargetSeconds is double seekTarget
                 ? $"跳转至 {FormatTime(seekTarget)}…"
                 : buffering ? "缓冲中…" : paused ? "已暂停" : "";
 
             VolumeSlider.Value = Math.Clamp(volume, 0, 100);
+            NetworkSpeedBlock.Text = FormatNetworkSpeed(snapshot?.NetworkSpeedBytesPerSecond);
+            ResolutionButton.Content = FormatResolutionLabel(snapshot?.Width, snapshot?.Height);
 
             var speedIndex = Array.FindIndex(Speeds, x => Math.Abs(x - speed) < 0.01);
             if (speedIndex >= 0 && SpeedComboBox.SelectedIndex != speedIndex)
@@ -420,7 +445,7 @@ public partial class PlayerWindow : Window
             return;
         }
 
-        if (DateTime.UtcNow - _lastControlsActivityUtc >= TimeSpan.FromSeconds(3))
+        if (DateTime.UtcNow - _lastControlsActivityUtc >= TimeSpan.FromSeconds(_appSettings.PlayerControlsAutoHideSeconds))
             HideControls();
     }
 
@@ -458,6 +483,7 @@ public partial class PlayerWindow : Window
             return;
 
         ControlsPanel.Visibility = Visibility.Collapsed;
+        MoreSettingsPanel.Visibility = Visibility.Collapsed;
         PlayerRoot.Cursor = Cursors.None;
     }
 
@@ -954,11 +980,13 @@ public partial class PlayerWindow : Window
             string.Equals(track.Type, "sub", StringComparison.Ordinal) &&
             track.Selected);
 
-        AudioButton.Content = selectedAudio is null
-            ? "音轨"
-            : $"音轨 · {FormatTrackButtonLabel(selectedAudio)}";
+        AudioButton.Content = "♫";
+        AudioButton.ToolTip = selectedAudio is null
+            ? "音频轨道"
+            : $"音频 · {FormatTrackButtonLabel(selectedAudio)}";
 
-        SubtitleButton.Content = selectedSubtitle is null
+        SubtitleButton.Content = "CC";
+        SubtitleButton.ToolTip = selectedSubtitle is null
             ? "字幕 · 关闭"
             : $"字幕 · {FormatTrackButtonLabel(selectedSubtitle)}";
     }
@@ -1054,6 +1082,7 @@ public partial class PlayerWindow : Window
             }
 
             DanmakuOverlay.SetDocument(document);
+            BuildDanmakuHeatmap(document);
 
             PlaybackLog.Write(
                 "Danmaku",
@@ -1085,7 +1114,7 @@ public partial class PlayerWindow : Window
         var dialog = new DanmakuSourceSettingsWindow(
             _danmakuSourceSettings)
         {
-            Owner = this
+            Owner = Window.GetWindow(this)
         };
 
         if (dialog.ShowDialog() != true || dialog.Result is null)
@@ -1126,7 +1155,7 @@ public partial class PlayerWindow : Window
             _danmakuSourceSettings,
             currentBinding)
         {
-            Owner = this
+            Owner = Window.GetWindow(this)
         };
 
         if (dialog.ShowDialog() != true)
@@ -1363,7 +1392,7 @@ public partial class PlayerWindow : Window
         var dialog = new DanmakuFilterWindow(
             _danmakuSettings)
         {
-            Owner = this
+            Owner = Window.GetWindow(this)
         };
 
         if (dialog.ShowDialog() != true ||
@@ -1528,6 +1557,144 @@ public partial class PlayerWindow : Window
             _mpv.Speed);
     }
 
+    private void MoreSettings_Click(object sender, RoutedEventArgs e)
+    {
+        MoreSettingsPanel.Visibility =
+            MoreSettingsPanel.Visibility == Visibility.Visible
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        ShowControls();
+    }
+
+    private void Resolution_Click(object sender, RoutedEventArgs e)
+    {
+        ToggleDiagnostics();
+        ShowControls();
+    }
+
+    private async void PreviousEpisode_Click(object sender, RoutedEventArgs e) =>
+        await NavigateAdjacentEpisodeAsync(-1);
+
+    private async void NextEpisode_Click(object sender, RoutedEventArgs e) =>
+        await NavigateAdjacentEpisodeAsync(1);
+
+    private async Task NavigateAdjacentEpisodeAsync(int offset)
+    {
+        try
+        {
+            var episodes = await GetCurrentSeasonEpisodesAsync();
+            if (episodes.Count == 0)
+                return;
+
+            var currentIndex = episodes
+                .Select((item, index) => (item, index))
+                .FirstOrDefault(x => string.Equals(
+                    x.item.Id,
+                    _launch.ItemId,
+                    StringComparison.OrdinalIgnoreCase))
+                .index;
+
+            if (currentIndex == 0 &&
+                !string.Equals(episodes[0].Id, _launch.ItemId, StringComparison.OrdinalIgnoreCase) &&
+                _launch.EpisodeNumber is int episodeNumber)
+            {
+                currentIndex = episodes.FindIndex(item => item.IndexNumber == episodeNumber);
+            }
+
+            var targetIndex = currentIndex + offset;
+            if (currentIndex < 0 || targetIndex < 0 || targetIndex >= episodes.Count)
+                return;
+
+            await RequestEpisodePlaybackAsync(episodes[targetIndex]);
+        }
+        catch (Exception ex)
+        {
+            PlaybackLog.Error("EpisodeNavigation", ex);
+            StatusBlock.Text = UserError.GetMessage(ex, "切换剧集");
+        }
+    }
+
+    private async void EpisodeList_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var episodes = await GetCurrentSeasonEpisodesAsync();
+            if (episodes.Count == 0)
+                return;
+
+            var menu = new ContextMenu
+            {
+                PlacementTarget = EpisodeListButton,
+                Placement = PlacementMode.Top,
+                StaysOpen = false,
+                MaxHeight = 460
+            };
+
+            foreach (var episode in episodes)
+            {
+                var label = episode.ParentIndexNumber is int season &&
+                            episode.IndexNumber is int number
+                    ? $"S{season:00}E{number:00} · {episode.Name}"
+                    : episode.Name;
+
+                var item = new MenuItem
+                {
+                    Header = label,
+                    IsCheckable = true,
+                    IsChecked = string.Equals(
+                        episode.Id,
+                        _launch.ItemId,
+                        StringComparison.OrdinalIgnoreCase)
+                };
+
+                item.Click += async (_, _) => await RequestEpisodePlaybackAsync(episode);
+                menu.Items.Add(item);
+            }
+
+            menu.IsOpen = true;
+            ShowControls();
+        }
+        catch (Exception ex)
+        {
+            PlaybackLog.Error("EpisodeList", ex);
+            StatusBlock.Text = UserError.GetMessage(ex, "加载选集");
+        }
+    }
+
+    private async Task<List<EmbyItem>> GetCurrentSeasonEpisodesAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_launch.SeriesId) ||
+            _launch.SeasonNumber is not int seasonNumber)
+        {
+            return [];
+        }
+
+        var seasons = await _client.GetSeasonsAsync(_launch.SeriesId);
+        var season = seasons.FirstOrDefault(item => item.IndexNumber == seasonNumber);
+        if (season is null)
+            return [];
+
+        return (await _client.GetEpisodesAsync(_launch.SeriesId, season.Id)).ToList();
+    }
+
+    private async Task RequestEpisodePlaybackAsync(EmbyItem episode)
+    {
+        StatusBlock.Text = "正在切换剧集…";
+        var replacement = await _client.GetPlayableStreamAsync(episode, restart: false);
+        PlaybackReplacementRequested?.Invoke(replacement);
+    }
+
+    private void ExitPlayer_Click(object sender, RoutedEventArgs e) =>
+        RequestBack();
+
+    private void RequestBack()
+    {
+        if (_fullscreen)
+            ToggleFullscreen();
+
+        BackRequested?.Invoke(this, EventArgs.Empty);
+    }
+
     private void Diagnostics_Click(object sender, RoutedEventArgs e) =>
         ToggleDiagnostics();
 
@@ -1673,6 +1840,117 @@ public partial class PlayerWindow : Window
         }
     }
 
+    private void BuildDanmakuHeatmap(DanmakuDocument document)
+    {
+        DanmakuHeatmapCanvas.Children.Clear();
+
+        var duration = _launch.RunTimeTicks is > 0
+            ? _launch.RunTimeTicks.Value / 10_000_000d
+            : 0;
+
+        if (duration <= 0 || document.Comments.Count == 0)
+            return;
+
+        const int bins = 96;
+        var counts = new int[bins];
+
+        foreach (var comment in document.Comments)
+        {
+            var index = (int)Math.Floor(comment.TimeSeconds / duration * bins);
+            index = Math.Clamp(index, 0, bins - 1);
+            counts[index]++;
+        }
+
+        var max = counts.Max();
+        if (max <= 0)
+            return;
+
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Loaded,
+            new Action(() =>
+            {
+                DanmakuHeatmapCanvas.Children.Clear();
+
+                var width = DanmakuHeatmapCanvas.ActualWidth;
+                if (width <= 1)
+                    width = Math.Max(640, ActualWidth - 48);
+
+                var cellWidth = width / bins;
+
+                for (var i = 0; i < bins; i++)
+                {
+                    if (counts[i] <= 0)
+                        continue;
+
+                    var intensity = Math.Sqrt(counts[i] / (double)max);
+                    var height = 2 + 13 * intensity;
+                    var rect = new Rectangle
+                    {
+                        Width = Math.Max(1.5, cellWidth - 0.7),
+                        Height = height,
+                        RadiusX = 1,
+                        RadiusY = 1,
+                        Fill = new SolidColorBrush(
+                            Color.FromArgb(
+                                (byte)(70 + 150 * intensity),
+                                0x0A,
+                                0x84,
+                                0xFF))
+                    };
+
+                    Canvas.SetLeft(rect, i * cellWidth);
+                    Canvas.SetTop(rect, Math.Max(0, 18 - height));
+                    DanmakuHeatmapCanvas.Children.Add(rect);
+                }
+            }));
+    }
+
+    private static string BuildEpisodeSubtitle(PlaybackLaunch launch)
+    {
+        if (!string.IsNullOrWhiteSpace(launch.SeriesName) &&
+            launch.SeasonNumber is int season &&
+            launch.EpisodeNumber is int episode)
+        {
+            return $"S{season:00}E{episode:00} · {launch.Title}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(launch.OriginalTitle) &&
+            !string.Equals(launch.OriginalTitle, launch.Title, StringComparison.OrdinalIgnoreCase))
+        {
+            return launch.OriginalTitle;
+        }
+
+        return "";
+    }
+
+    private static string FormatNetworkSpeed(double? bytesPerSecond)
+    {
+        if (bytesPerSecond is null || bytesPerSecond <= 0)
+            return "-- MB/s";
+
+        if (bytesPerSecond >= 1024 * 1024)
+            return $"{bytesPerSecond / 1024d / 1024d:0.0} MB/s";
+
+        return $"{bytesPerSecond / 1024d:0} KB/s";
+    }
+
+    private static string FormatResolutionLabel(int? width, int? height)
+    {
+        if (height is >= 2160)
+            return "4K";
+        if (height is >= 1440)
+            return "2K";
+        if (height is >= 1080)
+            return "1080p";
+        if (height is >= 720)
+            return "720p";
+        if (height is > 0)
+            return $"{height}p";
+        if (width is > 0)
+            return $"{width}px";
+        return "HD";
+    }
+
     private static string FormatBitrate(double bitsPerSecond)
     {
         if (bitsPerSecond >= 1_000_000)
@@ -1695,22 +1973,26 @@ public partial class PlayerWindow : Window
         if (_stopHandled)
             return;
 
+        var hostWindow = Window.GetWindow(this);
+        if (hostWindow is null)
+            return;
+
         if (!_fullscreen)
         {
-            _windowedState = WindowState;
-            _windowedStyle = WindowStyle;
+            _windowedState = hostWindow.WindowState;
+            _windowedStyle = hostWindow.WindowStyle;
             _fullscreen = true;
 
-            WindowState = WindowState.Normal;
-            WindowStyle = WindowStyle.None;
-            WindowState = WindowState.Maximized;
+            hostWindow.WindowState = WindowState.Normal;
+            hostWindow.WindowStyle = WindowStyle.None;
+            hostWindow.WindowState = WindowState.Maximized;
         }
         else
         {
             _fullscreen = false;
-            WindowState = WindowState.Normal;
-            WindowStyle = _windowedStyle;
-            WindowState = _windowedState;
+            hostWindow.WindowState = WindowState.Normal;
+            hostWindow.WindowStyle = _windowedStyle;
+            hostWindow.WindowState = _windowedState;
         }
 
         ShowControls();
@@ -1775,7 +2057,7 @@ public partial class PlayerWindow : Window
         }
     }
 
-    private void PlayerWindow_Closing(object? sender, CancelEventArgs e)
+    private void PlayerWindow_Unloaded(object sender, RoutedEventArgs e)
     {
         if (_stopHandled)
             return;
@@ -1797,14 +2079,14 @@ public partial class PlayerWindow : Window
 
         var finalTicks = _lastPositionTicks;
         var finalVolume = _mpv?.Volume ?? 100;
-        PlaybackLog.Write("Player", $"Closing playback window: finalTicks={finalTicks}");
+        PlaybackLog.Write("Player", $"Leaving playback page: finalTicks={finalTicks}");
 
         _ = FinalizePlaybackAsync(finalTicks, finalVolume);
 
         PlayerRoot.Cursor = Cursors.Arrow;
         ShutdownPlayback();
 
-        PlaybackLog.Write("Player", "mpv Render API playback stopped and disposed on window close");
+        PlaybackLog.Write("Player", "mpv Render API playback stopped and disposed on page unload");
     }
 
     private void ShutdownPlayback()

@@ -14,5 +14,6 @@ public sealed record MpvDiagnosticSnapshot(
     string SubtitleTrackId,
     double? CacheSeconds,
     double? CacheBufferingState,
+    double? NetworkSpeedBytesPerSecond,
     bool Buffering,
     double? AvSync);

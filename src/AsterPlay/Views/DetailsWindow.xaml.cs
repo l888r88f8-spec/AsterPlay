@@ -237,7 +237,8 @@ public partial class DetailsWindow : Window
                 episode.Item,
                 restart: false);
 
-            new PlayerWindow(_client, launch).Show();
+            PlaybackNavigation.Open(_client, launch);
+            Close();
         }
         catch (Exception ex)
         {
@@ -266,7 +267,8 @@ public partial class DetailsWindow : Window
         try
         {
             var launch = await _client.GetPlayableStreamAsync(_item, restart);
-            new PlayerWindow(_client, launch).Show();
+            PlaybackNavigation.Open(_client, launch);
+            Close();
         }
         catch (Exception ex)
         {
