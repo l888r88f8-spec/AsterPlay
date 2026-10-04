@@ -27,6 +27,7 @@ public partial class PlayerWindow : Window
     private int _reportSeconds;
     private int _danmakuLogSeconds;
     private int _seekRequestVersion;
+    private double? _serverSeekUiTargetSeconds;
     private int _lastFramebuffer;
     private int _lastFramebufferWidth;
     private int _lastFramebufferHeight;
@@ -313,16 +314,27 @@ public partial class PlayerWindow : Window
             {
                 PositionSlider.Maximum = duration;
 
-                if (!_positionSliderPointerDown && !_positionSliderDragging)
+                if (_serverSeekUiTargetSeconds is null &&
+                    !_positionSliderPointerDown &&
+                    !_positionSliderDragging)
+                {
                     PositionSlider.Value = Math.Clamp(position, 0, duration);
+                }
             }
 
-            if (!_positionSliderPointerDown && !_positionSliderDragging)
+            if (_serverSeekUiTargetSeconds is null &&
+                !_positionSliderPointerDown &&
+                !_positionSliderDragging)
+            {
                 CurrentTimeBlock.Text = FormatTime(position);
+            }
+
             DurationBlock.Text = duration > 0 ? FormatTime(duration) : "--:--";
             PauseButton.Content = paused ? "播放" : "暂停";
             MuteButton.Content = volume <= 0.01 ? "取消静音" : "静音";
-            StatusBlock.Text = buffering ? "缓冲中…" : paused ? "已暂停" : "";
+            StatusBlock.Text = _serverSeekUiTargetSeconds is double seekTarget
+                ? $"跳转至 {FormatTime(seekTarget)}…"
+                : buffering ? "缓冲中…" : paused ? "已暂停" : "";
 
             VolumeSlider.Value = Math.Clamp(volume, 0, 100);
 
@@ -575,6 +587,8 @@ public partial class PlayerWindow : Window
         var volume = mpv.Volume;
         var speed = mpv.Speed;
 
+        _serverSeekUiTargetSeconds = requestedAbsolute;
+
         PlaybackLog.Write(
             "PlayerSeek",
             $"Server seek negotiation begin: absolute={requestedAbsolute:0.###}, ticks={targetTicks}, " +
@@ -629,6 +643,7 @@ public partial class PlayerWindow : Window
             _mpv.SetSpeed(speed);
             _mpv.SetPaused(wasPaused);
 
+            _serverSeekUiTargetSeconds = null;
             CurrentTimeBlock.Text = FormatTime(requestedAbsolute);
             PositionSlider.Value = requestedAbsolute;
             SyncDanmakuPoc();
@@ -640,6 +655,7 @@ public partial class PlayerWindow : Window
                 return;
 
             PlaybackLog.Error("PlayerSeek", ex);
+            _serverSeekUiTargetSeconds = null;
             StatusBlock.Text = "跳转失败，继续当前播放";
 
             var currentAbsolute =
