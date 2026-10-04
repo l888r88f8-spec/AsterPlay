@@ -61,6 +61,20 @@ jobs:
 
           Write-Host "Windows release package verification passed."
 
+      - name: Smoke start packaged app
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD "dist\AsterPlay\AsterPlay.exe"
+          $process = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 5
+
+          if ($process.HasExited) {
+            throw "AsterPlay exited during startup smoke test with code $($process.ExitCode)."
+          }
+
+          Stop-Process -Id $process.Id -Force
+          Write-Host "Packaged AsterPlay started successfully and stayed alive for 5 seconds."
+
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
