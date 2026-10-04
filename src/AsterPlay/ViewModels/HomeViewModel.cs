@@ -224,12 +224,15 @@ public sealed class HomeViewModel : INotifyPropertyChanged, IDisposable
         CurrentHero.IsFavorite = target;
     }
 
-    public async Task<PlaybackLaunch> PlayCurrentAsync()
+    public Task<PlaybackLaunch> PlayItemAsync(MediaCardViewModel item) =>
+        _client.GetPlayableStreamAsync(item.Item);
+
+    public Task<PlaybackLaunch> PlayCurrentAsync()
     {
         if (CurrentHero is null)
             throw new InvalidOperationException("No media item is selected.");
 
-        return await _client.GetPlayableStreamAsync(CurrentHero.Item);
+        return PlayItemAsync(CurrentHero);
     }
 
     private void AdvanceHero()
