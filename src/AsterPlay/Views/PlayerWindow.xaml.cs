@@ -28,6 +28,7 @@ public partial class PlayerWindow : Window
     private int _danmakuLogSeconds;
     private int _seekRequestVersion;
     private double? _serverSeekUiTargetSeconds;
+    private double? _danmakuSeekTargetSeconds;
     private int _lastFramebuffer;
     private int _lastFramebufferWidth;
     private int _lastFramebufferHeight;
@@ -456,12 +457,20 @@ public partial class PlayerWindow : Window
 
         PlaybackLog.Write("Player", $"Seek {(seconds >= 0 ? "+" : "")}{seconds:0.###}");
 
+        var currentAbsolute =
+            _timelineOffsetSeconds + Math.Max(0, _mpv.PositionSeconds);
+        var targetAbsolute = Math.Clamp(
+            currentAbsolute + seconds,
+            0,
+            PositionSlider.Maximum > 0
+                ? PositionSlider.Maximum
+                : Math.Max(0, currentAbsolute + seconds));
+
+        _danmakuSeekTargetSeconds = targetAbsolute;
+
         if (_launch.RequiresServerSeek)
         {
-            var currentAbsolute =
-                _timelineOffsetSeconds + Math.Max(0, _mpv.PositionSeconds);
-
-            SeekAbsoluteFromTimeline(currentAbsolute + seconds);
+            SeekAbsoluteFromTimeline(targetAbsolute);
             return;
         }
 
@@ -553,6 +562,8 @@ public partial class PlayerWindow : Window
             requestedAbsolute,
             0,
             PositionSlider.Maximum > 0 ? PositionSlider.Maximum : requestedAbsolute);
+
+        _danmakuSeekTargetSeconds = requestedAbsolute;
 
         if (_launch.RequiresServerSeek)
         {
@@ -656,6 +667,7 @@ public partial class PlayerWindow : Window
 
             PlaybackLog.Error("PlayerSeek", ex);
             _serverSeekUiTargetSeconds = null;
+            _danmakuSeekTargetSeconds = null;
             StatusBlock.Text = "跳转失败，继续当前播放";
 
             var currentAbsolute =
@@ -976,7 +988,34 @@ public partial class PlayerWindow : Window
         if (!_danmakuPocVisible || _mpv is null || !_playbackLoaded)
             return;
 
-        var timelineSeconds = _timelineOffsetSeconds + Math.Max(0, _mpv.PositionSeconds);
+        var mpvPosition = Math.Max(0, _mpv.PositionSeconds);
+        var timelineSeconds = _timelineOffsetSeconds + mpvPosition;
+
+        if (_danmakuSeekTargetSeconds is double seekTarget)
+        {
+            var offsetSettled =
+                Math.Abs(_timelineOffsetSeconds - seekTarget) <= 0.75 ||
+                !_launch.UsesServerStartOffset;
+            var timelineSettled =
+                Math.Abs(timelineSeconds - seekTarget) <= 0.75;
+
+            if (!offsetSettled || !timelineSettled)
+            {
+                DanmakuPocOverlay.Synchronize(
+                    seekTarget,
+                    paused: true,
+                    _mpv.Speed);
+                return;
+            }
+
+            PlaybackLog.Write(
+                "DanmakuPoC",
+                $"Seek timeline settled: target={seekTarget:0.###}, timeline={timelineSeconds:0.###}, " +
+                $"offset={_timelineOffsetSeconds:0.###}, mpvPos={mpvPosition:0.###}");
+
+            _danmakuSeekTargetSeconds = null;
+        }
+
         DanmakuPocOverlay.Synchronize(
             timelineSeconds,
             _mpv.IsPaused || _mpv.IsBuffering,
