@@ -297,7 +297,8 @@ public partial class PlayerWindow : Window
                 var metrics = DanmakuOverlay.GetMetrics();
                 PlaybackLog.Write(
                     "Danmaku",
-                    $"timeline={metrics.TimelineSeconds:0.###}, active={metrics.ActiveCount}, " +
+                    $"timeline={metrics.TimelineSeconds:0.###}, loaded={metrics.LoadedCount}, " +
+                    $"visible={metrics.VisibleCount}, active={metrics.ActiveCount}, layoutDropped={metrics.LayoutDroppedCount}, " +
                     $"frame={metrics.LastFrameMilliseconds:0.###}ms, peak={metrics.PeakFrameMilliseconds:0.###}ms, " +
                     $"surface={metrics.Width:0}x{metrics.Height:0}, dpi={metrics.DpiX:0}x{metrics.DpiY:0}");
             }
@@ -1191,6 +1192,56 @@ public partial class PlayerWindow : Window
                 _danmakuSettings with { ScreenHeightRatio = value },
                 $"显示区域 {value:P0}")));
 
+        menu.Items.Add(CreateDanmakuSettingGroup(
+            "密度",
+            [
+                ("低 · 35%", 0.35d),
+                ("中 · 65%", 0.65d),
+                ("高 · 100%", 1.00d)
+            ],
+            _danmakuSettings.DensityRatio,
+            value => ApplyDanmakuSettings(
+                _danmakuSettings with { DensityRatio = value },
+                $"密度 {value:P0}")));
+
+        menu.Items.Add(CreateDanmakuIntSettingGroup(
+            "同时显示上限",
+            [
+                ("省资源 · 40", 40),
+                ("标准 · 80", 80),
+                ("高 · 140", 140)
+            ],
+            _danmakuSettings.MaxActiveComments,
+            value => ApplyDanmakuSettings(
+                _danmakuSettings with { MaxActiveComments = value },
+                $"同时显示上限 {value}")));
+
+        var overlapItem = new MenuItem
+        {
+            Header = "防重叠",
+            IsCheckable = true,
+            IsChecked = _danmakuSettings.AvoidOverlap
+        };
+        overlapItem.Click += (_, _) =>
+            ApplyDanmakuSettings(
+                _danmakuSettings with
+                {
+                    AvoidOverlap = overlapItem.IsChecked
+                },
+                overlapItem.IsChecked
+                    ? "已开启防重叠"
+                    : "已关闭防重叠");
+        menu.Items.Add(overlapItem);
+
+        var filterItem = new MenuItem
+        {
+            Header =
+                $"过滤设置… ({_danmakuSettings.BlockedWords.Count} 词 / {_danmakuSettings.BlockedUsers.Count} 用户)"
+        };
+        filterItem.Click += (_, _) =>
+            OpenDanmakuFilterWindow();
+        menu.Items.Add(filterItem);
+
         menu.Items.Add(new Separator());
 
         var resetItem = new MenuItem { Header = "恢复默认设置" };
@@ -1237,6 +1288,50 @@ public partial class PlayerWindow : Window
         return group;
     }
 
+    private static MenuItem CreateDanmakuIntSettingGroup(
+        string header,
+        IReadOnlyList<(string Label, int Value)> options,
+        int currentValue,
+        Action<int> apply)
+    {
+        var group = new MenuItem { Header = header };
+
+        foreach (var option in options)
+        {
+            var item = new MenuItem
+            {
+                Header = option.Label,
+                IsCheckable = true,
+                IsChecked = option.Value == currentValue
+            };
+
+            var value = option.Value;
+            item.Click += (_, _) => apply(value);
+            group.Items.Add(item);
+        }
+
+        return group;
+    }
+
+    private void OpenDanmakuFilterWindow()
+    {
+        var dialog = new DanmakuFilterWindow(
+            _danmakuSettings)
+        {
+            Owner = this
+        };
+
+        if (dialog.ShowDialog() != true ||
+            dialog.Result is null)
+        {
+            return;
+        }
+
+        ApplyDanmakuSettings(
+            dialog.Result,
+            $"过滤已更新：{dialog.Result.BlockedWords.Count} 词 / {dialog.Result.BlockedUsers.Count} 用户");
+    }
+
     private void ApplyDanmakuSettings(
         DanmakuSettings settings,
         string statusText)
@@ -1249,7 +1344,10 @@ public partial class PlayerWindow : Window
         PlaybackLog.Write(
             "DanmakuSettings",
             $"font={_danmakuSettings.FontSize:0.##}, speed={_danmakuSettings.Speed:0.##}, " +
-            $"opacity={_danmakuSettings.Opacity:0.##}, area={_danmakuSettings.ScreenHeightRatio:0.##}");
+            $"opacity={_danmakuSettings.Opacity:0.##}, area={_danmakuSettings.ScreenHeightRatio:0.##}, " +
+            $"density={_danmakuSettings.DensityRatio:0.##}, cap={_danmakuSettings.MaxActiveComments}, " +
+            $"avoidOverlap={_danmakuSettings.AvoidOverlap}, blockedWords={_danmakuSettings.BlockedWords.Count}, " +
+            $"blockedUsers={_danmakuSettings.BlockedUsers.Count}");
 
         if (_diagnosticsVisible)
             RefreshDiagnosticsPanel();
@@ -1271,8 +1369,12 @@ public partial class PlayerWindow : Window
         PlaybackLog.Write(
             "Danmaku",
             _danmakuVisible
-                ? $"Enabled: source={metrics.SourceName}, loaded={metrics.LoadedCount}, mouseThrough={!DanmakuOverlay.IsHitTestVisible}, surface={metrics.Width:0}x{metrics.Height:0}, dpi={metrics.DpiX:0}x{metrics.DpiY:0}"
-                : $"Disabled: source={metrics.SourceName}, loaded={metrics.LoadedCount}, peakFrame={metrics.PeakFrameMilliseconds:0.###}ms");
+                ? $"Enabled: source={metrics.SourceName}, loaded={metrics.LoadedCount}, visible={metrics.VisibleCount}, " +
+                  $"layoutDropped={metrics.LayoutDroppedCount}, cap={_danmakuSettings.MaxActiveComments}, " +
+                  $"mouseThrough={!DanmakuOverlay.IsHitTestVisible}, surface={metrics.Width:0}x{metrics.Height:0}, " +
+                  $"dpi={metrics.DpiX:0}x{metrics.DpiY:0}"
+                : $"Disabled: source={metrics.SourceName}, loaded={metrics.LoadedCount}, visible={metrics.VisibleCount}, " +
+                  $"peakFrame={metrics.PeakFrameMilliseconds:0.###}ms");
 
         if (_diagnosticsVisible)
             RefreshDiagnosticsPanel();
@@ -1509,8 +1611,11 @@ public partial class PlayerWindow : Window
         {
             var danmaku = DanmakuOverlay.GetMetrics();
             DiagnosticsDanmakuBlock.Text =
-                $"{danmaku.SourceName} · {danmaku.LoadedCount} 已载入 / {danmaku.ActiveCount} 活动 · " +
-                $"字号 {_danmakuSettings.FontSize:0} / 速度 {_danmakuSettings.Speed:0.##}× / 透明度 {_danmakuSettings.Opacity:P0} · " +
+                $"{danmaku.SourceName} · {danmaku.LoadedCount} 已载入 / {danmaku.VisibleCount} 过滤后 / " +
+                $"{danmaku.ActiveCount} 活动 / {danmaku.LayoutDroppedCount} 防重叠丢弃 · " +
+                $"字号 {_danmakuSettings.FontSize:0} / 速度 {_danmakuSettings.Speed:0.##}× / " +
+                $"透明度 {_danmakuSettings.Opacity:P0} / 密度 {_danmakuSettings.DensityRatio:P0} / " +
+                $"上限 {_danmakuSettings.MaxActiveComments} · " +
                 $"{danmaku.LastFrameMilliseconds:0.00} ms / 峰值 {danmaku.PeakFrameMilliseconds:0.00} ms · " +
                 $"{danmaku.Width:0}×{danmaku.Height:0} · DPI {danmaku.DpiX:0}×{danmaku.DpiY:0}";
         }
