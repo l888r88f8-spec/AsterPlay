@@ -212,11 +212,8 @@ public sealed class EmbyClient
             ? Guid.NewGuid().ToString("N")
             : info.PlaySessionId;
 
-        // qEmby's Emby branch deliberately uses a client-generated UUID for
-        // /Sessions/Playing* reporting instead of PlaybackInfo's session id.
-        var reportPlaySessionId = Guid.NewGuid().ToString("N");
         PlaybackLog.Write("Emby",
-            $"Playback sessions: streamSessionId={playSessionId}, reportSessionId={reportPlaySessionId}");
+            $"Playback session: playSessionId={playSessionId} (shared by stream/start/progress/stop)");
 
         string url;
         bool usesServerStartOffset;
@@ -278,7 +275,6 @@ public sealed class EmbyClient
             ItemId = playable.Id,
             MediaSourceId = media.Id,
             PlaySessionId = playSessionId,
-            ReportPlaySessionId = reportPlaySessionId,
             ResumePositionTicks = resumeTicks,
             RunTimeTicks = playable.RunTimeTicks ?? media.RunTimeTicks,
             UsesServerStartOffset = usesServerStartOffset,
@@ -306,24 +302,29 @@ public sealed class EmbyClient
         double volume,
         string? eventName)
     {
-        // Match the payload shape used by the proven qEmby implementation.
-        // Keep this deliberately small: Emby only needs the playback identity,
-        // absolute position and state for resume synchronization.
         var payload = new Dictionary<string, object?>
         {
+            ["QueueableMediaTypes"] = new[] { "Video" },
+            ["CanSeek"] = true,
             ["ItemId"] = launch.ItemId,
             ["MediaSourceId"] = launch.MediaSourceId,
+            ["PlaySessionId"] = launch.PlaySessionId,
             ["PositionTicks"] = Math.Max(0, positionTicks),
-            ["PlayMethod"] = "DirectPlay",
             ["IsPaused"] = isPaused,
             ["IsMuted"] = volume <= 0.01,
-            ["CanSeek"] = true,
-            ["PlaySessionId"] = launch.ReportPlaySessionId,
-            ["QueueableMediaTypes"] = new[] { "Video" }
+            ["VolumeLevel"] = (int)Math.Clamp(Math.Round(volume), 0, 100),
+            ["PlayMethod"] = launch.PlayMethod,
+            ["PlaybackRate"] = 1.0
         };
 
+        if (launch.RunTimeTicks is > 0)
+            payload["RunTimeTicks"] = launch.RunTimeTicks.Value;
+
         if (!string.IsNullOrWhiteSpace(eventName))
-            payload["EventName"] = eventName.ToLowerInvariant();
+            payload["EventName"] = eventName;
+
+        var payloadJson = JsonSerializer.Serialize(payload, _json);
+        PlaybackLog.Write("EmbyReportPayload", $"path={path}, body={payloadJson}");
 
         using var req = CreateRequest(HttpMethod.Post, path);
         req.Content = JsonContent.Create(payload);
@@ -331,7 +332,7 @@ public sealed class EmbyClient
         using var response = await _http.SendAsync(req);
         PlaybackLog.Write("EmbyReport",
             $"{eventName ?? Path.GetFileName(path)}: status={(int)response.StatusCode}, itemId={launch.ItemId}, " +
-            $"positionTicks={positionTicks}, paused={isPaused}, volume={volume:0.##}, reportSessionId={launch.ReportPlaySessionId}");
+            $"positionTicks={positionTicks}, paused={isPaused}, volume={volume:0.##}, playSessionId={launch.PlaySessionId}, playMethod={launch.PlayMethod}");
         await EnsureSuccess(response, "Playback session update failed");
     }
 
@@ -347,16 +348,24 @@ public sealed class EmbyClient
     private HttpRequestMessage CreateRequest(HttpMethod method, string path, bool includeToken = true)
     {
         var request = new HttpRequestMessage(method, Combine(path));
-        var authorization =
-            $"MediaBrowser Client=\"AsterPlay\", Device=\"Windows\", DeviceId=\"{DeviceId}\", Version=\"2.0.0\"";
 
-        if (includeToken && !string.IsNullOrWhiteSpace(AccessToken))
-            authorization += $", Token=\"{AccessToken}\"";
+        string authorization;
+        if (includeToken &&
+            !string.IsNullOrWhiteSpace(UserId) &&
+            !string.IsNullOrWhiteSpace(AccessToken))
+        {
+            authorization =
+                $"Emby UserId=\"{UserId}\", Client=\"AsterPlay\", Device=\"Windows\", " +
+                $"DeviceId=\"{DeviceId}\", Version=\"2.0.0\", Token=\"{AccessToken}\"";
+        }
+        else
+        {
+            authorization =
+                $"Emby Client=\"AsterPlay\", Device=\"Windows\", DeviceId=\"{DeviceId}\", Version=\"2.0.0\"";
+        }
 
         request.Headers.TryAddWithoutValidation("X-Emby-Authorization", authorization);
 
-        // Keep the dedicated token header as well for compatibility with servers
-        // and reverse proxies that explicitly inspect it.
         if (includeToken && !string.IsNullOrWhiteSpace(AccessToken))
             request.Headers.TryAddWithoutValidation("X-Emby-Token", AccessToken);
 
