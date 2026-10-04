@@ -15,3 +15,5 @@ jobs:
           dotnet-version: 8.0.x
       - name: Publish
         run: dotnet publish src/AsterPlay/AsterPlay.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o publish-check
+      - name: DPAPI smoke test
+        run: dotnet run --project .ci/SessionDpapiSmoke/SessionDpapiSmoke.csproj -c Release
