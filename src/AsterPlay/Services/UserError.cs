@@ -65,6 +65,15 @@ public static class UserError
         if (current is DllNotFoundException)
             return "播放器运行库缺失。请重新运行发布构建，确认 libmpv-2.dll 及其依赖已包含在 AsterPlay 目录中。";
 
+        if (current is BadImageFormatException)
+            return "播放器运行库架构不匹配或文件已损坏。请使用 AsterPlay Windows x64 发布包重新安装。";
+
+        if (current.Message.Contains("mpv_create", StringComparison.OrdinalIgnoreCase) ||
+            current.Message.Contains("mpv_initialize", StringComparison.OrdinalIgnoreCase))
+        {
+            return "libmpv 初始化失败。请检查发布包完整性和显卡驱动；详细信息已写入 playback.log。";
+        }
+
         if (current.Message.Contains("TranscodingUrl", StringComparison.OrdinalIgnoreCase))
             return "Emby 已选择转码，但没有返回有效的转码地址。请检查服务端转码配置和媒体源状态。";
 
