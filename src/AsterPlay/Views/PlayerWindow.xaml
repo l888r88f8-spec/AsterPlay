@@ -260,6 +260,12 @@
                                     Padding="11,7"
                                     Margin="0,0,7,0"
                                     Click="DanmakuSource_Click"/>
+                            <Button x:Name="DanmakuMatchButton"
+                                    Content="匹配"
+                                    Style="{StaticResource GlassButton}"
+                                    Padding="11,7"
+                                    Margin="0,0,7,0"
+                                    Click="DanmakuMatch_Click"/>
                             <Button x:Name="DiagnosticsButton"
                                     Content="信息"
                                     Style="{StaticResource GlassButton}"
