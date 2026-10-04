@@ -26,6 +26,7 @@ public sealed class MpvPlayerHost : HwndHost
     private long _lastClickTick;
     private int _lastClickX;
     private int _lastClickY;
+    private SubclassProc? _subclassProc;
 
     public event Action? NativeMouseActivity;
     public event Action? NativeDoubleClick;
@@ -81,14 +82,13 @@ public sealed class MpvPlayerHost : HwndHost
         SetCursor(hidden ? IntPtr.Zero : LoadCursor(IntPtr.Zero, new IntPtr(IdcArrow)));
     }
 
-    protected override IntPtr WndProc(
+    private IntPtr ChildWindowProc(
         IntPtr hwnd,
-        int msg,
-        IntPtr wParam,
-        IntPtr lParam,
-        ref bool handled)
+        uint msg,
+        UIntPtr subclassId,
+        UIntPtr refData)
     {
-        switch (msg)
+        switch ((int)msg)
         {
             case WmMouseMove:
                 NativeMouseActivity?.Invoke();
@@ -97,17 +97,17 @@ public sealed class MpvPlayerHost : HwndHost
             case WmLButtonDown:
                 NativeMouseActivity?.Invoke();
 
-                var packed = lParam.ToInt64();
-                var x = unchecked((short)(packed & 0xFFFF));
-                var y = unchecked((short)((packed >> 16) & 0xFFFF));
+                var packed = GetMessagePos();
+                var screenX = unchecked((short)(packed & 0xFFFF));
+                var screenY = unchecked((short)((packed >> 16) & 0xFFFF));
                 var now = Environment.TickCount64;
                 var maxDx = Math.Max(1, GetSystemMetrics(SmCxDoubleClk));
                 var maxDy = Math.Max(1, GetSystemMetrics(SmCyDoubleClk));
 
                 if (_lastClickTick > 0 &&
                     now - _lastClickTick <= GetDoubleClickTime() &&
-                    Math.Abs(x - _lastClickX) <= maxDx &&
-                    Math.Abs(y - _lastClickY) <= maxDy)
+                    Math.Abs(screenX - _lastClickX) <= maxDx &&
+                    Math.Abs(screenY - _lastClickY) <= maxDy)
                 {
                     _lastClickTick = 0;
                     NativeDoubleClick?.Invoke();
@@ -115,8 +115,8 @@ public sealed class MpvPlayerHost : HwndHost
                 else
                 {
                     _lastClickTick = now;
-                    _lastClickX = x;
-                    _lastClickY = y;
+                    _lastClickX = screenX;
+                    _lastClickY = screenY;
                 }
                 break;
 
@@ -124,11 +124,10 @@ public sealed class MpvPlayerHost : HwndHost
                 SetCursor(_cursorHidden
                     ? IntPtr.Zero
                     : LoadCursor(IntPtr.Zero, new IntPtr(IdcArrow)));
-                handled = true;
                 return IntPtr.Zero;
         }
 
-        return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
+        return DefSubclassProc(hwnd, msg, UIntPtr.Zero, IntPtr.Zero);
     }
 
     protected override HandleRef BuildWindowCore(HandleRef hwndParent)
@@ -142,6 +141,12 @@ public sealed class MpvPlayerHost : HwndHost
         if (_hwnd == IntPtr.Zero)
             throw new InvalidOperationException("Failed to create the mpv child window.");
 
+        _subclassProc = ChildWindowProc;
+        if (!SetWindowSubclass(_hwnd, _subclassProc, UIntPtr.Zero, UIntPtr.Zero))
+            throw new InvalidOperationException("Failed to subclass the mpv child window.");
+
+        PlaybackLog.Write("PlayerHost", $"Installed native mouse hook for hwnd=0x{_hwnd.ToInt64():X}");
+
         _mpv = new MpvClient(_hwnd);
         if (!string.IsNullOrWhiteSpace(_pendingUrl))
             _mpv.Load(_pendingUrl, _pendingStartSeconds);
@@ -154,8 +159,14 @@ public sealed class MpvPlayerHost : HwndHost
         ShutdownPlayback();
 
         if (hwnd.Handle != IntPtr.Zero)
-            DestroyWindow(hwnd.Handle);
+        {
+            if (_subclassProc is not null)
+                RemoveWindowSubclass(hwnd.Handle, _subclassProc, UIntPtr.Zero);
 
+            DestroyWindow(hwnd.Handle);
+        }
+
+        _subclassProc = null;
         _hwnd = IntPtr.Zero;
     }
 
@@ -181,6 +192,37 @@ public sealed class MpvPlayerHost : HwndHost
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool DestroyWindow(IntPtr hwnd);
+
+    private delegate IntPtr SubclassProc(
+        IntPtr hwnd,
+        uint msg,
+        UIntPtr subclassId,
+        UIntPtr refData);
+
+    [DllImport("comctl32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowSubclass(
+        IntPtr hwnd,
+        SubclassProc callback,
+        UIntPtr subclassId,
+        UIntPtr refData);
+
+    [DllImport("comctl32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool RemoveWindowSubclass(
+        IntPtr hwnd,
+        SubclassProc callback,
+        UIntPtr subclassId);
+
+    [DllImport("comctl32.dll")]
+    private static extern IntPtr DefSubclassProc(
+        IntPtr hwnd,
+        uint msg,
+        UIntPtr wParam,
+        IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetMessagePos();
 
     [DllImport("user32.dll")]
     private static extern IntPtr SetCursor(IntPtr cursor);
