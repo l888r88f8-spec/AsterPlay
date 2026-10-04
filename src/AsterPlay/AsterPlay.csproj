@@ -15,5 +15,6 @@
 
   <ItemGroup>
     <PackageReference Include="OpenTK.GLWpfControl" Version="4.3.6" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
   </ItemGroup>
 </Project>
