@@ -63,8 +63,13 @@ public sealed class ImageCacheService
         }
         finally
         {
-            if (lazy.IsValueCreated && lazy.Value.IsCompleted)
-                _inflight.TryRemove(new KeyValuePair<string, Lazy<Task<BitmapSource?>>>(key, lazy));
+            if (lazy.IsValueCreated &&
+                lazy.Value.IsCompleted &&
+                _inflight.TryGetValue(key, out var current) &&
+                ReferenceEquals(current, lazy))
+            {
+                _inflight.TryRemove(key, out _);
+            }
         }
     }
 
