@@ -59,11 +59,6 @@ if (-not (Test-Path $mpv)) {
 if (-not (Test-Path $mpv)) { throw "libmpv-2.dll is still missing after bootstrap." }
 Copy-Item (Join-Path $MpvDir "*.dll") $Publish -Force
 
-$zip = Join-Path $Dist "AsterPlay-Windows-x64.zip"
-if (Test-Path $zip) { Remove-Item $zip -Force }
-Compress-Archive -Path (Join-Path $Publish "*") -DestinationPath $zip -CompressionLevel Optimal
-
 Write-Host ""
 Write-Host "Build complete:"
 Write-Host "  Folder: $Publish"
-Write-Host "  ZIP:    $zip"
