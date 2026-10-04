@@ -8,6 +8,8 @@ public partial class DetailsWindow : Window
 {
     private readonly EmbyClient _client;
     private EmbyItem _item;
+    private bool _seasonSelectionReady;
+    private bool _episodesLoading;
 
     public DetailsWindow(EmbyClient client, EmbyItem item)
     {
@@ -53,6 +55,10 @@ public partial class DetailsWindow : Window
                 $"mediaSources={_item.MediaSources.Count}, mediaStreams={_item.MediaStreams.Count}");
 
             ApplyViewModel();
+
+            if (string.Equals(_item.Type, "Series", StringComparison.OrdinalIgnoreCase))
+                await LoadSeriesAsync();
+
             LoadingOverlay.Visibility = Visibility.Collapsed;
         }
         catch (Exception ex)
@@ -77,7 +83,17 @@ public partial class DetailsWindow : Window
 
         Title = $"AsterPlay · {viewModel.Title}";
 
-        RestartButton.Visibility = viewModel.HasResumePosition
+        var isSeries = viewModel.IsSeries;
+
+        PlayButton.Visibility = isSeries
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+
+        RestartButton.Visibility = !isSeries && viewModel.HasResumePosition
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        SeriesSection.Visibility = isSeries
             ? Visibility.Visible
             : Visibility.Collapsed;
 
@@ -91,11 +107,11 @@ public partial class DetailsWindow : Window
             ? Visibility.Visible
             : Visibility.Collapsed;
 
-        MediaSection.Visibility = viewModel.MediaSummary.Count > 0
+        MediaSection.Visibility = !isSeries && viewModel.MediaSummary.Count > 0
             ? Visibility.Visible
             : Visibility.Collapsed;
 
-        SourcesSection.Visibility = viewModel.MediaSources.Count > 0
+        SourcesSection.Visibility = !isSeries && viewModel.MediaSources.Count > 0
             ? Visibility.Visible
             : Visibility.Collapsed;
 
@@ -105,10 +121,129 @@ public partial class DetailsWindow : Window
             viewModel.ProviderBadges.Count > 0
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+    }
 
-        SeriesNotice.Visibility = viewModel.IsSeries
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+    private async Task LoadSeriesAsync()
+    {
+        SeriesStatusBlock.Text = "正在加载季度…";
+        SeasonComboBox.IsEnabled = false;
+        EpisodeItemsControl.ItemsSource = null;
+
+        var seasons = (await _client.GetSeasonsAsync(_item.Id))
+            .Select(item => new SeasonViewModel(_client, item))
+            .ToArray();
+
+        PlaybackLog.Write(
+            "SeriesDetails",
+            $"Series={_item.Id}, seasons={seasons.Length}");
+
+        _seasonSelectionReady = false;
+        SeasonComboBox.ItemsSource = seasons;
+
+        if (seasons.Length == 0)
+        {
+            SeriesStatusBlock.Text = "没有可用季度";
+            SeasonComboBox.SelectedItem = null;
+            SeasonComboBox.IsEnabled = false;
+            return;
+        }
+
+        var initialSeason = seasons.FirstOrDefault(season => season.Number is > 0)
+                            ?? seasons[0];
+
+        SeasonComboBox.SelectedItem = initialSeason;
+        SeasonComboBox.IsEnabled = true;
+        _seasonSelectionReady = true;
+
+        await LoadEpisodesAsync(initialSeason);
+    }
+
+    private async void SeasonComboBox_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (!_seasonSelectionReady ||
+            _episodesLoading ||
+            SeasonComboBox.SelectedItem is not SeasonViewModel season)
+        {
+            return;
+        }
+
+        await LoadEpisodesAsync(season);
+    }
+
+    private async Task LoadEpisodesAsync(SeasonViewModel season)
+    {
+        if (_episodesLoading)
+            return;
+
+        _episodesLoading = true;
+        SeasonComboBox.IsEnabled = false;
+        EpisodeItemsControl.ItemsSource = null;
+        SeriesStatusBlock.Text = $"正在加载 {season.Title}…";
+
+        try
+        {
+            var episodes = (await _client.GetEpisodesAsync(_item.Id, season.Item.Id))
+                .Select(item => new EpisodeViewModel(_client, item))
+                .ToArray();
+
+            EpisodeItemsControl.ItemsSource = episodes;
+            SeriesStatusBlock.Text = episodes.Length == 0
+                ? $"{season.Title} · 没有剧集"
+                : $"{season.Title} · {episodes.Length} 集";
+
+            PlaybackLog.Write(
+                "SeriesDetails",
+                $"Series={_item.Id}, season={season.Item.Id}, episodes={episodes.Length}");
+        }
+        catch (Exception ex)
+        {
+            SeriesStatusBlock.Text = $"{season.Title} · 加载失败";
+            MessageBox.Show(
+                ex.Message,
+                "Episodes",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+        finally
+        {
+            _episodesLoading = false;
+            SeasonComboBox.IsEnabled = true;
+        }
+    }
+
+    private async void EpisodePlay_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: EpisodeViewModel episode })
+            return;
+
+        SetActionsEnabled(false);
+
+        try
+        {
+            PlaybackLog.Write(
+                "SeriesDetails",
+                $"Episode play: itemId={episode.Item.Id}, label={episode.EpisodeLabel}, resumeTicks={episode.ResumePositionTicks}");
+
+            var launch = await _client.GetPlayableStreamAsync(
+                episode.Item,
+                restart: false);
+
+            new PlayerWindow(_client, launch).Show();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                ex.Message,
+                "Playback",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+        finally
+        {
+            SetActionsEnabled(true);
+        }
     }
 
     private async void Play_Click(object sender, RoutedEventArgs e) =>
@@ -171,6 +306,9 @@ public partial class DetailsWindow : Window
         PlayButton.IsEnabled = enabled;
         RestartButton.IsEnabled = enabled;
         FavoriteButton.IsEnabled = enabled;
+
+        if (!_episodesLoading)
+            SeasonComboBox.IsEnabled = enabled && SeriesSection.Visibility == Visibility.Visible;
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
