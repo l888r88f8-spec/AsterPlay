@@ -1,6 +1,7 @@
 <Window x:Class="AsterPlay.Views.DetailsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:AsterPlay.Controls"
         Title="AsterPlay Details"
         Width="1180" Height="820"
         MinWidth="920" MinHeight="680"
@@ -8,7 +9,7 @@
         Background="#08080C">
 
     <Grid>
-        <Image Source="{Binding BackdropUrl}"
+        <controls:CachedImage SourceUrl="{Binding BackdropUrl}"
                Stretch="UniformToFill"
                Opacity="0.34"/>
 
@@ -48,7 +49,7 @@
                             Background="#17171E"
                             BorderBrush="#30FFFFFF"
                             BorderThickness="1">
-                        <Image Source="{Binding PosterUrl}"
+                        <controls:CachedImage SourceUrl="{Binding PosterUrl}"
                                Stretch="UniformToFill"/>
                     </Border>
 
@@ -185,7 +186,7 @@
                                                 ClipToBounds="True"
                                                 Background="#17171E"
                                                 VerticalAlignment="Top">
-                                            <Image Source="{Binding ImageUrl}"
+                                            <controls:CachedImage SourceUrl="{Binding ImageUrl}"
                                                    Stretch="UniformToFill"/>
                                         </Border>
 
@@ -300,7 +301,7 @@
                                                 CornerRadius="12"
                                                 ClipToBounds="True"
                                                 Background="#17171E">
-                                            <Image Source="{Binding ImageUrl}"
+                                            <controls:CachedImage SourceUrl="{Binding ImageUrl}"
                                                    Stretch="UniformToFill"/>
                                         </Border>
                                         <TextBlock Text="{Binding Name}"
