@@ -164,6 +164,42 @@ public sealed class EmbyClient
             .ToList();
     }
 
+    public async Task<PlaybackInfoResponse> GetMediaInfoAsync(string itemId)
+    {
+        using var req = CreateRequest(
+            HttpMethod.Post,
+            $"/Items/{Esc(itemId)}/PlaybackInfo" +
+            $"?UserId={Esc(UserId)}" +
+            "&StartTimeTicks=0" +
+            "&IsPlayback=false" +
+            "&AutoOpenLiveStream=false");
+
+        req.Content = JsonContent.Create(new
+        {
+            UserId,
+            StartTimeTicks = 0L,
+            IsPlayback = false,
+            AutoOpenLiveStream = false
+        });
+
+        using var response = await _http.SendAsync(req);
+        PlaybackLog.Write(
+            "DetailsMedia",
+            $"PlaybackInfo details: itemId={itemId}, status={(int)response.StatusCode} {response.ReasonPhrase}");
+
+        await EnsureSuccess(response, "Media info request failed");
+
+        var info = await response.Content.ReadFromJsonAsync<PlaybackInfoResponse>(_json)
+                   ?? throw new InvalidOperationException("Media info response was empty.");
+
+        PlaybackLog.Write(
+            "DetailsMedia",
+            $"itemId={itemId}, mediaSources={info.MediaSources.Count}, " +
+            $"mediaStreams={info.MediaSources.Sum(source => source.MediaStreams.Count)}");
+
+        return info;
+    }
+
     public async Task<bool> SetFavoriteAsync(string itemId, bool favorite)
     {
         var method = favorite ? HttpMethod.Post : HttpMethod.Delete;
