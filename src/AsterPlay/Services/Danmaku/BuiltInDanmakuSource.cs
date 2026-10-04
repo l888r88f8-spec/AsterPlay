@@ -39,10 +39,10 @@ public sealed class BuiltInDanmakuSource : IDanmakuSource
                 DanmakuMode.Scroll,
                 sequence % 4 switch
                 {
-                    0 => 0xFFFFFFFF,
-                    1 => 0xFFFFD966,
-                    2 => 0xFF6EC6FF,
-                    _ => 0xFFA8F0B0
+                    0 => 0xFFFFFFFFu,
+                    1 => 0xFFFFD966u,
+                    2 => 0xFF6EC6FFu,
+                    _ => 0xFFA8F0B0u
                 }));
 
             sequence++;
@@ -57,7 +57,7 @@ public sealed class BuiltInDanmakuSource : IDanmakuSource
                 time,
                 $"顶部弹幕 · {FormatTime(time)}",
                 DanmakuMode.Top,
-                0xFFFFFFFF));
+                0xFFFFFFFFu));
         }
 
         for (var time = 9.0; time < duration; time += 17.0)
@@ -69,7 +69,7 @@ public sealed class BuiltInDanmakuSource : IDanmakuSource
                 time,
                 $"底部弹幕 · {FormatTime(time)}",
                 DanmakuMode.Bottom,
-                0xFFFFE38A));
+                0xFFFFE38Au));
         }
 
         IReadOnlyList<DanmakuComment> result = comments
