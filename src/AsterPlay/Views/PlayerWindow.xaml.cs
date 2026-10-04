@@ -297,8 +297,9 @@ public partial class PlayerWindow : Window
                 var metrics = DanmakuOverlay.GetMetrics();
                 PlaybackLog.Write(
                     "Danmaku",
-                    $"timeline={metrics.TimelineSeconds:0.###}, loaded={metrics.LoadedCount}, " +
-                    $"visible={metrics.VisibleCount}, active={metrics.ActiveCount}, layoutDropped={metrics.LayoutDroppedCount}, " +
+                    $"timeline={metrics.TimelineSeconds:0.###}, input={metrics.InputCount}, loaded={metrics.LoadedCount}, " +
+                    $"documentDropped={metrics.DocumentDroppedCount}, visible={metrics.VisibleCount}, active={metrics.ActiveCount}, " +
+                    $"layoutDropped={metrics.LayoutDroppedCount}, " +
                     $"frame={metrics.LastFrameMilliseconds:0.###}ms, peak={metrics.PeakFrameMilliseconds:0.###}ms, " +
                     $"surface={metrics.Width:0}x{metrics.Height:0}, dpi={metrics.DpiX:0}x{metrics.DpiY:0}");
             }
@@ -1369,11 +1370,13 @@ public partial class PlayerWindow : Window
         PlaybackLog.Write(
             "Danmaku",
             _danmakuVisible
-                ? $"Enabled: source={metrics.SourceName}, loaded={metrics.LoadedCount}, visible={metrics.VisibleCount}, " +
+                ? $"Enabled: source={metrics.SourceName}, input={metrics.InputCount}, loaded={metrics.LoadedCount}, " +
+                  $"documentDropped={metrics.DocumentDroppedCount}, visible={metrics.VisibleCount}, " +
                   $"layoutDropped={metrics.LayoutDroppedCount}, cap={_danmakuSettings.MaxActiveComments}, " +
                   $"mouseThrough={!DanmakuOverlay.IsHitTestVisible}, surface={metrics.Width:0}x{metrics.Height:0}, " +
                   $"dpi={metrics.DpiX:0}x{metrics.DpiY:0}"
-                : $"Disabled: source={metrics.SourceName}, loaded={metrics.LoadedCount}, visible={metrics.VisibleCount}, " +
+                : $"Disabled: source={metrics.SourceName}, input={metrics.InputCount}, loaded={metrics.LoadedCount}, " +
+                  $"documentDropped={metrics.DocumentDroppedCount}, visible={metrics.VisibleCount}, " +
                   $"peakFrame={metrics.PeakFrameMilliseconds:0.###}ms");
 
         if (_diagnosticsVisible)
@@ -1611,8 +1614,9 @@ public partial class PlayerWindow : Window
         {
             var danmaku = DanmakuOverlay.GetMetrics();
             DiagnosticsDanmakuBlock.Text =
-                $"{danmaku.SourceName} · {danmaku.LoadedCount} 已载入 / {danmaku.VisibleCount} 过滤后 / " +
-                $"{danmaku.ActiveCount} 活动 / {danmaku.LayoutDroppedCount} 防重叠丢弃 · " +
+                $"{danmaku.SourceName} · {danmaku.InputCount} 原始 / {danmaku.LoadedCount} 保留 / " +
+                $"{danmaku.VisibleCount} 过滤后 / {danmaku.ActiveCount} 活动 · " +
+                $"{danmaku.DocumentDroppedCount} 文档保护丢弃 / {danmaku.LayoutDroppedCount} 防重叠丢弃 · " +
                 $"字号 {_danmakuSettings.FontSize:0} / 速度 {_danmakuSettings.Speed:0.##}× / " +
                 $"透明度 {_danmakuSettings.Opacity:P0} / 密度 {_danmakuSettings.DensityRatio:P0} / " +
                 $"上限 {_danmakuSettings.MaxActiveComments} · " +
