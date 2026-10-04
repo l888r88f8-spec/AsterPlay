@@ -871,6 +871,8 @@ PlaybackDecision
 
 ## Step 10：图片缓存与加载体系
 
+> 状态：已实现，待运行时验收（2026-10-04）
+
 ### 目标
 
 解决大型媒体库中的重复图片请求和滚动性能问题。
@@ -903,6 +905,41 @@ Services/ImageCacheService.cs
 ### 完成标准
 
 多次进入同一页面时，不会重复下载大量相同 Emby 图片。
+
+### 实现说明
+
+已实现：
+
+- 新增 `Services/ImageCacheService.cs`
+- 新增 `Controls/CachedImage.cs`
+- Memory Cache 使用弱引用，避免长期固定占用大量图片内存
+- Disk Cache 存储于：
+  `%LOCALAPPDATA%\AsterPlay\cache\images`
+- 图片请求超时 12 秒
+- 单图最大缓存 32 MB
+- 同一 URL 并发请求合并，只执行一次实际下载
+- 最多 6 个图片下载并发
+- URL 缓存键会移除 `api_key / X-Emby-Token`，token 刷新不会导致同图生成重复缓存
+- 加载中占位图
+- 加载失败占位图
+- `CachedImage` 仅进入最近 ScrollViewer 可视区域后才开始加载
+- 控件卸载或 URL 变化时取消当前 UI 等待，不影响其它共享请求
+- 磁盘缓存自动清理：
+  - 最长保留 60 天
+  - 总容量最多约 512 MB
+  - 优先保留最近使用图片
+- 首页 Hero / 缩略图 / 海报全部接入缓存
+- 媒体库 Poster Grid 接入缓存
+- 详情页 Backdrop / Poster / Episode 缩略图 / 演员图片接入缓存
+- Windows x64 self-contained publish 已通过
+
+运行时验收重点：
+
+1. 第一次进入页面允许产生图片下载。
+2. 返回同一页面后应大量出现磁盘/内存命中，而不是重新下载。
+3. 媒体库滚动时屏幕外海报不应提前全部请求。
+4. 断网或单图失败时不应拖死页面，应显示失败占位。
+5. 缓存目录长期使用后不会无限增长。
 
 ---
 
@@ -1224,11 +1261,12 @@ Step 4 已完成。
 Step 5 已实现，待真实服务器验收。
 Step 6 已实现，待真实服务器验收。
 Step 7 核心功能已实现，待真实服务器验收。
-Step 8 已实现，待真实媒体组合验收。
-Step 9 已实现，待运行时验收。
+Step 8 已实现，已完成 DirectStream / 硬解等实机验证。
+Step 9 已实现，诊断 UI 已完成实机验证。
+Step 10 已实现，待运行时缓存效果验收。
 
 当前下一项实际开发任务：
 
 ```text
-Step 10：图片缓存
+Step 11
 ```
