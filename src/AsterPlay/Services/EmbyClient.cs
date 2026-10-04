@@ -295,10 +295,17 @@ public sealed class EmbyClient
             ? ""
             : WithToken($"/Items/{Esc(person.Id)}/Images/Primary?maxWidth={maxWidth}&quality=90");
 
-    public async Task<PlaybackLaunch> GetPlayableStreamAsync(EmbyItem source, bool restart = false)
+    public async Task<PlaybackLaunch> GetPlayableStreamAsync(
+        EmbyItem source,
+        bool restart = false,
+        long? startTimeTicksOverride = null,
+        string? preferredMediaSourceId = null,
+        string? currentPlaySessionId = null)
     {
         PlaybackLog.Write("Emby",
-            $"Resolve playback: sourceId={source.Id}, type={source.Type}, name={source.Name}, restart={restart}");
+            $"Resolve playback: sourceId={source.Id}, type={source.Type}, name={source.Name}, restart={restart}, " +
+            $"startOverride={startTimeTicksOverride?.ToString() ?? "-"}, preferredMediaSourceId={preferredMediaSourceId ?? "-"}, " +
+            $"currentPlaySessionId={currentPlaySessionId ?? "-"}");
 
         var playable = source;
         if (string.Equals(source.Type, "Series", StringComparison.OrdinalIgnoreCase))
@@ -315,20 +322,36 @@ public sealed class EmbyClient
         // Do not trust the home-card UserData. Resume position can change on another
         // device, so always resolve the latest item immediately before playback.
         playable = await GetItemAsync(playable.Id);
-        var resumeTicks = restart
-            ? 0
-            : Math.Max(0, playable.UserData?.PlaybackPositionTicks ?? 0);
+        var resumeTicks = startTimeTicksOverride.HasValue
+            ? Math.Max(0, startTimeTicksOverride.Value)
+            : restart
+                ? 0
+                : Math.Max(0, playable.UserData?.PlaybackPositionTicks ?? 0);
         PlaybackLog.Write("Emby",
             $"Fresh UserData: itemId={playable.Id}, resumeTicks={resumeTicks}, runtimeTicks={playable.RunTimeTicks ?? 0}");
 
-        using var req = CreateRequest(
-            HttpMethod.Post,
-            $"/Items/{Esc(playable.Id)}/PlaybackInfo?UserId={Esc(UserId)}");
+        var playbackInfoPath =
+            $"/Items/{Esc(playable.Id)}/PlaybackInfo?UserId={Esc(UserId)}" +
+            $"&StartTimeTicks={resumeTicks}&IsPlayback=true";
+
+        if (!string.IsNullOrWhiteSpace(preferredMediaSourceId))
+            playbackInfoPath += $"&MediaSourceId={Esc(preferredMediaSourceId)}";
+
+        if (!string.IsNullOrWhiteSpace(currentPlaySessionId))
+            playbackInfoPath += $"&CurrentPlaySessionId={Esc(currentPlaySessionId)}";
+
+        using var req = CreateRequest(HttpMethod.Post, playbackInfoPath);
 
         var playbackRequest = new PlaybackInfoRequestPayload
         {
             UserId = UserId,
             StartTimeTicks = resumeTicks,
+            MediaSourceId = string.IsNullOrWhiteSpace(preferredMediaSourceId)
+                ? null
+                : preferredMediaSourceId,
+            CurrentPlaySessionId = string.IsNullOrWhiteSpace(currentPlaySessionId)
+                ? null
+                : currentPlaySessionId,
             IsPlayback = true,
             EnableDirectPlay = true,
             EnableDirectStream = true,
@@ -369,8 +392,31 @@ public sealed class EmbyClient
                 $"transcodingContainer={candidate.TranscodingContainer}, subProtocol={candidate.TranscodingSubProtocol}");
         }
 
+        IReadOnlyList<MediaSource> decisionSources = info.MediaSources;
+
+        if (!string.IsNullOrWhiteSpace(preferredMediaSourceId))
+        {
+            var preferredSources = info.MediaSources
+                .Where(source => string.Equals(
+                    source.Id,
+                    preferredMediaSourceId,
+                    StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (preferredSources.Count > 0)
+            {
+                decisionSources = preferredSources;
+            }
+            else
+            {
+                PlaybackLog.Write(
+                    "PlaybackDecision",
+                    $"Preferred media source {preferredMediaSourceId} was not returned; falling back to all sources.");
+            }
+        }
+
         var decision = PlaybackDecisionSelector.Select(
-            info.MediaSources,
+            decisionSources,
             requiresServerStartOffset: resumeTicks > 0);
 
         var media = decision.MediaSource;
@@ -388,12 +434,14 @@ public sealed class EmbyClient
 
         string url;
         bool usesServerStartOffset;
+        bool requiresServerSeek;
         var playMethod = decision.PlayMethod;
 
         switch (decision.Kind)
         {
             case PlaybackDecisionKind.DirectPlay:
                 usesServerStartOffset = false;
+                requiresServerSeek = false;
 
                 var directPlayContainer = media.Container.Trim().TrimStart('.');
                 if (string.IsNullOrWhiteSpace(directPlayContainer))
@@ -412,6 +460,7 @@ public sealed class EmbyClient
 
             case PlaybackDecisionKind.DirectStream:
                 usesServerStartOffset = resumeTicks > 0;
+                requiresServerSeek = true;
 
                 if (!string.IsNullOrWhiteSpace(media.DirectStreamUrl))
                 {
@@ -453,6 +502,8 @@ public sealed class EmbyClient
                 break;
 
             case PlaybackDecisionKind.Transcode:
+                requiresServerSeek = true;
+
                 if (string.IsNullOrWhiteSpace(media.TranscodingUrl))
                 {
                     throw new InvalidOperationException(
@@ -519,6 +570,7 @@ public sealed class EmbyClient
             ResumePositionTicks = resumeTicks,
             RunTimeTicks = playable.RunTimeTicks ?? media.RunTimeTicks,
             UsesServerStartOffset = usesServerStartOffset,
+            RequiresServerSeek = requiresServerSeek,
             PlayMethod = playMethod,
             DecisionReason = decision.Reason,
             SourceContainer = media.Container,
@@ -531,6 +583,16 @@ public sealed class EmbyClient
             SourceHeight = sourceVideo?.Height
         };
     }
+
+    public Task<PlaybackLaunch> ReopenPlayableStreamAsync(
+        PlaybackLaunch current,
+        long startTimeTicks) =>
+        GetPlayableStreamAsync(
+            new EmbyItem { Id = current.ItemId },
+            restart: false,
+            startTimeTicksOverride: Math.Max(0, startTimeTicks),
+            preferredMediaSourceId: current.MediaSourceId,
+            currentPlaySessionId: current.PlaySessionId);
 
     public Task ReportPlaybackStartAsync(
         PlaybackLaunch launch, long positionTicks, bool isPaused, double volume) =>

@@ -15,7 +15,7 @@ public partial class PlayerWindow : Window
     private static readonly double[] Speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
     private readonly EmbyClient _client;
-    private readonly PlaybackLaunch _launch;
+    private PlaybackLaunch _launch;
     private readonly DispatcherTimer _timer;
     private readonly DispatcherTimer _controlsTimer;
     private double _timelineOffsetSeconds;
@@ -26,6 +26,7 @@ public partial class PlayerWindow : Window
     private int _renderInvalidationQueued;
     private int _reportSeconds;
     private int _danmakuLogSeconds;
+    private int _seekRequestVersion;
     private int _lastFramebuffer;
     private int _lastFramebufferWidth;
     private int _lastFramebufferHeight;
@@ -443,7 +444,7 @@ public partial class PlayerWindow : Window
 
         PlaybackLog.Write("Player", $"Seek {(seconds >= 0 ? "+" : "")}{seconds:0.###}");
 
-        if (_launch.UsesServerStartOffset)
+        if (_launch.RequiresServerSeek)
         {
             var currentAbsolute =
                 _timelineOffsetSeconds + Math.Max(0, _mpv.PositionSeconds);
@@ -527,9 +528,13 @@ public partial class PlayerWindow : Window
         _positionSliderPointerDown = false;
     }
 
-    private void SeekAbsoluteFromTimeline(double requestedAbsolute)
+    private void SeekAbsoluteFromTimeline(double requestedAbsolute) =>
+        _ = SeekAbsoluteFromTimelineAsync(requestedAbsolute);
+
+    private async Task SeekAbsoluteFromTimelineAsync(double requestedAbsolute)
     {
-        if (_mpv is null)
+        var mpv = _mpv;
+        if (mpv is null)
             return;
 
         requestedAbsolute = Math.Clamp(
@@ -537,107 +542,116 @@ public partial class PlayerWindow : Window
             0,
             PositionSlider.Maximum > 0 ? PositionSlider.Maximum : requestedAbsolute);
 
-        if (_launch.UsesServerStartOffset)
+        if (_launch.RequiresServerSeek)
         {
-            ReloadServerOffsetStream(requestedAbsolute);
+            await ReopenServerSeekStreamAsync(requestedAbsolute);
             return;
         }
 
         var localTarget = Math.Max(0, requestedAbsolute - _timelineOffsetSeconds);
         PlaybackLog.Write(
             "PlayerSeek",
-            $"Timeline seek: absolute={requestedAbsolute:0.###}, local={localTarget:0.###}, offset={_timelineOffsetSeconds:0.###}");
+            $"Client seek: absolute={requestedAbsolute:0.###}, local={localTarget:0.###}, offset={_timelineOffsetSeconds:0.###}");
 
-        _mpv.SeekAbsolute(localTarget);
+        mpv.SeekAbsolute(localTarget);
         CurrentTimeBlock.Text = FormatTime(requestedAbsolute);
         SyncDanmakuPoc();
         ShowControls();
     }
 
-    private void ReloadServerOffsetStream(double requestedAbsolute)
+    private async Task ReopenServerSeekStreamAsync(double requestedAbsolute)
     {
-        if (_mpv is null)
+        var mpv = _mpv;
+        if (mpv is null)
             return;
 
+        var requestVersion = ++_seekRequestVersion;
+        var oldLaunch = _launch;
         var targetTicks = (long)Math.Max(
             0,
             Math.Round(requestedAbsolute * 10_000_000d));
 
-        var oldOffset = _timelineOffsetSeconds;
-        var wasPaused = _mpv.IsPaused;
-        var volume = _mpv.Volume;
-        var speed = _mpv.Speed;
-
-        var url = ReplaceQueryParameter(
-            _launch.Url,
-            "StartTimeTicks",
-            targetTicks.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        var wasPaused = mpv.IsPaused;
+        var volume = mpv.Volume;
+        var speed = mpv.Speed;
 
         PlaybackLog.Write(
             "PlayerSeek",
-            $"Server-offset seek -> reload stream: absolute={requestedAbsolute:0.###}, oldOffset={oldOffset:0.###}, newOffset={requestedAbsolute:0.###}, paused={wasPaused}");
-
-        _timelineOffsetSeconds = requestedAbsolute;
-        _lastPositionTicks = targetTicks;
+            $"Server seek negotiation begin: absolute={requestedAbsolute:0.###}, ticks={targetTicks}, " +
+            $"mediaSourceId={oldLaunch.MediaSourceId}, currentPlaySessionId={oldLaunch.PlaySessionId}");
 
         StatusBlock.Text = $"跳转至 {FormatTime(requestedAbsolute)}…";
         CurrentTimeBlock.Text = FormatTime(requestedAbsolute);
         PositionSlider.Value = requestedAbsolute;
-
-        _mpv.Load(url);
-        _mpv.SetVolume(volume);
-        _mpv.SetSpeed(speed);
-        _mpv.SetPaused(wasPaused);
-
-        SyncDanmakuPoc();
         ShowControls();
-    }
 
-    private static string ReplaceQueryParameter(string url, string name, string value)
-    {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            return url;
-
-        var builder = new UriBuilder(uri);
-        var segments = builder.Query
-            .TrimStart('?')
-            .Split('&', StringSplitOptions.RemoveEmptyEntries)
-            .ToList();
-
-        var replacement = $"{Uri.EscapeDataString(name)}={Uri.EscapeDataString(value)}";
-        var replaced = false;
-
-        for (var index = 0; index < segments.Count; index++)
+        try
         {
-            var segment = segments[index];
-            var separatorIndex = segment.IndexOf('=');
-            var encodedName = separatorIndex >= 0
-                ? segment[..separatorIndex]
-                : segment;
+            var replacement = await _client.ReopenPlayableStreamAsync(
+                oldLaunch,
+                targetTicks);
 
-            string decodedName;
-            try
+            if (_stopHandled ||
+                requestVersion != _seekRequestVersion ||
+                _mpv is null)
             {
-                decodedName = Uri.UnescapeDataString(encodedName);
-            }
-            catch (UriFormatException)
-            {
-                decodedName = encodedName;
+                PlaybackLog.Write(
+                    "PlayerSeek",
+                    $"Ignoring stale server seek response: requestVersion={requestVersion}, latest={_seekRequestVersion}");
+                return;
             }
 
-            if (!string.Equals(decodedName, name, StringComparison.OrdinalIgnoreCase))
-                continue;
+            if (!string.Equals(
+                    replacement.ItemId,
+                    oldLaunch.ItemId,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    "Emby returned a different item while seeking.");
+            }
 
-            segments[index] = replacement;
-            replaced = true;
-            break;
+            _launch = replacement;
+            _timelineOffsetSeconds = replacement.UsesServerStartOffset
+                ? Math.Max(0, replacement.ResumePositionTicks / 10_000_000d)
+                : 0;
+            _lastPositionTicks = targetTicks;
+            _startReportSent = false;
+            _reportSeconds = 0;
+
+            PlaybackLog.Write(
+                "PlayerSeek",
+                $"Server seek negotiation complete: oldSession={oldLaunch.PlaySessionId}, " +
+                $"newSession={replacement.PlaySessionId}, serverOffset={replacement.UsesServerStartOffset}, " +
+                $"requiresServerSeek={replacement.RequiresServerSeek}, url={PlaybackLog.Redact(replacement.Url)}");
+
+            _mpv.Load(replacement.Url);
+            _mpv.SetVolume(volume);
+            _mpv.SetSpeed(speed);
+            _mpv.SetPaused(wasPaused);
+
+            CurrentTimeBlock.Text = FormatTime(requestedAbsolute);
+            PositionSlider.Value = requestedAbsolute;
+            SyncDanmakuPoc();
+            ShowControls();
         }
+        catch (Exception ex)
+        {
+            if (requestVersion != _seekRequestVersion)
+                return;
 
-        if (!replaced)
-            segments.Add(replacement);
+            PlaybackLog.Error("PlayerSeek", ex);
+            StatusBlock.Text = "跳转失败，继续当前播放";
 
-        builder.Query = string.Join("&", segments);
-        return builder.Uri.ToString();
+            var currentAbsolute =
+                _timelineOffsetSeconds + Math.Max(0, mpv.PositionSeconds);
+            CurrentTimeBlock.Text = FormatTime(currentAbsolute);
+            PositionSlider.Value = Math.Clamp(
+                currentAbsolute,
+                PositionSlider.Minimum,
+                PositionSlider.Maximum);
+
+            ShowControls();
+        }
     }
 
     private void VolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

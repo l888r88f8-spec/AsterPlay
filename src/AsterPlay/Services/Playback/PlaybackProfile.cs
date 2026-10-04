@@ -11,6 +11,14 @@ public sealed class PlaybackInfoRequestPayload
     [JsonPropertyName("StartTimeTicks")]
     public long StartTimeTicks { get; init; }
 
+    [JsonPropertyName("MediaSourceId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? MediaSourceId { get; init; }
+
+    [JsonPropertyName("CurrentPlaySessionId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CurrentPlaySessionId { get; init; }
+
     [JsonPropertyName("IsPlayback")]
     public bool IsPlayback { get; init; } = true;
 

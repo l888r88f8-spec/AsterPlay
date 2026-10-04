@@ -333,6 +333,7 @@ public sealed class PlaybackLaunch
     public long ResumePositionTicks { get; set; }
     public long? RunTimeTicks { get; set; }
     public bool UsesServerStartOffset { get; set; }
+    public bool RequiresServerSeek { get; set; }
     public string PlayMethod { get; set; } = "DirectPlay";
 
     // Negotiation metadata used by the player diagnostics panel.
