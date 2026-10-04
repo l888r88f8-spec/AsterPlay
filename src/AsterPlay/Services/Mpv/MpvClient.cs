@@ -10,19 +10,17 @@ public sealed class MpvClient : IDisposable
     private Thread? _eventThread;
     private volatile bool _eventLoopRunning;
 
-    public MpvClient(IntPtr windowHandle)
+    public MpvClient()
     {
-        PlaybackLog.Write("mpv", $"Creating mpv for hwnd=0x{windowHandle.ToInt64():X}");
+        PlaybackLog.Write("mpv", "Creating mpv for Render API");
         _handle = Native.mpv_create();
         if (_handle == IntPtr.Zero)
             throw new InvalidOperationException("mpv_create failed.");
 
-        SetOption("wid", windowHandle.ToInt64().ToString(CultureInfo.InvariantCulture));
         SetOption("config", "no");
         SetOption("load-scripts", "no");
         SetOption("osc", "no");
-        SetOption("vo", "gpu-next");
-        SetOption("gpu-api", "d3d11");
+        SetOption("vo", "libmpv");
         SetOption("hwdec", "auto-copy");
         // Keep mpv's native network cache policy. Jellyfin MPV Shim leaves
         // the default alone unless a larger user-selected buffer is requested.
@@ -40,6 +38,8 @@ public sealed class MpvClient : IDisposable
         PlaybackLog.Write("mpv", $"request_log_messages(debug) -> {logResult}");
         StartEventLoop();
     }
+
+    internal IntPtr Handle => _handle;
 
     public void Load(string url, double startSeconds = 0)
     {
