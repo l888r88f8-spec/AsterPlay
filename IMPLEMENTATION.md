@@ -682,6 +682,8 @@ ViewModels/LibraryViewModel.cs
 
 ## Step 8：完整播放能力协商
 
+> 状态：已实现，待真实媒体组合验收（2026-10-04）
+
 ### 目标
 
 替换当前较简单的：
@@ -745,6 +747,47 @@ PlaybackDecision
 ### 完成标准
 
 常见视频 / 音频 / 字幕组合能够正确选择 DirectPlay、DirectStream 或 Transcode，而不是强行直放。
+
+### 实现说明
+
+已实现：
+
+- 新增独立 `PlaybackProfile`
+- 新增独立 `PlaybackDecision / PlaybackDecisionSelector`
+- PlaybackInfo 请求正式携带 Emby DeviceProfile
+- DeviceProfile 显式声明常见 mpv DirectPlay 容器与 Codec：
+  - MKV / WebM
+  - MP4 / M4V / MOV
+  - MPEG-TS / M2TS
+  - AVI
+  - MPEG / VOB
+  - OGG / OGV
+  - H.264 / HEVC(H.265) / AV1 / VP9 / VP8 / MPEG-2 / MPEG-4 / VC-1
+  - AAC / AC3 / EAC3 / TrueHD / DTS(DCA) / MP2 / MP3 / Opus / Vorbis / FLAC / ALAC / PCM
+- 转码 fallback 使用 HLS + TS + H.264 + AAC/AC3
+- 转码音频最多声明 8 声道，实际下混由 mpv 处理
+- 字幕声明 Embed，不虚报 AsterPlay 尚未实现的 External sidecar DeliveryUrl 能力
+- 不人为设置 MaxStreamingBitrate；在没有用户带宽设置前，不因客户端自设上限触发不必要转码
+- PlaybackInfo 返回后不再固定使用第一 MediaSource
+- 非续播按服务器结果选择：
+  `DirectPlay -> DirectStream -> Transcode`
+- DirectStream 优先使用服务器返回的 `DirectStreamUrl`
+- Transcode 使用服务器返回的 `TranscodingUrl`
+- 保留旧服务器 Supports* 标志不完整时的兼容 fallback
+- 播放决策写入 `PlaybackDecision` 日志
+- MediaSource 日志记录 DirectStream / Transcode 元数据并继续脱敏 token
+- 续播仍保持已验证架构：
+  `Fresh UserData -> PlaybackInfo(StartTimeTicks) -> server-offset stream -> mpv local timeline 0 -> absolute Emby timeline`
+- 续播不会退回 mpv 本地初始 seek
+- Windows x64 self-contained publish 已通过
+
+已明确限制：
+
+- 官方 Emby 4.10.1 DeviceProfile 的 ProfileConditionValue 没有 `VideoRangeType`，因此不使用 Jellyfin 扩展字段强制区分 Dolby Vision。
+- HDR / Dolby Vision 当前依赖 mpv/FFmpeg 实际解码能力；如果后续需要“DOVI 一律服务端转码”，应单独做可配置策略。
+- External sidecar 字幕尚未通过 `DeliveryUrl -> mpv sub-add` 接入，因此 profile 不声明 External 字幕能力。
+
+真实服务器验收建议覆盖：H.264/AAC、HEVC/EAC3、AV1、TrueHD/DTS、多字幕、需要转码的异常组合，以及续播。
 
 ---
 
@@ -1142,9 +1185,10 @@ Step 4 已完成。
 Step 5 已实现，待真实服务器验收。
 Step 6 已实现，待真实服务器验收。
 Step 7 核心功能已实现，待真实服务器验收。
+Step 8 已实现，待真实媒体组合验收。
 
 当前下一项实际开发任务：
 
 ```text
-Step 8：播放协商 / DeviceProfile
+Step 9：播放诊断
 ```
