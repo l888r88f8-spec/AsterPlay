@@ -945,7 +945,7 @@ Services/ImageCacheService.cs
 
 ## Step 11：Session Token 安全
 
-> 状态：已实现，待本机验收（2026-10-04）
+> 状态：已实现并验收通过（2026-10-04）
 
 ### 目标
 
@@ -1306,7 +1306,7 @@ Step 7 核心功能已实现，待真实服务器验收。
 Step 8 已实现，已完成 DirectStream / 硬解等实机验证。
 Step 9 已实现，诊断 UI 已完成实机验证。
 Step 10 已实现并完成运行时缓存效果验收。
-Step 11 已实现，待本机 session 迁移 / 自动登录验收。
+Step 11 已实现并完成本机 session 迁移 / 自动登录验收。
 
 当前下一项实际开发任务：
 
