@@ -122,3 +122,10 @@ Log growth is bounded:
 ## 8. Release decision
 
 Step 14 can be marked fully accepted only after all applicable sections above pass on a real Windows x64 desktop with the intended Emby server/media set.
+
+## 9. Acceptance record
+
+- Date: 2026-10-05
+- Environment: real Windows x64 desktop with the intended Emby server/media set
+- Result: PASS
+- Step 14 release acceptance: complete
