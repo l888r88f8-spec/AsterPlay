@@ -25,6 +25,9 @@ public partial class PlayerWindow : Window
     private DateTime _lastControlsActivityUtc;
     private int _renderInvalidationQueued;
     private int _reportSeconds;
+    private int _lastFramebuffer;
+    private int _lastFramebufferWidth;
+    private int _lastFramebufferHeight;
     private bool _videoSurfaceStarted;
     private bool _playbackLoaded;
     private bool _updatingUi;
@@ -144,10 +147,28 @@ public partial class PlayerWindow : Window
                 _playbackLoaded = true;
             }
 
+            var framebuffer = VideoSurface.Framebuffer;
+            var framebufferWidth = VideoSurface.FrameBufferWidth;
+            var framebufferHeight = VideoSurface.FrameBufferHeight;
+
+            if (framebuffer != _lastFramebuffer ||
+                framebufferWidth != _lastFramebufferWidth ||
+                framebufferHeight != _lastFramebufferHeight)
+            {
+                PlaybackLog.Write(
+                    "mpv-render",
+                    $"Framebuffer changed: fbo={framebuffer}, size={framebufferWidth}x{framebufferHeight}, " +
+                    "libmpvFlipY=0, wpfCompensation=ScaleY(-1)");
+
+                _lastFramebuffer = framebuffer;
+                _lastFramebufferWidth = framebufferWidth;
+                _lastFramebufferHeight = framebufferHeight;
+            }
+
             _renderContext.Render(
-                VideoSurface.Framebuffer,
-                VideoSurface.FrameBufferWidth,
-                VideoSurface.FrameBufferHeight);
+                framebuffer,
+                framebufferWidth,
+                framebufferHeight);
         }
         catch (Exception ex)
         {
