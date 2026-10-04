@@ -15,6 +15,7 @@
 
         <gl:GLWpfControl x:Name="VideoSurface"
                          Focusable="False"
+                         IsHitTestVisible="False"
                          Render="VideoSurface_OnRender"/>
 
         <Border x:Name="ControlsPanel"
