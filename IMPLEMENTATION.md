@@ -793,6 +793,8 @@ PlaybackDecision
 
 ## Step 9：播放器状态与诊断信息
 
+> 状态：已实现，待运行时验收（2026-10-04）
+
 ### 目标
 
 方便开发和后续用户诊断播放问题。
@@ -827,6 +829,43 @@ PlaybackDecision
 - 当前音轨
 - 当前字幕
 - 是否正在缓冲
+
+### 实现说明
+
+已实现：
+
+- 播放控制栏新增“信息”按钮
+- 支持 `I` 键快速显示 / 隐藏诊断面板
+- 诊断面板默认隐藏，不参与鼠标命中，不影响播放器输入
+- 面板每秒刷新一次，不额外创建高频诊断线程
+- 展示 Emby 协商结果：
+  - DirectPlay / DirectStream / Transcode
+  - negotiated container / protocol
+  - 服务器播放决策原因
+  - MediaSourceId
+  - 原始源容器
+  - 原始视频 Codec / 音频 Codec
+  - 原始分辨率
+  - 是否使用服务器续播偏移
+- 展示 mpv 实际播放状态：
+  - 实际视频 Codec
+  - 实际音频 Codec
+  - 实际视频分辨率
+  - estimated-vf-fps / container-fps
+  - 视频 / 音频实际码率（mpv packet 级估算）
+  - `hwdec-current`
+  - `current-vo`
+  - 当前 aid / sid
+  - 当前选中音轨 / 字幕名称
+  - `demuxer-cache-duration`
+  - `cache-buffering-state`
+  - `paused-for-cache`
+- 硬解状态直接显示为“软件解码”或具体硬解后端，例如 `d3d11va-copy`
+- Step 8 的播放协商结果现在可直接从 UI 验收，不必只看 playback.log
+- 打开诊断面板时会写入 `PlayerDiagnostics` 日志
+- Windows x64 self-contained publish 已通过
+
+运行时验收重点：分别播放 DirectPlay / DirectStream / Transcode 内容，确认 UI 与 playback.log 中的 PlaybackDecision 一致，并确认 hwdec、Codec、音轨、字幕、缓冲状态实时变化。
 
 ---
 
@@ -1186,9 +1225,10 @@ Step 5 已实现，待真实服务器验收。
 Step 6 已实现，待真实服务器验收。
 Step 7 核心功能已实现，待真实服务器验收。
 Step 8 已实现，待真实媒体组合验收。
+Step 9 已实现，待运行时验收。
 
 当前下一项实际开发任务：
 
 ```text
-Step 9：播放诊断
+Step 10：图片缓存
 ```
