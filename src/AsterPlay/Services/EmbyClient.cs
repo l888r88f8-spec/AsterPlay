@@ -299,19 +299,20 @@ public sealed class EmbyClient
         double volume,
         string? eventName)
     {
+        // Match the payload shape used by the proven qEmby implementation.
+        // Keep this deliberately small: Emby only needs the playback identity,
+        // absolute position and state for resume synchronization.
         var payload = new Dictionary<string, object?>
         {
-            ["QueueableMediaTypes"] = new[] { "Video" },
-            ["CanSeek"] = true,
             ["ItemId"] = launch.ItemId,
             ["MediaSourceId"] = launch.MediaSourceId,
-            ["PlaySessionId"] = launch.PlaySessionId,
             ["PositionTicks"] = Math.Max(0, positionTicks),
+            ["PlayMethod"] = launch.PlayMethod,
             ["IsPaused"] = isPaused,
             ["IsMuted"] = volume <= 0.01,
-            ["VolumeLevel"] = (int)Math.Clamp(Math.Round(volume), 0, 100),
-            ["PlayMethod"] = launch.PlayMethod,
-            ["PlaybackRate"] = 1.0
+            ["CanSeek"] = true,
+            ["PlaySessionId"] = launch.PlaySessionId,
+            ["QueueableMediaTypes"] = new[] { "Video" }
         };
 
         if (!string.IsNullOrWhiteSpace(eventName))
@@ -338,10 +339,16 @@ public sealed class EmbyClient
     private HttpRequestMessage CreateRequest(HttpMethod method, string path, bool includeToken = true)
     {
         var request = new HttpRequestMessage(method, Combine(path));
-        request.Headers.TryAddWithoutValidation(
-            "X-Emby-Authorization",
-            $"MediaBrowser Client=\"AsterPlay\", Device=\"Windows\", DeviceId=\"{DeviceId}\", Version=\"2.0.0\"");
+        var authorization =
+            $"MediaBrowser Client=\"AsterPlay\", Device=\"Windows\", DeviceId=\"{DeviceId}\", Version=\"2.0.0\"";
 
+        if (includeToken && !string.IsNullOrWhiteSpace(AccessToken))
+            authorization += $", Token=\"{AccessToken}\"";
+
+        request.Headers.TryAddWithoutValidation("X-Emby-Authorization", authorization);
+
+        // Keep the dedicated token header as well for compatibility with servers
+        // and reverse proxies that explicitly inspect it.
         if (includeToken && !string.IsNullOrWhiteSpace(AccessToken))
             request.Headers.TryAddWithoutValidation("X-Emby-Token", AccessToken);
 
