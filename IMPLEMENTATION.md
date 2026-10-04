@@ -604,6 +604,8 @@ GetPlayableStreamAsync()
 
 ## Step 7：完整媒体库浏览
 
+> 状态：核心功能已实现，待真实服务器验收（2026-10-04）
+
 ### 目标
 
 让用户不再依赖 Hero、继续观看和最新媒体寻找内容。
@@ -653,6 +655,28 @@ ViewModels/LibraryViewModel.cs
 ### 完成标准
 
 用户可以浏览服务器完整电影 / 剧集资源，并能搜索、筛选、排序。
+
+### 实现说明
+
+已实现：
+
+- 新增独立 `LibraryView.xaml / LibraryView.xaml.cs`
+- 新增 `LibraryViewModel`
+- 主窗口标题栏新增“首页 / 媒体库”导航
+- 支持“全部媒体库”以及单个 Emby 媒体库选择
+- 支持 Movie / Series / Movie+Series 类型筛选
+- 支持关键词搜索（Enter 或“应用筛选”）
+- 支持精确年份筛选
+- 支持“仅收藏”筛选
+- 支持名称、添加时间、上映年份、社区评分、最近播放排序
+- 每页 40 项，使用服务端 `StartIndex / Limit` 分页
+- Poster Grid 使用受限宽度图片，不一次请求全部原图
+- 点击 Poster 直接进入现有电影 / 剧集详情页
+- Windows x64 self-contained publish 已通过
+
+未伪装实现：
+
+- 独立“完整播放历史”页面暂未加入。官方 Items 查询的 `IsPlayed` 仅表示已看完，`IsResumable` 仅表示可续播，不能准确代表完整历史；后续若实现将基于可靠的历史语义单独处理。
 
 ---
 
@@ -1117,9 +1141,10 @@ Step 3 已完成。
 Step 4 已完成。
 Step 5 已实现，待真实服务器验收。
 Step 6 已实现，待真实服务器验收。
+Step 7 核心功能已实现，待真实服务器验收。
 
 当前下一项实际开发任务：
 
 ```text
-Step 7：媒体库、搜索与筛选
+Step 8：播放协商 / DeviceProfile
 ```
