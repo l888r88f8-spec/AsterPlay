@@ -37,10 +37,9 @@ Output:
 
 ```text
 dist/AsterPlay/
-dist/AsterPlay-Windows-x64.zip
 ```
 
-The ZIP is self-contained and does not require .NET to be installed on the target PC.
+The published folder is self-contained and does not require .NET to be installed on the target PC.
 
 ## Acknowledgements
 
