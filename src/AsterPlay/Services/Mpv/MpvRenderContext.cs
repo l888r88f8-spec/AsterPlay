@@ -117,7 +117,12 @@ public sealed class MpvRenderContext : IDisposable
         };
 
         Marshal.StructureToPtr(target, _fbo, false);
-        // GLWpfControl flips its OpenGL framebuffer when presenting it through D3DImage.\n        // Ask libmpv to render flipped so the final WPF image is upright.\n        Marshal.WriteInt32(_flipY, 1);
+
+        // Render into the offscreen FBO using libmpv's normal orientation.
+        // GLWpfControl 4.3.6 applies its own fixed Y flip when presenting the
+        // shared D3DImage. PlayerWindow compensates for that at the WPF visual
+        // layer so orientation no longer depends on libmpv's per-frame FLIP_Y.
+        Marshal.WriteInt32(_flipY, 0);
 
         Native.mpv_render_context_render(_renderContext, _renderParams);
     }
