@@ -7,7 +7,7 @@ public static class PlaybackLog
     private static readonly object Sync = new();
     private static readonly string DirectoryPath =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "AsterPlay", "logs");
+            "AsterPlay");
 
     private static readonly string LogFilePath =
         Path.Combine(DirectoryPath, "playback.log");
