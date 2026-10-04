@@ -9,32 +9,33 @@ public partial class DanmakuMatchWindow : Window
     private readonly DanmakuService _service;
     private readonly DanmakuContext _context;
     private readonly DanmakuSourceSettings _sourceSettings;
-    private readonly DanmakuMatchCandidate? _currentManualMatch;
+    private readonly DanmakuSeriesMatchBinding? _currentBinding;
     private CancellationTokenSource? _searchCts;
 
     public DanmakuMatchWindow(
         DanmakuService service,
         DanmakuContext context,
         DanmakuSourceSettings sourceSettings,
-        DanmakuMatchCandidate? currentManualMatch)
+        DanmakuSeriesMatchBinding? currentBinding)
     {
         InitializeComponent();
 
         _service = service;
         _context = context;
         _sourceSettings = sourceSettings;
-        _currentManualMatch = currentManualMatch;
+        _currentBinding = currentBinding;
 
         CurrentMediaTextBlock.Text = FormatCurrentMedia(context);
-        CurrentMatchTextBlock.Text = currentManualMatch is null
-            ? "当前：自动匹配"
-            : $"当前手动匹配：{currentManualMatch.DisplayTitle} · episodeId {currentManualMatch.EpisodeId}";
+        CurrentMatchTextBlock.Text = FormatCurrentBinding(
+            currentBinding);
 
         SearchTextBox.Text =
             DanmakuApiSupport.BuildSearchSubject(context);
     }
 
-    public DanmakuMatchCandidate? SelectedCandidate { get; private set; }
+    public DanmakuSeriesMatchCandidate? SelectedSeries { get; private set; }
+
+    public DanmakuMatchCandidate? SelectedEpisode { get; private set; }
 
     public bool UseAutomaticMatch { get; private set; }
 
@@ -59,54 +60,52 @@ public partial class DanmakuMatchWindow : Window
         _searchCts = new CancellationTokenSource();
 
         SearchButton.IsEnabled = false;
-        CandidatesListBox.IsEnabled = false;
-        StatusTextBlock.Text = "正在搜索 LogVar…";
-        EmptyTextBlock.Visibility = Visibility.Collapsed;
+        SeriesListBox.IsEnabled = false;
+        EpisodesListBox.IsEnabled = false;
+        StatusTextBlock.Text = "正在搜索 LogVar 剧集…";
+        SeriesEmptyTextBlock.Visibility = Visibility.Collapsed;
+        EpisodesEmptyTextBlock.Visibility = Visibility.Visible;
+        SeriesListBox.ItemsSource = null;
+        EpisodesListBox.ItemsSource = null;
 
         try
         {
-            var candidates = await _service.SearchCandidatesAsync(
+            var series = await _service.SearchSeriesCandidatesAsync(
                 _context,
                 _sourceSettings,
                 SearchTextBox.Text,
                 _searchCts.Token);
 
-            CandidatesListBox.ItemsSource = candidates;
-            CandidatesListBox.IsEnabled = true;
+            SeriesListBox.ItemsSource = series;
+            SeriesListBox.IsEnabled = true;
 
-            if (candidates.Count == 0)
+            if (series.Count == 0)
             {
-                EmptyTextBlock.Text = "没有找到候选";
-                EmptyTextBlock.Visibility = Visibility.Visible;
-                StatusTextBlock.Text = "没有找到匹配候选，可以换一个剧名或关键词再搜。";
+                SeriesEmptyTextBlock.Text = "没有找到剧集";
+                SeriesEmptyTextBlock.Visibility = Visibility.Visible;
+                StatusTextBlock.Text =
+                    "没有找到匹配剧集，可以换一个剧名或关键词再搜。";
                 return;
             }
 
-            if (_currentManualMatch is not null)
-            {
-                CandidatesListBox.SelectedItem = candidates.FirstOrDefault(
-                    candidate =>
-                        candidate.EpisodeId ==
-                        _currentManualMatch.EpisodeId);
-            }
+            var selectedSeries = FindBoundSeries(series) ??
+                                 series.First();
 
-            CandidatesListBox.SelectedIndex =
-                CandidatesListBox.SelectedIndex >= 0
-                    ? CandidatesListBox.SelectedIndex
-                    : 0;
+            SeriesListBox.SelectedItem = selectedSeries;
+            SeriesListBox.ScrollIntoView(selectedSeries);
 
             StatusTextBlock.Text =
-                $"找到 {candidates.Count} 个候选，按评分从高到低排列。";
+                $"找到 {series.Count} 个剧集候选。先选剧集，再确认当前集。";
         }
         catch (OperationCanceledException)
         {
         }
         catch (Exception ex)
         {
-            EmptyTextBlock.Text = "搜索失败";
-            EmptyTextBlock.Visibility = Visibility.Visible;
+            SeriesEmptyTextBlock.Text = "搜索失败";
+            SeriesEmptyTextBlock.Visibility = Visibility.Visible;
             StatusTextBlock.Text = $"搜索失败：{ex.Message}";
-            PlaybackLog.Error("DanmakuManualSearch", ex);
+            PlaybackLog.Error("DanmakuManualSeriesSearch", ex);
         }
         finally
         {
@@ -114,11 +113,106 @@ public partial class DanmakuMatchWindow : Window
         }
     }
 
-    private void CandidatesListBox_MouseDoubleClick(
+    private DanmakuSeriesMatchCandidate? FindBoundSeries(
+        IReadOnlyList<DanmakuSeriesMatchCandidate> series)
+    {
+        if (_currentBinding is null)
+            return null;
+
+        if (_currentBinding.AnimeId > 0)
+        {
+            var byId = series.FirstOrDefault(
+                item => item.AnimeId == _currentBinding.AnimeId);
+            if (byId is not null)
+                return byId;
+        }
+
+        return series.FirstOrDefault(
+            item =>
+                string.Equals(
+                    item.AnimeTitle,
+                    _currentBinding.AnimeTitle,
+                    StringComparison.OrdinalIgnoreCase) &&
+                (_currentBinding.LogVarSeasonNumber <= 0 ||
+                 item.SeasonNumber <= 0 ||
+                 item.SeasonNumber ==
+                 _currentBinding.LogVarSeasonNumber));
+    }
+
+    private void SeriesListBox_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (SeriesListBox.SelectedItem is not DanmakuSeriesMatchCandidate series)
+        {
+            EpisodesListBox.ItemsSource = null;
+            EpisodesEmptyTextBlock.Visibility = Visibility.Visible;
+            return;
+        }
+
+        EpisodesListBox.ItemsSource = series.Episodes;
+        EpisodesListBox.IsEnabled = true;
+        EpisodesEmptyTextBlock.Visibility =
+            series.Episodes.Count == 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        if (series.Episodes.Count == 0)
+            return;
+
+        var targetEpisodeNumber =
+            _context.EpisodeNumber.GetValueOrDefault(0);
+
+        if (_currentBinding is not null &&
+            IsBoundSeries(series) &&
+            targetEpisodeNumber > 0)
+        {
+            targetEpisodeNumber +=
+                _currentBinding.EpisodeOffset;
+        }
+
+        var selectedEpisode =
+            targetEpisodeNumber > 0
+                ? series.Episodes.FirstOrDefault(
+                    item =>
+                        item.EpisodeNumber ==
+                        targetEpisodeNumber)
+                : null;
+
+        selectedEpisode ??= series.Episodes.First();
+
+        EpisodesListBox.SelectedItem = selectedEpisode;
+        EpisodesListBox.ScrollIntoView(selectedEpisode);
+
+        StatusTextBlock.Text =
+            targetEpisodeNumber > 0
+                ? $"当前 Emby 集数 E{_context.EpisodeNumber.GetValueOrDefault():00}；已定位 LogVar E{selectedEpisode.EpisodeNumber:00}。"
+                : "请选择当前媒体对应的 LogVar 集数。";
+    }
+
+    private bool IsBoundSeries(
+        DanmakuSeriesMatchCandidate series)
+    {
+        if (_currentBinding is null)
+            return false;
+
+        if (_currentBinding.AnimeId > 0 &&
+            series.AnimeId == _currentBinding.AnimeId)
+        {
+            return true;
+        }
+
+        return string.Equals(
+            series.AnimeTitle,
+            _currentBinding.AnimeTitle,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void EpisodesListBox_MouseDoubleClick(
         object sender,
         System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (CandidatesListBox.SelectedItem is DanmakuMatchCandidate)
+        if (EpisodesListBox.SelectedItem is DanmakuMatchCandidate)
             AcceptSelected();
     }
 
@@ -129,13 +223,20 @@ public partial class DanmakuMatchWindow : Window
 
     private void AcceptSelected()
     {
-        if (CandidatesListBox.SelectedItem is not DanmakuMatchCandidate candidate)
+        if (SeriesListBox.SelectedItem is not DanmakuSeriesMatchCandidate series)
         {
-            StatusTextBlock.Text = "请先选择一个候选。";
+            StatusTextBlock.Text = "请先选择一个剧集。";
             return;
         }
 
-        SelectedCandidate = candidate;
+        if (EpisodesListBox.SelectedItem is not DanmakuMatchCandidate episode)
+        {
+            StatusTextBlock.Text = "请选择当前视频对应的集数。";
+            return;
+        }
+
+        SelectedSeries = series;
+        SelectedEpisode = episode;
         UseAutomaticMatch = false;
         DialogResult = true;
     }
@@ -144,7 +245,8 @@ public partial class DanmakuMatchWindow : Window
         object sender,
         RoutedEventArgs e)
     {
-        SelectedCandidate = null;
+        SelectedSeries = null;
+        SelectedEpisode = null;
         UseAutomaticMatch = true;
         DialogResult = true;
     }
@@ -182,5 +284,20 @@ public partial class DanmakuMatchWindow : Window
         }
 
         return $"当前媒体：{context.Title}";
+    }
+
+    private static string FormatCurrentBinding(
+        DanmakuSeriesMatchBinding? binding)
+    {
+        if (binding is null)
+            return "当前：自动匹配";
+
+        var offset = binding.EpisodeOffset == 0
+            ? "集数一一对应"
+            : binding.EpisodeOffset > 0
+                ? $"LogVar 集数 +{binding.EpisodeOffset}"
+                : $"LogVar 集数 {binding.EpisodeOffset}";
+
+        return $"当前剧集绑定：{binding.AnimeTitle} · {offset}";
     }
 }
