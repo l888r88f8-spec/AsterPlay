@@ -565,6 +565,7 @@ public sealed class EmbyClient
             Url = url,
             Title = title,
             OriginalTitle = playable.OriginalTitle,
+            SeriesId = playable.SeriesId,
             SeriesName = playable.SeriesName,
             SeasonNumber = playable.ParentIndexNumber,
             EpisodeNumber = playable.IndexNumber,
