@@ -141,6 +141,39 @@ public sealed class MpvClient : IDisposable
     public bool IsPaused => GetBoolProperty("pause");
     public bool IsBuffering => GetBoolProperty("paused-for-cache");
 
+    public MpvDiagnosticSnapshot GetDiagnosticSnapshot()
+    {
+        var width = GetNullableIntProperty("video-params/w")
+                    ?? GetNullableIntProperty("dwidth");
+        var height = GetNullableIntProperty("video-params/h")
+                     ?? GetNullableIntProperty("dheight");
+
+        var fps = GetNullableDoubleProperty("estimated-vf-fps")
+                  ?? GetNullableDoubleProperty("container-fps");
+
+        var videoBitrate = GetNullableDoubleProperty("packet-video-bitrate")
+                           ?? GetNullableDoubleProperty("video-bitrate");
+        var audioBitrate = GetNullableDoubleProperty("packet-audio-bitrate")
+                           ?? GetNullableDoubleProperty("audio-bitrate");
+
+        return new MpvDiagnosticSnapshot(
+            GetStringProperty("video-codec") ?? GetStringProperty("video-format") ?? "",
+            GetStringProperty("audio-codec-name") ?? "",
+            width,
+            height,
+            fps,
+            videoBitrate,
+            audioBitrate,
+            GetStringProperty("hwdec-current") ?? "",
+            GetStringProperty("current-vo") ?? GetStringProperty("vo") ?? "",
+            GetStringProperty("aid") ?? "",
+            GetStringProperty("sid") ?? "",
+            GetNullableDoubleProperty("demuxer-cache-duration"),
+            GetNullableDoubleProperty("cache-buffering-state"),
+            IsBuffering,
+            GetNullableDoubleProperty("avsync"));
+    }
+
     public string DiagnosticState =>
         $"eof={GetStringProperty("eof-reached") ?? "-"}, " +
         $"abort={GetStringProperty("playback-abort") ?? "-"}, " +
@@ -337,6 +370,14 @@ public sealed class MpvClient : IDisposable
     {
         var value = GetStringProperty(name);
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result)
+            ? result
+            : null;
+    }
+
+    private double? GetNullableDoubleProperty(string name)
+    {
+        var value = GetStringProperty(name);
+        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var result)
             ? result
             : null;
     }
