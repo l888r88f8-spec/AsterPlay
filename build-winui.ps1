@@ -27,5 +27,11 @@ if (-not (Test-Path $exe)) {
     throw "WinUI 3 publish self-check failed: AsterPlay.WinUI.exe is missing."
 }
 
+$liquidRuntime = Join-Path $Publish "CustomEffectRuntimeNative.dll"
+if (-not (Test-Path $liquidRuntime)) {
+    throw "LiquidGlassWinUI native runtime is missing from the publish output."
+}
+
 Write-Host "WinUI 3 publish self-check passed."
 Write-Host "  EXE: $exe"
+Write-Host "  LiquidGlass runtime: $liquidRuntime"
