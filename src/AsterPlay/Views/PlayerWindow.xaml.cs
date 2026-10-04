@@ -14,11 +14,15 @@ public partial class PlayerWindow : Window
     private bool _updatingUi;
     private bool _fullscreen;
     private long _lastPositionTicks;
+    private readonly double _resumeSeconds;
+    private bool _resumeApplied;
 
     public PlayerWindow(EmbyClient client, PlaybackLaunch launch)
     {
         _client = client;
         _launch = launch;
+        _resumeSeconds = Math.Max(0, launch.ResumePositionTicks / 10_000_000d);
+        _resumeApplied = _resumeSeconds <= 0.25;
 
         InitializeComponent();
 
@@ -37,8 +41,8 @@ public partial class PlayerWindow : Window
         try
         {
             PlaybackLog.Write("Player", $"Window loaded: title={_launch.Title}, itemId={_launch.ItemId}, mediaSourceId={_launch.MediaSourceId}, resumeTicks={_launch.ResumePositionTicks}, log={PlaybackLog.LogPath}");
-            var resumeSeconds = _launch.ResumePositionTicks / 10_000_000d;
-            PlayerHost.Load(_launch.Url, resumeSeconds);
+            PlaybackLog.Write("Player", $"Load from start; resume seek will be applied after media is ready: resumeSeconds={_resumeSeconds:0.###}");
+            PlayerHost.Load(_launch.Url);
             VolumeSlider.Value = 100;
             _lastPositionTicks = _launch.ResumePositionTicks;
             _timer.Start();
@@ -74,6 +78,14 @@ public partial class PlayerWindow : Window
         if (duration <= 0 && _launch.RunTimeTicks is > 0)
             duration = _launch.RunTimeTicks.Value / 10_000_000d;
 
+        if (!_resumeApplied && duration > 0)
+        {
+            _resumeApplied = true;
+            PlaybackLog.Write("Player", $"Applying deferred resume seek: {_resumeSeconds:0.###}s");
+            PlayerHost.SeekAbsolute(_resumeSeconds);
+            position = _resumeSeconds;
+        }
+
         _lastPositionTicks = (long)(position * 10_000_000d);
 
         PlaybackLog.Write("PlayerState",
@@ -108,14 +120,15 @@ public partial class PlayerWindow : Window
         }
     }
 
-    private async Task ReportProgressAsync()
+    private async Task ReportProgressAsync(string eventName = "TimeUpdate")
     {
         await SafeReportAsync(() =>
             _client.ReportPlaybackProgressAsync(
                 _launch,
                 _lastPositionTicks,
                 PlayerHost.IsPaused,
-                PlayerHost.Volume));
+                PlayerHost.Volume,
+                eventName));
     }
 
     private async Task SafeReportAsync(Func<Task> action)
@@ -146,8 +159,9 @@ public partial class PlayerWindow : Window
     private void Pause_Click(object sender, RoutedEventArgs e)
     {
         PlaybackLog.Write("Player", "Pause button clicked");
+        var wasPaused = PlayerHost.IsPaused;
         PlayerHost.TogglePause();
-        _ = ReportProgressAsync();
+        _ = ReportProgressAsync(wasPaused ? "Unpause" : "Pause");
     }
 
     private void Back_Click(object sender, RoutedEventArgs e)
