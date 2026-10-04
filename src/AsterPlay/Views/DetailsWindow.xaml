@@ -243,7 +243,7 @@
                                             <ProgressBar Grid.Row="2"
                                                          Minimum="0"
                                                          Maximum="100"
-                                                         Value="{Binding PlayedPercentage}"
+                                                         Value="{Binding PlayedPercentage, Mode=OneWay}"
                                                          Height="4"
                                                          Margin="0,10,0,0"/>
 
