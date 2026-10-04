@@ -1029,6 +1029,8 @@ DPAPI 加密
 
 ## Step 12：弹幕渲染技术 PoC
 
+> 状态：已实现，待真实播放验收（2026-10-04）
+
 ### 目标
 
 验证基于当前 Render API 架构的 WPF 弹幕 Overlay 在真实播放中的性能和同步表现。
@@ -1065,6 +1067,44 @@ WPF Visual Tree
 ### 完成标准
 
 可以在视频 WPF Surface 上方持续稳定渲染测试文字，不出现明显错位、闪烁或播放卡顿。
+
+### 实现说明
+
+已实现：
+
+- 新增 `Controls/DanmakuPocOverlay.cs`
+- Overlay 直接位于视频 WPF Visual Tree 上方，不使用额外 HWND
+- Overlay `IsHitTestVisible=false`，验证鼠标穿透路径
+- 播放器控制栏新增“弹幕 PoC”按钮
+- 支持 `D` 键快速开关 PoC
+- 使用单一 `CompositionTarget.Rendering` 渲染循环，不为每条测试弹幕创建 Timer / WPF Animation
+- 测试弹幕由播放时间轴确定位置，暂停时冻结，倍速时按媒体时间加速
+- 每 250ms 使用 mpv `time-pos` 重新校时，Seek 后自动回到新的媒体时间轴
+- 使用确定性的时间槽生成约 50 条并发测试文字，用于持续压力观察
+- Resize / 最大化 / 全屏时直接根据当前 WPF Surface 尺寸重新计算轨道与位置
+- 每帧读取当前 DPI；DPI 改变时清理 FormattedText 缓存并按新 `PixelsPerDip` 重建
+- Alt+Tab 或 WPF Composition 暂停后，下一次 mpv 校时不会累积长期时间漂移
+- 播放信息面板新增“弹幕 PoC”诊断行，显示：
+  - 当前活动弹幕数
+  - 最近一帧 Overlay 绘制耗时
+  - 峰值 Overlay 绘制耗时
+  - Overlay 当前尺寸
+  - 当前 DPI
+- `playback.log` 每 5 秒记录一次 PoC 指标，便于运行时比对卡顿
+- Windows x64 self-contained publish 已通过临时 CI 验证
+- 临时 Step 12 CI 已在验证后删除
+
+仍需真实播放验收：
+
+1. 普通窗口播放 5～10 分钟，确认测试文字无明显闪烁或错位。
+2. 连续 Resize、最大化、F11 全屏 / 退出全屏，确认弹幕轨道立即适配。
+3. 暂停 / 恢复、10 秒 Seek、Slider Seek、0.5× / 2× 倍速，确认弹幕与视频时间轴保持一致。
+4. 将窗口移动到不同 DPI 显示器，确认文字尺寸和位置稳定。
+5. 多次 Alt+Tab 后确认弹幕不跳变、不长期漂移。
+6. 控制栏隐藏时双击视频和鼠标移动仍正常，确认 Overlay 不截获鼠标。
+7. 打开“播放信息”观察 Overlay 单帧 / 峰值耗时，并结合 playback.log 判断是否影响视频播放。
+
+Step 12 在以上运行时验收通过前，不进入 Step 13。
 
 ---
 
@@ -1307,9 +1347,12 @@ Step 8 已实现，已完成 DirectStream / 硬解等实机验证。
 Step 9 已实现，诊断 UI 已完成实机验证。
 Step 10 已实现并完成运行时缓存效果验收。
 Step 11 已实现并完成本机 session 迁移 / 自动登录验收。
+Step 12 已实现并通过 Windows x64 self-contained publish，待真实播放验收。
 
-当前下一项实际开发任务：
+当前下一项实际任务：
 
 ```text
-Step 12：弹幕渲染技术 PoC
+Step 12：弹幕 PoC 真实播放验收
 ```
+
+Step 12 验收通过后才进入 Step 13。
