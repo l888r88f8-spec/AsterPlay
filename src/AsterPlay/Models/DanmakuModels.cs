@@ -22,6 +22,7 @@ public sealed record DanmakuContext(
     string ItemId,
     string Title,
     double DurationSeconds,
+    string SeriesId = "",
     string SeriesName = "",
     int? SeasonNumber = null,
     int? EpisodeNumber = null,
@@ -29,6 +30,12 @@ public sealed record DanmakuContext(
     string ItemType = "",
     string MediaPath = "",
     string FileName = "");
+
+public sealed record DanmakuSeriesMatchBinding(
+    long AnimeId,
+    string AnimeTitle,
+    int LogVarSeasonNumber,
+    int EpisodeOffset);
 
 public sealed record DanmakuSettings
 {
