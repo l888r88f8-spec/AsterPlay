@@ -24,7 +24,8 @@ public sealed class MpvClient : IDisposable
         SetOption("vo", "gpu-next");
         SetOption("gpu-api", "d3d11");
         SetOption("hwdec", "auto-copy");
-        SetOption("cache", "yes");
+        // Keep mpv's native network cache policy. Jellyfin MPV Shim leaves
+        // the default alone unless a larger user-selected buffer is requested.
         SetOption("keep-open", "yes");
 
         var result = Native.mpv_initialize(_handle);
@@ -35,8 +36,8 @@ public sealed class MpvClient : IDisposable
             throw new InvalidOperationException($"mpv_initialize failed: {result}");
         }
 
-        var logResult = Native.mpv_request_log_messages(_handle, "info");
-        PlaybackLog.Write("mpv", $"request_log_messages(info) -> {logResult}");
+        var logResult = Native.mpv_request_log_messages(_handle, "debug");
+        PlaybackLog.Write("mpv", $"request_log_messages(debug) -> {logResult}");
         StartEventLoop();
     }
 
