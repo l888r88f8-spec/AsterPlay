@@ -454,6 +454,8 @@ Windows x64 self-contained publish 已通过。真实服务器字段展示将在
 
 ## Step 5：完整电影详情页
 
+> 状态：已实现，待真实服务器验收（2026-10-04）
+
 ### 目标
 
 让电影详情页成为真正的操作页面。
@@ -504,6 +506,30 @@ PlaybackPositionTicks > 0
 ```text
 了解影片 -> 查看媒体信息 -> 收藏 -> 播放
 ```
+
+### 实现说明
+
+已实现：
+
+- 打开详情页时重新请求完整 Emby Item，不依赖首页卡片裁剪数据
+- 背景图 / Poster / 标题 / 原标题 / Tagline
+- 年份 / 社区评分 / 时长 / 分级 / 类型
+- 完整简介
+- 演员横向列表及人物图片
+- 导演 / 制作公司
+- Genres / Tags / ProviderIds
+- MediaSources
+- Video / Audio / Subtitle 媒体流摘要
+- 视频 Codec / 分辨率 / HDR/色彩字段（服务器提供时）
+- 音频语言 / Codec / 声道
+- 字幕语言 / Codec / 外挂 / 默认 / 强制状态
+- 收藏 / 取消收藏，并重新拉取 Item 确认状态
+- 无进度时显示“播放”
+- 有进度时显示“继续播放”以及独立“从头播放”
+- `GetPlayableStreamAsync(..., restart: true)` 明确以 0 ticks 启动，不影响首页默认续播行为
+- Series 暂保留通用详情展示，季 / 集浏览进入 Step 6
+
+Windows x64 self-contained publish 已通过。Step 5 需使用真实电影数据验收字段完整性、图片和操作。
 
 ---
 
