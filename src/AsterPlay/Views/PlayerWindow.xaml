@@ -248,6 +248,12 @@
                                     Padding="11,7"
                                     Margin="0,0,7,0"
                                     Click="Danmaku_Click"/>
+                            <Button x:Name="DanmakuSettingsButton"
+                                    Content="弹幕设置"
+                                    Style="{StaticResource GlassButton}"
+                                    Padding="11,7"
+                                    Margin="0,0,7,0"
+                                    Click="DanmakuSettings_Click"/>
                             <Button x:Name="DiagnosticsButton"
                                     Content="信息"
                                     Style="{StaticResource GlassButton}"

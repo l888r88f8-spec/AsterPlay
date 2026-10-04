@@ -22,6 +22,7 @@ public partial class PlayerWindow : Window
     private readonly DispatcherTimer _controlsTimer;
     private readonly DanmakuService _danmakuService = new();
     private readonly CancellationTokenSource _danmakuLoadCts = new();
+    private DanmakuSettings _danmakuSettings = DanmakuSettingsStore.Load();
     private double _timelineOffsetSeconds;
 
     private MpvClient? _mpv;
@@ -51,6 +52,7 @@ public partial class PlayerWindow : Window
     private bool _positionSliderPointerDown;
     private bool _positionSliderDragging;
     private ContextMenu? _activeTrackMenu;
+    private ContextMenu? _activeDanmakuSettingsMenu;
     private long _lastPositionTicks;
     private double _lastAudibleVolume = 100;
     private WindowState _windowedState = WindowState.Normal;
@@ -68,6 +70,8 @@ public partial class PlayerWindow : Window
 
         Title = $"AsterPlay · {launch.Title}";
         TitleBlock.Text = launch.Title;
+
+        DanmakuOverlay.SetSettings(_danmakuSettings);
 
         SpeedComboBox.ItemsSource = Speeds.Select(x => $"{x:0.##}×").ToArray();
         SpeedComboBox.SelectedIndex = 2;
@@ -999,6 +1003,138 @@ public partial class PlayerWindow : Window
     private void Danmaku_Click(object sender, RoutedEventArgs e) =>
         ToggleDanmaku();
 
+    private void DanmakuSettings_Click(object sender, RoutedEventArgs e) =>
+        OpenDanmakuSettingsMenu();
+
+    private void OpenDanmakuSettingsMenu()
+    {
+        if (_activeDanmakuSettingsMenu?.IsOpen == true)
+            _activeDanmakuSettingsMenu.IsOpen = false;
+
+        var menu = new ContextMenu
+        {
+            PlacementTarget = DanmakuSettingsButton,
+            Placement = PlacementMode.Top,
+            StaysOpen = false
+        };
+
+        menu.Items.Add(CreateDanmakuSettingGroup(
+            "字号",
+            [
+                ("小 · 18", 18d),
+                ("标准 · 22", 22d),
+                ("大 · 28", 28d),
+                ("特大 · 34", 34d)
+            ],
+            _danmakuSettings.FontSize,
+            value => ApplyDanmakuSettings(
+                _danmakuSettings with { FontSize = value },
+                $"字号 {value:0}")));
+
+        menu.Items.Add(CreateDanmakuSettingGroup(
+            "速度",
+            [
+                ("慢 · 0.75×", 0.75d),
+                ("标准 · 1.0×", 1d),
+                ("快 · 1.25×", 1.25d),
+                ("很快 · 1.5×", 1.5d)
+            ],
+            _danmakuSettings.Speed,
+            value => ApplyDanmakuSettings(
+                _danmakuSettings with { Speed = value },
+                $"速度 {value:0.##}×")));
+
+        menu.Items.Add(CreateDanmakuSettingGroup(
+            "透明度",
+            [
+                ("50%", 0.50d),
+                ("70%", 0.70d),
+                ("85%", 0.85d),
+                ("100%", 1.00d)
+            ],
+            _danmakuSettings.Opacity,
+            value => ApplyDanmakuSettings(
+                _danmakuSettings with { Opacity = value },
+                $"透明度 {value:P0}")));
+
+        menu.Items.Add(CreateDanmakuSettingGroup(
+            "显示区域",
+            [
+                ("上半屏 · 50%", 0.50d),
+                ("默认 · 72%", 0.72d),
+                ("全屏 · 100%", 1.00d)
+            ],
+            _danmakuSettings.ScreenHeightRatio,
+            value => ApplyDanmakuSettings(
+                _danmakuSettings with { ScreenHeightRatio = value },
+                $"显示区域 {value:P0}")));
+
+        menu.Items.Add(new Separator());
+
+        var resetItem = new MenuItem { Header = "恢复默认设置" };
+        resetItem.Click += (_, _) =>
+            ApplyDanmakuSettings(new DanmakuSettings(), "已恢复默认设置");
+        menu.Items.Add(resetItem);
+
+        menu.Closed += (_, _) =>
+        {
+            _trackMenuOpen = false;
+            if (ReferenceEquals(_activeDanmakuSettingsMenu, menu))
+                _activeDanmakuSettingsMenu = null;
+            ShowControls();
+        };
+
+        _activeDanmakuSettingsMenu = menu;
+        _trackMenuOpen = true;
+        ShowControls();
+        menu.IsOpen = true;
+    }
+
+    private static MenuItem CreateDanmakuSettingGroup(
+        string header,
+        IReadOnlyList<(string Label, double Value)> options,
+        double currentValue,
+        Action<double> apply)
+    {
+        var group = new MenuItem { Header = header };
+
+        foreach (var option in options)
+        {
+            var item = new MenuItem
+            {
+                Header = option.Label,
+                IsCheckable = true,
+                IsChecked = Math.Abs(option.Value - currentValue) < 0.001
+            };
+
+            var value = option.Value;
+            item.Click += (_, _) => apply(value);
+            group.Items.Add(item);
+        }
+
+        return group;
+    }
+
+    private void ApplyDanmakuSettings(
+        DanmakuSettings settings,
+        string statusText)
+    {
+        _danmakuSettings = settings;
+        DanmakuOverlay.SetSettings(_danmakuSettings);
+        DanmakuSettingsStore.Save(_danmakuSettings);
+
+        StatusBlock.Text = $"弹幕：{statusText}";
+        PlaybackLog.Write(
+            "DanmakuSettings",
+            $"font={_danmakuSettings.FontSize:0.##}, speed={_danmakuSettings.Speed:0.##}, " +
+            $"opacity={_danmakuSettings.Opacity:0.##}, area={_danmakuSettings.ScreenHeightRatio:0.##}");
+
+        if (_diagnosticsVisible)
+            RefreshDiagnosticsPanel();
+
+        ShowControls();
+    }
+
     private void ToggleDanmaku()
     {
         _danmakuVisible = !_danmakuVisible;
@@ -1252,6 +1388,7 @@ public partial class PlayerWindow : Window
             var danmaku = DanmakuOverlay.GetMetrics();
             DiagnosticsDanmakuBlock.Text =
                 $"{danmaku.SourceName} · {danmaku.LoadedCount} 已载入 / {danmaku.ActiveCount} 活动 · " +
+                $"字号 {_danmakuSettings.FontSize:0} / 速度 {_danmakuSettings.Speed:0.##}× / 透明度 {_danmakuSettings.Opacity:P0} · " +
                 $"{danmaku.LastFrameMilliseconds:0.00} ms / 峰值 {danmaku.PeakFrameMilliseconds:0.00} ms · " +
                 $"{danmaku.Width:0}×{danmaku.Height:0} · DPI {danmaku.DpiX:0}×{danmaku.DpiY:0}";
         }
@@ -1376,7 +1513,11 @@ public partial class PlayerWindow : Window
 
         if (_activeTrackMenu?.IsOpen == true)
             _activeTrackMenu.IsOpen = false;
+        if (_activeDanmakuSettingsMenu?.IsOpen == true)
+            _activeDanmakuSettingsMenu.IsOpen = false;
+
         _activeTrackMenu = null;
+        _activeDanmakuSettingsMenu = null;
         _trackMenuOpen = false;
 
         var finalTicks = _lastPositionTicks;
