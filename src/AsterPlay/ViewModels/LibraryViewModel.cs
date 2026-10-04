@@ -267,6 +267,7 @@ public sealed class LibraryViewModel : INotifyPropertyChanged
             return;
 
         IsLoading = true;
+        var loadTimer = System.Diagnostics.Stopwatch.StartNew();
 
         try
         {
@@ -308,6 +309,13 @@ public sealed class LibraryViewModel : INotifyPropertyChanged
         }
         finally
         {
+            loadTimer.Stop();
+            PlaybackLog.Write(
+                "Performance",
+                $"Library page load: {loadTimer.Elapsed.TotalMilliseconds:0} ms, page={_pageIndex + 1}, " +
+                $"items={Items.Count}, total={TotalRecordCount}, search={(string.IsNullOrWhiteSpace(SearchText) ? "none" : "set")}, " +
+                $"workingSet={Environment.WorkingSet / 1024d / 1024d:0.0} MB, managed={GC.GetTotalMemory(false) / 1024d / 1024d:0.0} MB");
+
             IsLoading = false;
             OnPropertyChanged(nameof(CanGoPrevious));
             OnPropertyChanged(nameof(CanGoNext));
