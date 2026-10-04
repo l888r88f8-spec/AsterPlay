@@ -166,6 +166,7 @@ public sealed class LibraryViewModel : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(CanGoPrevious));
             OnPropertyChanged(nameof(CanGoNext));
+            OnPropertyChanged(nameof(IsEmpty));
         }
     }
 
@@ -185,6 +186,7 @@ public sealed class LibraryViewModel : INotifyPropertyChanged
     public bool CanGoPrevious => !IsLoading && _pageIndex > 0;
     public bool CanGoNext =>
         !IsLoading && ((_pageIndex + 1) * PageSize) < TotalRecordCount;
+    public bool IsEmpty => !IsLoading && Items.Count == 0;
 
     public string PageLabel
     {
@@ -302,6 +304,7 @@ public sealed class LibraryViewModel : INotifyPropertyChanged
             TotalRecordCount = result.TotalRecordCount;
             OnPropertyChanged(nameof(PageLabel));
             OnPropertyChanged(nameof(ResultLabel));
+            OnPropertyChanged(nameof(IsEmpty));
         }
         finally
         {
