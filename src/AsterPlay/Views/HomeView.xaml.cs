@@ -39,11 +39,18 @@ public partial class HomeView : UserControl
         try
         {
             await _viewModel.InitializeAsync();
-            LoadingOverlay.Visibility = Visibility.Collapsed;
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "AsterPlay", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(
+                UserError.GetMessage(ex, "加载首页"),
+                "AsterPlay",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+        finally
+        {
+            LoadingOverlay.Visibility = Visibility.Collapsed;
         }
     }
 
@@ -177,7 +184,7 @@ public partial class HomeView : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Playback", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(UserError.GetMessage(ex, "播放"), "Playback", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -189,7 +196,7 @@ public partial class HomeView : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Favorite", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(UserError.GetMessage(ex, "更新收藏"), "Favorite", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
