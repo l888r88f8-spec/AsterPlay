@@ -24,6 +24,25 @@ public sealed class MpvPlayerHost : HwndHost
         _mpv?.Load(url, _pendingStartSeconds);
     }
 
+    public void ShutdownPlayback()
+    {
+        _pendingUrl = null;
+        _pendingStartSeconds = 0;
+
+        if (_mpv is null)
+            return;
+
+        try
+        {
+            _mpv.Stop();
+        }
+        finally
+        {
+            _mpv.Dispose();
+            _mpv = null;
+        }
+    }
+
     public void TogglePause() => _mpv?.TogglePause();
     public void Seek(double seconds) => _mpv?.Seek(seconds);
     public void SeekAbsolute(double seconds) => _mpv?.SeekAbsolute(seconds);
@@ -58,8 +77,7 @@ public sealed class MpvPlayerHost : HwndHost
 
     protected override void DestroyWindowCore(HandleRef hwnd)
     {
-        _mpv?.Dispose();
-        _mpv = null;
+        ShutdownPlayback();
 
         if (hwnd.Handle != IntPtr.Zero)
             DestroyWindow(hwnd.Handle);
