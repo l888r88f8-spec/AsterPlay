@@ -49,7 +49,7 @@ public static class UserError
                 return "无法从 Emby 获取播放信息。请检查媒体源是否仍可访问；如果需要转码，也请检查服务端转码配置。";
             }
 
-            if (http.StatusCode is >= HttpStatusCode.InternalServerError)
+            if (http.StatusCode is not null && (int)http.StatusCode.Value >= 500)
             {
                 return $"Emby 服务器暂时不可用（HTTP {(int)http.StatusCode.Value}），请稍后重试。";
             }
