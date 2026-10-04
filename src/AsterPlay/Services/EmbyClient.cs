@@ -126,14 +126,7 @@ public sealed class EmbyClient
         var method = favorite ? HttpMethod.Post : HttpMethod.Delete;
         using var req = CreateRequest(method, $"/Users/{Esc(UserId)}/FavoriteItems/{Esc(itemId)}");
         if (favorite)
-            req.Content = JsonContent.Create(new
-        {
-            StartTimeTicks = Math.Max(0, playable.UserData?.PlaybackPositionTicks ?? 0),
-            IsPlayback = true,
-            EnableDirectPlay = true,
-            EnableDirectStream = true,
-            EnableTranscoding = false
-        });
+            req.Content = JsonContent.Create(new { });
 
         using var response = await _http.SendAsync(req);
         await EnsureSuccess(response, "Failed to update favorite");
@@ -166,7 +159,14 @@ public sealed class EmbyClient
         using var req = CreateRequest(
             HttpMethod.Post,
             $"/Items/{Esc(playable.Id)}/PlaybackInfo?UserId={Esc(UserId)}");
-        req.Content = JsonContent.Create(new { });
+        req.Content = JsonContent.Create(new
+        {
+            StartTimeTicks = Math.Max(0, playable.UserData?.PlaybackPositionTicks ?? 0),
+            IsPlayback = true,
+            EnableDirectPlay = true,
+            EnableDirectStream = true,
+            EnableTranscoding = false
+        });
 
         using var response = await _http.SendAsync(req);
         await EnsureSuccess(response, "PlaybackInfo request failed");
