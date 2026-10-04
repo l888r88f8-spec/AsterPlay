@@ -945,6 +945,8 @@ Services/ImageCacheService.cs
 
 ## Step 11：Session Token 安全
 
+> 状态：已实现，待本机验收（2026-10-04）
+
 ### 目标
 
 取消 `session.json` 中的 AccessToken 明文存储。
@@ -982,6 +984,46 @@ DPAPI 加密
 ### 完成标准
 
 磁盘上的 `session.json` 不再出现可直接读取的 AccessToken 明文。
+
+### 实现说明
+
+已实现：
+
+- 新增 Windows DPAPI 依赖 `System.Security.Cryptography.ProtectedData`
+- 运行时 `EmbySession` 不再直接序列化到磁盘
+- 新磁盘格式只保存：
+  - `FormatVersion`
+  - `ServerUrl`
+  - `UserId`
+  - `DeviceId`
+  - `UserName`
+  - `AccessTokenProtected`
+- AccessToken 使用：
+  `ProtectedData.Protect(..., DataProtectionScope.CurrentUser)`
+- 加密结果以 Base64 写入 `AccessTokenProtected`
+- Load 时使用 `ProtectedData.Unprotect` 恢复运行时 token
+- 加入固定应用 entropy：`AsterPlay.Session.v1`
+- 写入 `session.json` 使用临时文件 + 原子替换，减少写一半导致损坏的风险
+- 支持旧版明文 `AccessToken` 自动迁移：
+  1. 正常读取旧 session
+  2. 恢复 token
+  3. 立即重新 DPAPI 加密
+  4. 原子覆盖旧 `session.json`
+- DPAPI 解密失败时不会把密文当明文继续使用
+- Windows x64 self-contained publish 已通过
+- Windows CI 运行时 smoke test 已通过：
+  - 新保存的 `session.json` 不包含明文 token
+  - 新加密 session 可以正常 Load
+  - 旧明文 session 可以正常 Load
+  - 旧明文 session Load 后会自动改写成 `AccessTokenProtected`
+
+本机验收重点：
+
+1. 用已有旧版本 session 启动新版 AsterPlay，不应要求重新登录。
+2. 启动后检查 `%LOCALAPPDATA%\AsterPlay\session.json`，不应再存在 `"AccessToken": "明文..."`。
+3. 应看到 `AccessTokenProtected`，其值为不可直接读取的 Base64 密文。
+4. 关闭并重新启动 AsterPlay，自动登录仍应正常。
+5. 登出后 `session.json` 应继续被删除。
 
 ---
 
@@ -1263,10 +1305,11 @@ Step 6 已实现，待真实服务器验收。
 Step 7 核心功能已实现，待真实服务器验收。
 Step 8 已实现，已完成 DirectStream / 硬解等实机验证。
 Step 9 已实现，诊断 UI 已完成实机验证。
-Step 10 已实现，待运行时缓存效果验收。
+Step 10 已实现并完成运行时缓存效果验收。
+Step 11 已实现，待本机 session 迁移 / 自动登录验收。
 
 当前下一项实际开发任务：
 
 ```text
-Step 11
+Step 12：弹幕渲染技术 PoC
 ```
