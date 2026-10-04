@@ -1,15 +1,14 @@
 <Application x:Class="AsterPlay.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:AsterPlay.Controls"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <Color x:Key="AppBackgroundColor">#090A0D</Color>
-        <Color x:Key="SidebarColor">#111216</Color>
-        <Color x:Key="SurfaceColor">#17181D</Color>
-        <Color x:Key="SurfaceHoverColor">#202127</Color>
-        <Color x:Key="AccentColor">#0A84FF</Color>
-        <Color x:Key="TextPrimaryColor">#F5F5F7</Color>
-        <Color x:Key="TextSecondaryColor">#98989F</Color>
+        <Color x:Key="AppBackgroundColor">#07090D</Color>
+        <Color x:Key="SurfaceColor">#171B24</Color>
+        <Color x:Key="AccentColor">#4DA3FF</Color>
+        <Color x:Key="TextPrimaryColor">#F7F8FB</Color>
+        <Color x:Key="TextSecondaryColor">#9DA4B2</Color>
 
         <SolidColorBrush x:Key="AppBackground" Color="{StaticResource AppBackgroundColor}"/>
         <SolidColorBrush x:Key="AppForeground" Color="{StaticResource TextPrimaryColor}"/>
@@ -17,83 +16,185 @@
         <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
         <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}"/>
 
+        <LinearGradientBrush x:Key="LiquidGlassTintBrush"
+                             StartPoint="0,0"
+                             EndPoint="1,1">
+            <GradientStop Color="#9A222A38" Offset="0"/>
+            <GradientStop Color="#72171D29" Offset="0.46"/>
+            <GradientStop Color="#5C0C111A" Offset="1"/>
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="LiquidGlassEdgeBrush"
+                             StartPoint="0,0"
+                             EndPoint="1,1">
+            <GradientStop Color="#A6FFFFFF" Offset="0"/>
+            <GradientStop Color="#44FFFFFF" Offset="0.24"/>
+            <GradientStop Color="#225CB8FF" Offset="0.62"/>
+            <GradientStop Color="#6B9CD6FF" Offset="1"/>
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="LiquidGlassSoftEdgeBrush"
+                             StartPoint="0,0"
+                             EndPoint="1,1">
+            <GradientStop Color="#70FFFFFF" Offset="0"/>
+            <GradientStop Color="#20FFFFFF" Offset="0.32"/>
+            <GradientStop Color="#105AA8FF" Offset="0.72"/>
+            <GradientStop Color="#3D9BD6FF" Offset="1"/>
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="LiquidGlassGlareBrush"
+                             StartPoint="0,0"
+                             EndPoint="1,1">
+            <GradientStop Color="#68FFFFFF" Offset="0"/>
+            <GradientStop Color="#18FFFFFF" Offset="0.20"/>
+            <GradientStop Color="#00FFFFFF" Offset="0.46"/>
+            <GradientStop Color="#001570FF" Offset="0.72"/>
+            <GradientStop Color="#2A65B7FF" Offset="1"/>
+        </LinearGradientBrush>
+
+        <RadialGradientBrush x:Key="LiquidGlassBloomBrush"
+                             Center="0.15,0.05"
+                             GradientOrigin="0.15,0.05"
+                             RadiusX="0.85"
+                             RadiusY="0.85">
+            <GradientStop Color="#2AFFFFFF" Offset="0"/>
+            <GradientStop Color="#1058AFFF" Offset="0.46"/>
+            <GradientStop Color="#00000000" Offset="1"/>
+        </RadialGradientBrush>
+
         <Style TargetType="Window">
             <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI"/>
             <Setter Property="Background" Value="{StaticResource AppBackground}"/>
             <Setter Property="Foreground" Value="{StaticResource AppForeground}"/>
         </Style>
 
+        <Style TargetType="{x:Type controls:LiquidGlassPanel}">
+            <Setter Property="Background" Value="{StaticResource LiquidGlassTintBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource LiquidGlassEdgeBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="18"/>
+            <Setter Property="CornerRadius" Value="24"/>
+            <Setter Property="GlareOpacity" Value="0.30"/>
+            <Setter Property="BloomOpacity" Value="0.30"/>
+            <Setter Property="EdgeLightOpacity" Value="0.54"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type controls:LiquidGlassPanel}">
+                        <Grid>
+                            <Border x:Name="Bloom"
+                                    Margin="4"
+                                    CornerRadius="{TemplateBinding CornerRadius}"
+                                    Background="#01000000"
+                                    Opacity="{TemplateBinding BloomOpacity}"
+                                    IsHitTestVisible="False">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="30"
+                                                      ShadowDepth="7"
+                                                      Opacity="0.82"
+                                                      Color="#1C6FBF"/>
+                                </Border.Effect>
+                            </Border>
+
+                            <Border x:Name="GlassBase"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="{TemplateBinding CornerRadius}"/>
+
+                            <Border x:Name="BloomTint"
+                                    Margin="1"
+                                    CornerRadius="{TemplateBinding CornerRadius}"
+                                    Background="{StaticResource LiquidGlassBloomBrush}"
+                                    Opacity="{TemplateBinding BloomOpacity}"
+                                    IsHitTestVisible="False"/>
+
+                            <Border x:Name="Glare"
+                                    Margin="1"
+                                    CornerRadius="{TemplateBinding CornerRadius}"
+                                    Background="{StaticResource LiquidGlassGlareBrush}"
+                                    Opacity="{TemplateBinding GlareOpacity}"
+                                    IsHitTestVisible="False"/>
+
+                            <Border x:Name="InnerEdge"
+                                    Margin="2"
+                                    CornerRadius="{TemplateBinding CornerRadius}"
+                                    BorderBrush="#24FFFFFF"
+                                    BorderThickness="1"
+                                    Opacity="{TemplateBinding EdgeLightOpacity}"
+                                    IsHitTestVisible="False"/>
+
+                            <Border Padding="{TemplateBinding Padding}"
+                                    CornerRadius="{TemplateBinding CornerRadius}">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                    <Condition Property="IsInteractive" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Glare" Property="Opacity" Value="0.56"/>
+                                <Setter TargetName="InnerEdge" Property="Opacity" Value="0.82"/>
+                                <Setter TargetName="BloomTint" Property="Opacity" Value="0.44"/>
+                            </MultiTrigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="GlassBase" Property="Opacity" Value="0.55"/>
+                                <Setter TargetName="Glare" Property="Opacity" Value="0.10"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style TargetType="TextBox">
-            <Setter Property="Foreground" Value="#F5F5F7"/>
-            <Setter Property="Background" Value="#14FFFFFF"/>
-            <Setter Property="BorderBrush" Value="#22FFFFFF"/>
+            <Setter Property="Foreground" Value="#F7F8FB"/>
+            <Setter Property="Background" Value="#2CFFFFFF"/>
+            <Setter Property="BorderBrush" Value="{StaticResource LiquidGlassSoftEdgeBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CaretBrush" Value="White"/>
+            <Setter Property="Padding" Value="12,8"/>
         </Style>
 
         <Style TargetType="PasswordBox">
-            <Setter Property="Foreground" Value="#F5F5F7"/>
-            <Setter Property="Background" Value="#14FFFFFF"/>
-            <Setter Property="BorderBrush" Value="#22FFFFFF"/>
+            <Setter Property="Foreground" Value="#F7F8FB"/>
+            <Setter Property="Background" Value="#2CFFFFFF"/>
+            <Setter Property="BorderBrush" Value="{StaticResource LiquidGlassSoftEdgeBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CaretBrush" Value="White"/>
+            <Setter Property="Padding" Value="12,8"/>
         </Style>
 
         <Style TargetType="ComboBox">
-            <Setter Property="Foreground" Value="#F5F5F7"/>
-            <Setter Property="Background" Value="#202127"/>
-            <Setter Property="BorderBrush" Value="#2CFFFFFF"/>
+            <Setter Property="Foreground" Value="#F7F8FB"/>
+            <Setter Property="Background" Value="#38242B36"/>
+            <Setter Property="BorderBrush" Value="{StaticResource LiquidGlassSoftEdgeBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,6"/>
         </Style>
 
         <Style x:Key="SurfaceCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="#B817181D"/>
-            <Setter Property="BorderBrush" Value="#18FFFFFF"/>
+            <Setter Property="Background" Value="{StaticResource LiquidGlassTintBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource LiquidGlassSoftEdgeBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="CornerRadius" Value="22"/>
         </Style>
 
         <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#F5F5F7"/>
-            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="Foreground" Value="#F7F8FB"/>
+            <Setter Property="FontFamily" Value="Segoe UI Variable Display, Segoe UI"/>
+            <Setter Property="FontSize" Value="19"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
 
-        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Background" Value="#0A84FF"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,10"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="10"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.88"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.72"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
-            <Setter Property="Foreground" Value="#F5F5F7"/>
-            <Setter Property="Background" Value="#18FFFFFF"/>
-            <Setter Property="BorderBrush" Value="#20FFFFFF"/>
+        <Style x:Key="LiquidGlassButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="#F7F8FB"/>
+            <Setter Property="Background" Value="#26FFFFFF"/>
+            <Setter Property="BorderBrush" Value="{StaticResource LiquidGlassSoftEdgeBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="16,10"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -101,17 +202,46 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="10"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
+                        <Grid>
+                            <Border x:Name="Bloom"
+                                    Margin="2"
+                                    CornerRadius="12"
+                                    Background="#01000000"
+                                    Opacity="0">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="18"
+                                                      ShadowDepth="0"
+                                                      Opacity="0.75"
+                                                      Color="#4DA3FF"/>
+                                </Border.Effect>
+                            </Border>
+                            <Border x:Name="Bd"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="12"
+                                    Padding="{TemplateBinding Padding}">
+                                <Grid>
+                                    <Border Background="{StaticResource LiquidGlassGlareBrush}"
+                                            CornerRadius="11"
+                                            Opacity="0.18"
+                                            IsHitTestVisible="False"/>
+                                    <ContentPresenter HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#28FFFFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#42FFFFFF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource LiquidGlassEdgeBrush}"/>
+                                <Setter TargetName="Bloom" Property="Opacity" Value="0.38"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.78"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.38"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -119,6 +249,19 @@
             </Setter>
         </Style>
 
-        <Style x:Key="GlassButton" TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}"/>
+        <Style x:Key="PrimaryButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource LiquidGlassButtonStyle}">
+            <Setter Property="Background" Value="#B83691F4"/>
+            <Setter Property="BorderBrush" Value="#A0A8D8FF"/>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource LiquidGlassButtonStyle}"/>
+
+        <Style x:Key="GlassButton"
+               TargetType="Button"
+               BasedOn="{StaticResource LiquidGlassButtonStyle}"/>
     </Application.Resources>
 </Application>
