@@ -10,6 +10,7 @@ public sealed class MpvClient : IDisposable
 
     public MpvClient(IntPtr windowHandle)
     {
+        PlaybackLog.Write("mpv", $"Creating mpv for hwnd=0x{windowHandle.ToInt64():X}");
         _handle = Native.mpv_create();
         if (_handle == IntPtr.Zero)
             throw new InvalidOperationException("mpv_create failed.");
@@ -25,6 +26,7 @@ public sealed class MpvClient : IDisposable
         SetOption("keep-open", "yes");
 
         var result = Native.mpv_initialize(_handle);
+        PlaybackLog.Write("mpv", $"mpv_initialize result={result}");
         if (result < 0)
         {
             Dispose();
@@ -34,6 +36,7 @@ public sealed class MpvClient : IDisposable
 
     public void Load(string url, double startSeconds = 0)
     {
+        PlaybackLog.Write("mpv", $"Load: url={url}, startSeconds={startSeconds:0.###}");
         if (startSeconds > 0.25)
         {
             Command(
@@ -49,6 +52,7 @@ public sealed class MpvClient : IDisposable
         }
 
         SetProperty("pause", "no");
+        PlaybackLog.Write("mpv", $"Load dispatched. pause={GetStringProperty("pause")}, time-pos={GetStringProperty("time-pos")}, duration={GetStringProperty("duration")}");
     }
 
     public void TogglePause() => Command("cycle", "pause");
@@ -74,6 +78,7 @@ public sealed class MpvClient : IDisposable
     private void SetOption(string name, string value)
     {
         var result = Native.mpv_set_option_string(_handle, name, value);
+        PlaybackLog.Write("mpv", $"option {name}={value} -> {result}");
         if (result < 0)
             throw new InvalidOperationException($"mpv option {name} failed: {result}");
     }
@@ -84,6 +89,7 @@ public sealed class MpvClient : IDisposable
             return;
 
         var result = Native.mpv_set_property_string(_handle, name, value);
+        PlaybackLog.Write("mpv", $"property {name}={value} -> {result}");
         if (result < 0)
             throw new InvalidOperationException($"mpv property {name} failed: {result}");
     }
@@ -141,6 +147,7 @@ public sealed class MpvClient : IDisposable
 
             Marshal.WriteIntPtr(argv, args.Length * IntPtr.Size, IntPtr.Zero);
             var result = Native.mpv_command(_handle, argv);
+            PlaybackLog.Write("mpv", $"command {string.Join(" ", args.Select((x, i) => i == 1 && args.Length > 1 && args[0] == "loadfile" ? PlaybackLog.Redact(x) : x))} -> {result}");
             if (result < 0)
                 throw new InvalidOperationException($"mpv command failed: {result}");
         }
@@ -157,6 +164,7 @@ public sealed class MpvClient : IDisposable
         if (_handle == IntPtr.Zero)
             return;
 
+        PlaybackLog.Write("mpv", "terminate_destroy");
         Native.mpv_terminate_destroy(_handle);
         _handle = IntPtr.Zero;
         GC.SuppressFinalize(this);
