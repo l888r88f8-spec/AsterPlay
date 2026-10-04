@@ -1,6 +1,7 @@
 <UserControl x:Class="AsterPlay.Views.HomeView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:AsterPlay.Controls"
              UseLayoutRounding="True"
              SnapsToDevicePixels="True"
              TextOptions.TextFormattingMode="Display"
@@ -66,7 +67,7 @@
                       PreviewMouseWheel="MainScrollViewer_PreviewMouseWheel">
             <StackPanel>
                 <Grid x:Name="HeroRoot" Height="620" ClipToBounds="True">
-                    <Image Source="{Binding CurrentHero.BackdropUrl}"
+                    <controls:CachedImage SourceUrl="{Binding CurrentHero.BackdropUrl}"
                            Stretch="UniformToFill"/>
 
                     <Rectangle>
@@ -221,7 +222,7 @@
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
-                                                    <Image Source="{Binding BackdropUrl}"
+                                                    <controls:CachedImage SourceUrl="{Binding BackdropUrl}"
                                                            Width="92" Height="52"
                                                            Stretch="UniformToFill"/>
                                                 </Border>
@@ -254,7 +255,7 @@
                                             <Border Height="146" CornerRadius="10"
                                                     Background="#15151C" ClipToBounds="True">
                                                 <Grid>
-                                                    <Image Source="{Binding BackdropUrl}"
+                                                    <controls:CachedImage SourceUrl="{Binding BackdropUrl}"
                                                            Stretch="UniformToFill"/>
                                                     <ProgressBar Value="{Binding PlayedPercentage, Mode=OneWay}"
                                                                  Maximum="100" Height="4"
@@ -289,7 +290,7 @@
                                         <StackPanel>
                                             <Border Height="245" CornerRadius="10"
                                                     Background="#15151C" ClipToBounds="True">
-                                                <Image Source="{Binding PosterUrl}"
+                                                <controls:CachedImage SourceUrl="{Binding PosterUrl}"
                                                        Stretch="UniformToFill"/>
                                             </Border>
                                             <TextBlock Text="{Binding Title}" Foreground="#F5F6F8"
