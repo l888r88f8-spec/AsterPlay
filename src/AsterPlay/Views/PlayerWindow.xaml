@@ -16,7 +16,12 @@
         <gl:GLWpfControl x:Name="VideoSurface"
                          Focusable="False"
                          IsHitTestVisible="False"
-                         Render="VideoSurface_OnRender"/>
+                         RenderTransformOrigin="0.5,0.5"
+                         Render="VideoSurface_OnRender">
+            <gl:GLWpfControl.RenderTransform>
+                <ScaleTransform ScaleY="-1"/>
+            </gl:GLWpfControl.RenderTransform>
+        </gl:GLWpfControl>
 
         <Border x:Name="ControlsPanel"
                 Height="150"
