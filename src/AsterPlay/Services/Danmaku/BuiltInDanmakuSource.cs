@@ -32,18 +32,20 @@ public sealed class BuiltInDanmakuSource : IDanmakuSource
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            uint colorArgb = (sequence % 4) switch
+            {
+                0 => 0xFFFFFFFFu,
+                1 => 0xFFFFD966u,
+                2 => 0xFF6EC6FFu,
+                _ => 0xFFA8F0B0u
+            };
+
             comments.Add(new DanmakuComment(
                 $"scroll-{sequence}",
                 time,
                 ScrollMessages[sequence % ScrollMessages.Length],
                 DanmakuMode.Scroll,
-                sequence % 4 switch
-                {
-                    0 => 0xFFFFFFFFu,
-                    1 => 0xFFFFD966u,
-                    2 => 0xFF6EC6FFu,
-                    _ => 0xFFA8F0B0u
-                }));
+                colorArgb));
 
             sequence++;
         }
