@@ -3,12 +3,31 @@ using System.Runtime.InteropServices;
 
 namespace AsterPlay.Services.Mpv;
 
+public sealed class MpvPlaybackEndedEventArgs : EventArgs
+{
+    public MpvPlaybackEndedEventArgs(int reason, int error, string reasonName, string errorText)
+    {
+        Reason = reason;
+        Error = error;
+        ReasonName = reasonName;
+        ErrorText = errorText;
+    }
+
+    public int Reason { get; }
+    public int Error { get; }
+    public string ReasonName { get; }
+    public string ErrorText { get; }
+    public bool IsError => Reason == 4 || Error < 0;
+}
+
 public sealed class MpvClient : IDisposable
 {
     private const string DllName = "libmpv-2.dll";
     private IntPtr _handle;
     private Thread? _eventThread;
     private volatile bool _eventLoopRunning;
+
+    public event EventHandler<MpvPlaybackEndedEventArgs>? PlaybackEnded;
 
     public MpvClient()
     {
@@ -269,8 +288,25 @@ public sealed class MpvClient : IDisposable
                         {
                             var reason = Marshal.ReadInt32(ev.Data, 0);
                             var error = Marshal.ReadInt32(ev.Data, 4);
+                            var reasonName = EndReasonName(reason);
+                            var errorText = ErrorString(error);
                             PlaybackLog.Write("mpv-event",
-                                $"END_FILE reason={EndReasonName(reason)}({reason}), error={error} ({ErrorString(error)}) | {DiagnosticState}");
+                                $"END_FILE reason={reasonName}({reason}), error={error} ({errorText}) | {DiagnosticState}");
+
+                            try
+                            {
+                                PlaybackEnded?.Invoke(
+                                    this,
+                                    new MpvPlaybackEndedEventArgs(
+                                        reason,
+                                        error,
+                                        reasonName,
+                                        errorText));
+                            }
+                            catch (Exception ex)
+                            {
+                                PlaybackLog.Error("mpv-end-callback", ex);
+                            }
                         }
                         else
                         {
