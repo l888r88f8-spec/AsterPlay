@@ -7,10 +7,9 @@ namespace AsterPlay.Services;
 
 public sealed class EmbyClient
 {
-    private const string DetailFields =
-        "Overview,Genres,ProductionYear,CommunityRating,RunTimeTicks,UserData," +
-        "People,Studios,Taglines,MediaStreams,MediaSources,ProviderIds,Path," +
-        "PremiereDate,OfficialRating,Tags,PrimaryImageAspectRatio";
+    private const string DetailListFields =
+        "Genres,MediaStreams,Overview,ParentId,Path,People,ProviderIds," +
+        "PrimaryImageAspectRatio,Studios,Taglines";
 
     private readonly HttpClient _http = new()
     {
@@ -129,16 +128,14 @@ public sealed class EmbyClient
 
     public Task<EmbyItem> GetItemAsync(string itemId) =>
         GetAsync<EmbyItem>(
-            $"/Users/{Esc(UserId)}/Items/{Esc(itemId)}" +
-            $"?Fields={Esc(DetailFields)}" +
-            "&EnableImages=true&EnableUserData=true");
+            $"/Users/{Esc(UserId)}/Items/{Esc(itemId)}");
 
     public async Task<List<EmbyItem>> GetSeasonsAsync(string seriesId)
     {
         var path =
             $"/Shows/{Esc(seriesId)}/Seasons" +
             $"?UserId={Esc(UserId)}" +
-            $"&Fields={Esc(DetailFields)}" +
+            $"&Fields={Esc(DetailListFields)}" +
             "&EnableImages=true&EnableUserData=true" +
             "&ImageTypeLimit=1&EnableImageTypes=Primary,Backdrop,Thumb";
 
@@ -155,7 +152,7 @@ public sealed class EmbyClient
             $"/Shows/{Esc(seriesId)}/Episodes" +
             $"?UserId={Esc(UserId)}" +
             $"&SeasonId={Esc(seasonId)}" +
-            $"&Fields={Esc(DetailFields)}" +
+            $"&Fields={Esc(DetailListFields)}" +
             "&EnableImages=true&EnableUserData=true" +
             "&ImageTypeLimit=1&EnableImageTypes=Primary,Backdrop,Thumb";
 
