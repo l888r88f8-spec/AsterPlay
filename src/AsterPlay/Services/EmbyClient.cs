@@ -161,11 +161,7 @@ public sealed class EmbyClient
             $"/Items/{Esc(playable.Id)}/PlaybackInfo?UserId={Esc(UserId)}");
         req.Content = JsonContent.Create(new
         {
-            StartTimeTicks = Math.Max(0, playable.UserData?.PlaybackPositionTicks ?? 0),
-            IsPlayback = true,
-            EnableDirectPlay = true,
-            EnableDirectStream = true,
-            EnableTranscoding = false
+            UserId
         });
 
         using var response = await _http.SendAsync(req);
@@ -177,22 +173,10 @@ public sealed class EmbyClient
         var media = info.MediaSources.FirstOrDefault()
                     ?? throw new InvalidOperationException("No media source is available.");
 
-        string url;
-        if (!string.IsNullOrWhiteSpace(media.DirectStreamUrl))
-        {
-            url = Combine(media.DirectStreamUrl);
-            url = AppendQueryParameter(url, "MediaSourceId", media.Id);
-            url = AppendQueryParameter(url, "PlaySessionId", info.PlaySessionId);
-            url = AppendToken(url);
-        }
-        else
-        {
-            var container = media.Container.Trim().TrimStart('.');
-            var extension = string.IsNullOrWhiteSpace(container) ? "" : "." + container;
-            url = WithToken(
-                $"/Videos/{Esc(playable.Id)}/stream{extension}?static=true" +
-                $"&MediaSourceId={Esc(media.Id)}&PlaySessionId={Esc(info.PlaySessionId)}");
-        }
+        // Keep the same playback strategy that has already proven reliable in qEmby:
+        // use Emby's static video stream endpoint instead of preferring DirectStreamUrl.
+        var url = WithToken(
+            $"/Videos/{Esc(playable.Id)}/stream?static=true&mediaSourceId={Esc(media.Id)}");
 
         var title = playable.IndexNumber is > 0
             ? playable.ParentIndexNumber is > 0
@@ -206,7 +190,9 @@ public sealed class EmbyClient
             Title = title,
             ItemId = playable.Id,
             MediaSourceId = media.Id,
-            PlaySessionId = info.PlaySessionId,
+            PlaySessionId = string.IsNullOrWhiteSpace(info.PlaySessionId)
+                ? Guid.NewGuid().ToString("N")
+                : info.PlaySessionId,
             ResumePositionTicks = Math.Max(0, playable.UserData?.PlaybackPositionTicks ?? 0),
             RunTimeTicks = playable.RunTimeTicks
         };
