@@ -161,7 +161,7 @@ public sealed class LogVarDanmakuSource : IDanmakuSource
             cancellationToken);
     }
 
-    public async Task<IReadOnlyList<DanmakuMatchCandidate>> SearchCandidatesAsync(
+    public async Task<IReadOnlyList<DanmakuSeriesMatchCandidate>> SearchSeriesCandidatesAsync(
         DanmakuContext context,
         string? manualKeyword,
         CancellationToken cancellationToken)
@@ -173,38 +173,95 @@ public sealed class LogVarDanmakuSource : IDanmakuSource
             keyword = DanmakuApiSupport.BuildSearchSubject(context);
 
         if (string.IsNullOrWhiteSpace(keyword))
-            return Array.Empty<DanmakuMatchCandidate>();
-
-        var episode = DanmakuApiSupport.IsEpisode(context)
-            ? context.EpisodeNumber?.ToString(
-                System.Globalization.CultureInfo.InvariantCulture) ?? ""
-            : "movie";
+            return Array.Empty<DanmakuSeriesMatchCandidate>();
 
         var root = await GetJsonAsync(
             "/api/v2/search/episodes",
             new Dictionary<string, string?>
             {
                 ["anime"] = keyword,
-                ["episode"] = episode
+                ["episode"] = ""
             },
             cancellationToken);
 
         DanmakuApiSupport.EnsureSuccessfulResponse(
             root,
-            "LogVar episode search");
+            "LogVar series search");
 
         var candidates =
-            DanmakuApiSupport.ParseEpisodeSearchCandidates(
+            DanmakuApiSupport.ParseSeriesSearchCandidates(
                 root,
                 context,
                 keyword);
 
         PlaybackLog.Write(
             "DanmakuSource",
-            $"LogVar manual search: itemId={context.ItemId}, keyword={keyword}, episode={episode}, " +
-            $"candidates={candidates.Count}, topScore={candidates.FirstOrDefault()?.Score:0.##}");
+            $"LogVar manual series search: itemId={context.ItemId}, keyword={keyword}, " +
+            $"series={candidates.Count}, top={candidates.FirstOrDefault()?.AnimeTitle}, " +
+            $"topScore={candidates.FirstOrDefault()?.Score:0.##}");
 
         return candidates;
+    }
+
+    public async Task<DanmakuMatchCandidate?> ResolveSeriesBindingAsync(
+        DanmakuContext context,
+        DanmakuSeriesMatchBinding binding,
+        CancellationToken cancellationToken)
+    {
+        var seriesCandidates = await SearchSeriesCandidatesAsync(
+            context,
+            binding.AnimeTitle,
+            cancellationToken);
+
+        var series = binding.AnimeId > 0
+            ? seriesCandidates.FirstOrDefault(
+                item => item.AnimeId == binding.AnimeId)
+            : null;
+
+        series ??= seriesCandidates.FirstOrDefault(
+            item =>
+                string.Equals(
+                    item.AnimeTitle,
+                    binding.AnimeTitle,
+                    StringComparison.OrdinalIgnoreCase) &&
+                (binding.LogVarSeasonNumber <= 0 ||
+                 item.SeasonNumber <= 0 ||
+                 item.SeasonNumber == binding.LogVarSeasonNumber));
+
+        if (series is null)
+        {
+            PlaybackLog.Write(
+                "DanmakuSource",
+                $"LogVar saved series not found: itemId={context.ItemId}, animeId={binding.AnimeId}, anime={binding.AnimeTitle}");
+
+            return null;
+        }
+
+        if (!DanmakuApiSupport.IsEpisode(context))
+            return series.Episodes.FirstOrDefault();
+
+        var embyEpisode = context.EpisodeNumber ?? 0;
+        var targetEpisode = embyEpisode > 0
+            ? embyEpisode + binding.EpisodeOffset
+            : 0;
+
+        var selected = targetEpisode > 0
+            ? series.Episodes.FirstOrDefault(
+                item => item.EpisodeNumber == targetEpisode)
+            : null;
+
+        if (selected is null)
+        {
+            PlaybackLog.Write(
+                "DanmakuSource",
+                $"LogVar saved series has no mapped episode: itemId={context.ItemId}, " +
+                $"embyEpisode={embyEpisode}, offset={binding.EpisodeOffset}, targetEpisode={targetEpisode}, " +
+                $"anime={series.AnimeTitle}");
+
+            return null;
+        }
+
+        return selected;
     }
 
     public Task<IReadOnlyList<DanmakuComment>> LoadCandidateAsync(
