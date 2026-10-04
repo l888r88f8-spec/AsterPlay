@@ -110,6 +110,8 @@ public sealed class PlaybackLaunch
     public string PlaySessionId { get; set; } = "";
     public long ResumePositionTicks { get; set; }
     public long? RunTimeTicks { get; set; }
+    public bool UsesServerStartOffset { get; set; }
+    public string PlayMethod { get; set; } = "DirectPlay";
 }
 
 public sealed class MediaSource
@@ -125,4 +127,16 @@ public sealed class MediaSource
 
     [JsonPropertyName("SupportsDirectPlay")]
     public bool SupportsDirectPlay { get; set; }
+
+    [JsonPropertyName("SupportsDirectStream")]
+    public bool SupportsDirectStream { get; set; }
+
+    [JsonPropertyName("SupportsTranscoding")]
+    public bool SupportsTranscoding { get; set; }
+
+    [JsonPropertyName("TranscodingUrl")]
+    public string TranscodingUrl { get; set; } = "";
+
+    [JsonPropertyName("RunTimeTicks")]
+    public long? RunTimeTicks { get; set; }
 }
