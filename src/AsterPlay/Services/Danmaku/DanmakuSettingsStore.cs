@@ -77,6 +77,25 @@ public static class DanmakuSettingsStore
             ScreenHeightRatio = Math.Clamp(
                 settings.ScreenHeightRatio,
                 0.25,
-                1)
+                1),
+            DensityRatio = Math.Clamp(
+                settings.DensityRatio,
+                0.25,
+                1),
+            MaxActiveComments = Math.Clamp(
+                settings.MaxActiveComments,
+                10,
+                300),
+            BlockedWords = NormalizeList(settings.BlockedWords),
+            BlockedUsers = NormalizeList(settings.BlockedUsers)
         };
+
+    private static List<string> NormalizeList(
+        IEnumerable<string>? values) =>
+        (values ?? Array.Empty<string>())
+            .Select(value => value?.Trim() ?? "")
+            .Where(value => value.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(200)
+            .ToList();
 }
