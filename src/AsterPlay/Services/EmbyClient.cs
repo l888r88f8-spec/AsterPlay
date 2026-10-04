@@ -121,6 +121,11 @@ public sealed class EmbyClient
         return (await GetAsync<EmbyItemsResponse>(path)).Items;
     }
 
+    public Task<EmbyItem> GetItemAsync(string itemId) =>
+        GetAsync<EmbyItem>(
+            $"/Users/{Esc(UserId)}/Items/{Esc(itemId)}" +
+            "?Fields=Overview,Genres,ProductionYear,CommunityRating,RunTimeTicks,UserData");
+
     public async Task<bool> SetFavoriteAsync(string itemId, bool favorite)
     {
         var method = favorite ? HttpMethod.Post : HttpMethod.Delete;
@@ -146,7 +151,8 @@ public sealed class EmbyClient
 
     public async Task<PlaybackLaunch> GetPlayableStreamAsync(EmbyItem source)
     {
-        PlaybackLog.Write("Emby", $"Resolve playback: sourceId={source.Id}, type={source.Type}, name={source.Name}, resumeTicks={source.UserData?.PlaybackPositionTicks ?? 0}");
+        PlaybackLog.Write("Emby",
+            $"Resolve playback: sourceId={source.Id}, type={source.Type}, name={source.Name}");
 
         var playable = source;
         if (string.Equals(source.Type, "Series", StringComparison.OrdinalIgnoreCase))
@@ -156,40 +162,102 @@ public sealed class EmbyClient
                 "&Fields=Overview,Genres,ProductionYear,CommunityRating,RunTimeTicks,UserData");
             playable = next.Items.FirstOrDefault()
                        ?? throw new InvalidOperationException("No playable next episode was found for this series.");
-            PlaybackLog.Write("Emby", $"Series resolved to episode: itemId={playable.Id}, name={playable.Name}");
+            PlaybackLog.Write("Emby",
+                $"Series resolved to episode: itemId={playable.Id}, name={playable.Name}");
         }
+
+        // Do not trust the home-card UserData. Resume position can change on another
+        // device, so always resolve the latest item immediately before playback.
+        playable = await GetItemAsync(playable.Id);
+        var resumeTicks = Math.Max(0, playable.UserData?.PlaybackPositionTicks ?? 0);
+        PlaybackLog.Write("Emby",
+            $"Fresh UserData: itemId={playable.Id}, resumeTicks={resumeTicks}, runtimeTicks={playable.RunTimeTicks ?? 0}");
 
         using var req = CreateRequest(
             HttpMethod.Post,
             $"/Items/{Esc(playable.Id)}/PlaybackInfo?UserId={Esc(UserId)}");
         req.Content = JsonContent.Create(new
         {
-            UserId
+            UserId,
+            StartTimeTicks = resumeTicks,
+            IsPlayback = true,
+            EnableDirectPlay = true,
+            EnableDirectStream = true,
+            EnableTranscoding = true
         });
 
         using var response = await _http.SendAsync(req);
-        PlaybackLog.Write("Emby", $"PlaybackInfo response: status={(int)response.StatusCode} {response.ReasonPhrase}");
+        PlaybackLog.Write("Emby",
+            $"PlaybackInfo response: status={(int)response.StatusCode} {response.ReasonPhrase}, startTimeTicks={resumeTicks}");
         await EnsureSuccess(response, "PlaybackInfo request failed");
 
         var info = await response.Content.ReadFromJsonAsync<PlaybackInfoResponse>(_json)
                    ?? throw new InvalidOperationException("PlaybackInfo was empty.");
 
-        PlaybackLog.Write("Emby", $"PlaybackInfo: playSessionId={info.PlaySessionId}, mediaSources={info.MediaSources.Count}");
+        PlaybackLog.Write("Emby",
+            $"PlaybackInfo: playSessionId={info.PlaySessionId}, mediaSources={info.MediaSources.Count}");
         for (var i = 0; i < info.MediaSources.Count; i++)
         {
             var candidate = info.MediaSources[i];
             PlaybackLog.Write("Emby",
-                $"MediaSource[{i}]: id={candidate.Id}, container={candidate.Container}, supportsDirectPlay={candidate.SupportsDirectPlay}, directStreamUrl={candidate.DirectStreamUrl}");
+                $"MediaSource[{i}]: id={candidate.Id}, container={candidate.Container}, " +
+                $"directPlay={candidate.SupportsDirectPlay}, directStream={candidate.SupportsDirectStream}, " +
+                $"transcode={candidate.SupportsTranscoding}, transcodingUrl={candidate.TranscodingUrl}");
         }
 
         var media = info.MediaSources.FirstOrDefault()
                     ?? throw new InvalidOperationException("No media source is available.");
 
-        // Keep the same playback strategy that has already proven reliable in qEmby:
-        // use Emby's static video stream endpoint instead of preferring DirectStreamUrl.
-        var url = WithToken(
-            $"/Videos/{Esc(playable.Id)}/stream?static=true&mediaSourceId={Esc(media.Id)}");
-        PlaybackLog.Write("Emby", $"Selected source: itemId={playable.Id}, mediaSourceId={media.Id}, url={url}");
+        var playSessionId = string.IsNullOrWhiteSpace(info.PlaySessionId)
+            ? Guid.NewGuid().ToString("N")
+            : info.PlaySessionId;
+
+        string url;
+        bool usesServerStartOffset;
+        string playMethod;
+
+        if (resumeTicks > 0)
+        {
+            // Resume is performed by Emby, not by mpv. The returned stream starts at
+            // the requested point, while mpv's local timeline starts from zero.
+            usesServerStartOffset = true;
+
+            if (!string.IsNullOrWhiteSpace(media.TranscodingUrl))
+            {
+                url = AppendToken(Combine(media.TranscodingUrl));
+                playMethod = "Transcode";
+                PlaybackLog.Write("Emby", "Resume strategy: negotiated TranscodingUrl");
+            }
+            else
+            {
+                var container = media.Container.Trim().TrimStart('.');
+                if (string.IsNullOrWhiteSpace(container))
+                    container = "mp4";
+
+                url = WithToken(
+                    $"/Videos/{Esc(playable.Id)}/stream.{Esc(container)}" +
+                    $"?MediaSourceId={Esc(media.Id)}" +
+                    $"&PlaySessionId={Esc(playSessionId)}" +
+                    $"&StartTimeTicks={resumeTicks}" +
+                    $"&DeviceId={Esc(DeviceId)}");
+                playMethod = "Transcode";
+                PlaybackLog.Write("Emby", "Resume strategy: dynamic stream with StartTimeTicks");
+            }
+        }
+        else
+        {
+            usesServerStartOffset = false;
+            playMethod = "DirectPlay";
+            url = WithToken(
+                $"/Videos/{Esc(playable.Id)}/stream?static=true" +
+                $"&MediaSourceId={Esc(media.Id)}" +
+                $"&PlaySessionId={Esc(playSessionId)}");
+            PlaybackLog.Write("Emby", "Playback strategy: static direct stream");
+        }
+
+        PlaybackLog.Write("Emby",
+            $"Selected source: itemId={playable.Id}, mediaSourceId={media.Id}, " +
+            $"resumeTicks={resumeTicks}, serverOffset={usesServerStartOffset}, playMethod={playMethod}, url={url}");
 
         var title = playable.IndexNumber is > 0
             ? playable.ParentIndexNumber is > 0
@@ -203,11 +271,11 @@ public sealed class EmbyClient
             Title = title,
             ItemId = playable.Id,
             MediaSourceId = media.Id,
-            PlaySessionId = string.IsNullOrWhiteSpace(info.PlaySessionId)
-                ? Guid.NewGuid().ToString("N")
-                : info.PlaySessionId,
-            ResumePositionTicks = Math.Max(0, playable.UserData?.PlaybackPositionTicks ?? 0),
-            RunTimeTicks = playable.RunTimeTicks
+            PlaySessionId = playSessionId,
+            ResumePositionTicks = resumeTicks,
+            RunTimeTicks = playable.RunTimeTicks ?? media.RunTimeTicks,
+            UsesServerStartOffset = usesServerStartOffset,
+            PlayMethod = playMethod
         };
     }
 
@@ -242,7 +310,7 @@ public sealed class EmbyClient
             ["IsPaused"] = isPaused,
             ["IsMuted"] = volume <= 0.01,
             ["VolumeLevel"] = (int)Math.Clamp(Math.Round(volume), 0, 100),
-            ["PlayMethod"] = "DirectPlay",
+            ["PlayMethod"] = launch.PlayMethod,
             ["PlaybackRate"] = 1.0
         };
 
