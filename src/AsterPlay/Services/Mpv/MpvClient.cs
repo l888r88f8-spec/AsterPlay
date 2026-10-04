@@ -5,8 +5,6 @@ namespace AsterPlay.Services.Mpv;
 
 public sealed class MpvClient : IDisposable
 {
-    public event EventHandler? FileLoaded;
-
     private const string DllName = "libmpv-2.dll";
     private IntPtr _handle;
     private Thread? _eventThread;
@@ -248,14 +246,6 @@ public sealed class MpvClient : IDisposable
 
                     case MpvEventId.FileLoaded:
                         PlaybackLog.Write("mpv-event", $"FILE_LOADED | {DiagnosticState}");
-                        try
-                        {
-                            FileLoaded?.Invoke(this, EventArgs.Empty);
-                        }
-                        catch (Exception ex)
-                        {
-                            PlaybackLog.Error("mpv-file-loaded", ex);
-                        }
                         break;
 
                     case MpvEventId.VideoReconfig:

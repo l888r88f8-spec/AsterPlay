@@ -27,8 +27,6 @@ public partial class PlayerWindow : Window
     private int _reportSeconds;
     private int _danmakuLogSeconds;
     private int _seekRequestVersion;
-    private double? _pendingSeekTargetSeconds;
-    private bool _serverSeekAwaitingFileLoaded;
     private int _lastFramebuffer;
     private int _lastFramebufferWidth;
     private int _lastFramebufferHeight;
@@ -88,7 +86,6 @@ public partial class PlayerWindow : Window
                 "Render API mode: mpv renders into the WPF OpenGL framebuffer; no wid/HwndHost is used.");
 
             _mpv = new MpvClient();
-            _mpv.FileLoaded += Mpv_FileLoaded;
             _lastAudibleVolume = 100;
             _lastPositionTicks = _launch.ResumePositionTicks;
 
@@ -242,12 +239,9 @@ public partial class PlayerWindow : Window
             ? _launch.RunTimeTicks.Value / 10_000_000d
             : _timelineOffsetSeconds + Math.Max(0, _mpv.DurationSeconds);
 
-        if (_pendingSeekTargetSeconds is null)
-            _lastPositionTicks = (long)(position * 10_000_000d);
+        _lastPositionTicks = (long)(position * 10_000_000d);
 
-        if (_pendingSeekTargetSeconds is null &&
-            !_startReportSent &&
-            mpvPosition > 0.05)
+        if (!_startReportSent && mpvPosition > 0.05)
         {
             _startReportSent = true;
             PlaybackLog.Write("Player",
@@ -293,7 +287,7 @@ public partial class PlayerWindow : Window
             }
         }
 
-        if (_startReportSent && _pendingSeekTargetSeconds is null)
+        if (_startReportSent)
         {
             _reportSeconds++;
             if (_reportSeconds >= 10)
@@ -315,24 +309,20 @@ public partial class PlayerWindow : Window
         _updatingUi = true;
         try
         {
-            var displayPosition = _pendingSeekTargetSeconds ?? position;
-
             if (duration > 0)
             {
                 PositionSlider.Maximum = duration;
 
                 if (!_positionSliderPointerDown && !_positionSliderDragging)
-                    PositionSlider.Value = Math.Clamp(displayPosition, 0, duration);
+                    PositionSlider.Value = Math.Clamp(position, 0, duration);
             }
 
             if (!_positionSliderPointerDown && !_positionSliderDragging)
-                CurrentTimeBlock.Text = FormatTime(displayPosition);
+                CurrentTimeBlock.Text = FormatTime(position);
             DurationBlock.Text = duration > 0 ? FormatTime(duration) : "--:--";
             PauseButton.Content = paused ? "播放" : "暂停";
             MuteButton.Content = volume <= 0.01 ? "取消静音" : "静音";
-            StatusBlock.Text = _pendingSeekTargetSeconds is double pendingTarget
-                ? $"跳转至 {FormatTime(pendingTarget)}…"
-                : buffering ? "缓冲中…" : paused ? "已暂停" : "";
+            StatusBlock.Text = buffering ? "缓冲中…" : paused ? "已暂停" : "";
 
             VolumeSlider.Value = Math.Clamp(volume, 0, 100);
 
@@ -585,8 +575,6 @@ public partial class PlayerWindow : Window
         var volume = mpv.Volume;
         var speed = mpv.Speed;
 
-        _pendingSeekTargetSeconds = requestedAbsolute;
-
         PlaybackLog.Write(
             "PlayerSeek",
             $"Server seek negotiation begin: absolute={requestedAbsolute:0.###}, ticks={targetTicks}, " +
@@ -636,7 +624,6 @@ public partial class PlayerWindow : Window
                 $"newSession={replacement.PlaySessionId}, serverOffset={replacement.UsesServerStartOffset}, " +
                 $"requiresServerSeek={replacement.RequiresServerSeek}, url={PlaybackLog.Redact(replacement.Url)}");
 
-            _serverSeekAwaitingFileLoaded = true;
             _mpv.Load(replacement.Url);
             _mpv.SetVolume(volume);
             _mpv.SetSpeed(speed);
@@ -653,8 +640,6 @@ public partial class PlayerWindow : Window
                 return;
 
             PlaybackLog.Error("PlayerSeek", ex);
-            _serverSeekAwaitingFileLoaded = false;
-            _pendingSeekTargetSeconds = null;
             StatusBlock.Text = "跳转失败，继续当前播放";
 
             var currentAbsolute =
@@ -666,42 +651,6 @@ public partial class PlayerWindow : Window
                 PositionSlider.Maximum);
 
             ShowControls();
-        }
-    }
-
-    private void Mpv_FileLoaded(object? sender, EventArgs e)
-    {
-        if (!_serverSeekAwaitingFileLoaded)
-            return;
-
-        try
-        {
-            Dispatcher.BeginInvoke(
-                DispatcherPriority.Normal,
-                new Action(() =>
-                {
-                    if (_stopHandled || !_serverSeekAwaitingFileLoaded)
-                        return;
-
-                    _serverSeekAwaitingFileLoaded = false;
-                    var target = _pendingSeekTargetSeconds;
-                    _pendingSeekTargetSeconds = null;
-
-                    if (target is double targetSeconds)
-                    {
-                        _lastPositionTicks = (long)Math.Max(
-                            0,
-                            Math.Round(targetSeconds * 10_000_000d));
-
-                        PlaybackLog.Write(
-                            "PlayerSeek",
-                            $"Seek target lock released after FILE_LOADED: target={targetSeconds:0.###}");
-                    }
-                }));
-        }
-        catch (InvalidOperationException)
-        {
-            // Window is shutting down; no UI state needs to be restored.
         }
     }
 
@@ -1293,8 +1242,6 @@ public partial class PlayerWindow : Window
 
         if (mpv is null)
             return;
-
-        mpv.FileLoaded -= Mpv_FileLoaded;
 
         try
         {
