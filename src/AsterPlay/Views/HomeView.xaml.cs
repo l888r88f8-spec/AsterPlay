@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using System.Windows.Threading;
 using AsterPlay.Services;
 using AsterPlay.Models;
 using AsterPlay.ViewModels;
@@ -9,6 +10,7 @@ public partial class HomeView : UserControl
 {
     private readonly HomeViewModel _viewModel;
     private readonly EmbyClient _client;
+    private bool _playbackRefreshSubscribed;
 
     public event EventHandler? LogoutRequested;
 
@@ -20,11 +22,17 @@ public partial class HomeView : UserControl
         DataContext = _viewModel;
         Loaded += HomeView_Loaded;
         SizeChanged += HomeView_SizeChanged;
-        Unloaded += (_, _) => _viewModel.Dispose();
+        Unloaded += HomeView_Unloaded;
     }
 
     private async void HomeView_Loaded(object sender, RoutedEventArgs e)
     {
+        if (!_playbackRefreshSubscribed)
+        {
+            _client.PlaybackStateChanged += EmbyClient_PlaybackStateChanged;
+            _playbackRefreshSubscribed = true;
+        }
+
         ApplyResponsiveHeroLayout(ActualWidth);
         LoadingOverlay.Visibility = Visibility.Visible;
 
@@ -36,6 +44,45 @@ public partial class HomeView : UserControl
         catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "AsterPlay", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void HomeView_Unloaded(object sender, RoutedEventArgs e)
+    {
+        if (_playbackRefreshSubscribed)
+        {
+            _client.PlaybackStateChanged -= EmbyClient_PlaybackStateChanged;
+            _playbackRefreshSubscribed = false;
+        }
+
+        _viewModel.Dispose();
+    }
+
+    private void EmbyClient_PlaybackStateChanged(object? sender, EventArgs e)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(
+                DispatcherPriority.Background,
+                new Action(() => _ = RefreshResumeAfterPlaybackAsync()));
+            return;
+        }
+
+        _ = RefreshResumeAfterPlaybackAsync();
+    }
+
+    private async Task RefreshResumeAfterPlaybackAsync()
+    {
+        try
+        {
+            await _viewModel.RefreshResumeAsync();
+            PlaybackLog.Write(
+                "Home",
+                $"Continue Watching refreshed after playback update; items={_viewModel.ResumeItems.Count}");
+        }
+        catch (Exception ex)
+        {
+            PlaybackLog.Error("HomeResumeRefresh", ex);
         }
     }
 
