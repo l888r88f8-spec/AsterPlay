@@ -1306,6 +1306,8 @@ Step 13 最终验收完成，允许进入 Step 14。
 
 ## Step 14：发布前收尾
 
+> 状态：代码侧已实现，自动发布验证进行中；最终完成需真实 Windows x64 + Emby 人工验收（2026-10-04）
+
 ### 2026-10-04 实现进度
 
 已完成代码侧发布收尾：
@@ -1325,6 +1327,9 @@ Step 13 最终验收完成，允许进入 Step 14。
 - 首页 Hero 候选数量限制为 6，缩略图增加暗色标题 Overlay、hover 缩放与键盘焦点状态。
 - 媒体库卡片加入 `VisualStateManager` hover/pressed 动画、键盘焦点描边和方向键导航；右键菜单可直接打开详情。
 - 媒体库加入无结果空状态，以及加载期间的 Skeleton 占位与 indeterminate 进度。
+- `playback.log` 增加 8 MB 轮转上限并保留一个 `playback.previous.log`，mpv 日志级别从 debug 收敛到 info，PlayerState 改为每 5 秒采样，降低长时间播放的同步磁盘写入。
+- `playback.log` 新增首页首次加载、媒体库分页/筛选、详情加载的耗时及 working set / managed memory 指标，供大库和页面切换实机验收。
+- 新增 `RELEASE-CHECKLIST.md`，固化干净构建、登录/session、三种播放路径、错误处理、弹幕回归和性能观察的最终人工验收清单。
 
 仍需真实 Windows x64 人工验收后才能把 Step 14 标记为最终完成：
 
