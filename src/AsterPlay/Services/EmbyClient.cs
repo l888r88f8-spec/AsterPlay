@@ -126,7 +126,14 @@ public sealed class EmbyClient
         var method = favorite ? HttpMethod.Post : HttpMethod.Delete;
         using var req = CreateRequest(method, $"/Users/{Esc(UserId)}/FavoriteItems/{Esc(itemId)}");
         if (favorite)
-            req.Content = JsonContent.Create(new { });
+            req.Content = JsonContent.Create(new
+        {
+            StartTimeTicks = Math.Max(0, playable.UserData?.PlaybackPositionTicks ?? 0),
+            IsPlayback = true,
+            EnableDirectPlay = true,
+            EnableDirectStream = true,
+            EnableTranscoding = false
+        });
 
         using var response = await _http.SendAsync(req);
         await EnsureSuccess(response, "Failed to update favorite");
@@ -173,14 +180,18 @@ public sealed class EmbyClient
         string url;
         if (!string.IsNullOrWhiteSpace(media.DirectStreamUrl))
         {
-            url = AppendToken(Combine(media.DirectStreamUrl));
+            url = Combine(media.DirectStreamUrl);
+            url = AppendQueryParameter(url, "MediaSourceId", media.Id);
+            url = AppendQueryParameter(url, "PlaySessionId", info.PlaySessionId);
+            url = AppendToken(url);
         }
         else
         {
             var container = media.Container.Trim().TrimStart('.');
             var extension = string.IsNullOrWhiteSpace(container) ? "" : "." + container;
             url = WithToken(
-                $"/Videos/{Esc(playable.Id)}/stream{extension}?static=true&MediaSourceId={Esc(media.Id)}");
+                $"/Videos/{Esc(playable.Id)}/stream{extension}?static=true" +
+                $"&MediaSourceId={Esc(media.Id)}&PlaySessionId={Esc(info.PlaySessionId)}");
         }
 
         var title = playable.IndexNumber is > 0
@@ -271,6 +282,16 @@ public sealed class EmbyClient
     }
 
     private string WithToken(string path) => AppendToken(Combine(path));
+
+    private static string AppendQueryParameter(string url, string name, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) ||
+            url.Contains(name + "=", StringComparison.OrdinalIgnoreCase))
+            return url;
+
+        return url + (url.Contains('?') ? "&" : "?") +
+               Uri.EscapeDataString(name) + "=" + Uri.EscapeDataString(value);
+    }
 
     private string AppendToken(string url)
     {
