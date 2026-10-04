@@ -119,12 +119,12 @@ internal static class DanmakuApiSupport
         return builder.Uri.ToString();
     }
 
-    public static IReadOnlyList<ApiMatchCandidate> ParseMatchCandidates(
+    public static IReadOnlyList<DanmakuMatchCandidate> ParseMatchCandidates(
         JsonElement root,
         DanmakuContext context,
         string queryText)
     {
-        var result = new List<ApiMatchCandidate>();
+        var result = new List<DanmakuMatchCandidate>();
         var matched = BoolField(root, "isMatched");
 
         if (!TryGetArray(root, "matches", out var matches))
@@ -150,7 +150,7 @@ internal static class DanmakuApiSupport
                 "episodeTitle",
                 "name");
 
-            var candidate = new ApiMatchCandidate(
+            var candidate = new DanmakuMatchCandidate(
                 episodeId,
                 animeTitle,
                 episodeTitle,
@@ -173,12 +173,12 @@ internal static class DanmakuApiSupport
         return Deduplicate(result);
     }
 
-    public static IReadOnlyList<ApiMatchCandidate> ParseEpisodeSearchCandidates(
+    public static IReadOnlyList<DanmakuMatchCandidate> ParseEpisodeSearchCandidates(
         JsonElement root,
         DanmakuContext context,
         string queryText)
     {
-        var result = new List<ApiMatchCandidate>();
+        var result = new List<DanmakuMatchCandidate>();
 
         if (!TryGetArray(root, "animes", out var animes))
             return result;
@@ -227,7 +227,7 @@ internal static class DanmakuApiSupport
                     episodeNumber = context.EpisodeNumber.Value;
                 }
 
-                var candidate = new ApiMatchCandidate(
+                var candidate = new DanmakuMatchCandidate(
                     episodeId,
                     animeTitle,
                     episodeTitle,
@@ -268,8 +268,8 @@ internal static class DanmakuApiSupport
         return Deduplicate(result);
     }
 
-    public static ApiMatchCandidate? SelectBestCandidate(
-        IEnumerable<ApiMatchCandidate> candidates,
+    public static DanmakuMatchCandidate? SelectBestCandidate(
+        IEnumerable<DanmakuMatchCandidate> candidates,
         DanmakuContext context)
     {
         var best = candidates
@@ -468,7 +468,7 @@ internal static class DanmakuApiSupport
 
     private static double ScoreCandidate(
         DanmakuContext context,
-        ApiMatchCandidate candidate,
+        DanmakuMatchCandidate candidate,
         string queryText)
     {
         var subject = IsEpisode(context)
@@ -560,8 +560,8 @@ internal static class DanmakuApiSupport
         return pairs;
     }
 
-    private static IReadOnlyList<ApiMatchCandidate> Deduplicate(
-        IEnumerable<ApiMatchCandidate> candidates) =>
+    private static IReadOnlyList<DanmakuMatchCandidate> Deduplicate(
+        IEnumerable<DanmakuMatchCandidate> candidates) =>
         candidates
             .GroupBy(candidate => candidate.EpisodeId)
             .Select(group =>
@@ -758,11 +758,37 @@ internal static class DanmakuApiSupport
     }
 }
 
-internal sealed record ApiMatchCandidate(
+public sealed record DanmakuMatchCandidate(
     long EpisodeId,
     string AnimeTitle,
     string EpisodeTitle,
     int SeasonNumber,
     int EpisodeNumber,
     double Score,
-    string MatchReason);
+    string MatchReason)
+{
+    public string DisplayTitle =>
+        string.IsNullOrWhiteSpace(AnimeTitle)
+            ? EpisodeTitle
+            : string.IsNullOrWhiteSpace(EpisodeTitle)
+                ? AnimeTitle
+                : $"{AnimeTitle} · {EpisodeTitle}";
+
+    public string DetailText
+    {
+        get
+        {
+            var parts = new List<string>();
+
+            if (SeasonNumber > 0)
+                parts.Add($"S{SeasonNumber:00}");
+            if (EpisodeNumber > 0)
+                parts.Add($"E{EpisodeNumber:00}");
+
+            parts.Add($"episodeId {EpisodeId}");
+            parts.Add($"评分 {Score:0.#}");
+
+            return string.Join(" · ", parts);
+        }
+    }
+}
