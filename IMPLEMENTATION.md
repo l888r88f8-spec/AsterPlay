@@ -72,7 +72,7 @@ AsterPlay 当前处于：
 4. 不再向旧 qEmby 仓库开发新功能。
 5. 所有新功能直接基于 AsterPlay `main` 推进。
 6. 大功能先解决数据和行为，再处理视觉效果。
-7. 弹幕必须先解决 `HwndHost Airspace` 技术路线，再开发完整功能。
+7. 播放器已迁移到 libmpv Render API；后续弹幕直接使用 WPF Overlay，不再受 HwndHost Airspace 限制。
 
 ---
 
@@ -114,7 +114,7 @@ AsterPlay 当前处于：
 src/AsterPlay/Services/EmbyClient.cs
 src/AsterPlay/Views/PlayerWindow.xaml
 src/AsterPlay/Views/PlayerWindow.xaml.cs
-src/AsterPlay/Controls/MpvPlayerHost.cs
+src/AsterPlay/Services/Mpv/MpvRenderContext.cs
 src/AsterPlay/Services/Mpv/MpvClient.cs
 ```
 
@@ -242,7 +242,7 @@ src/AsterPlay/Views/PlayerWindow.xaml.cs
 
 ### 实现说明
 
-由于视频使用 `HwndHost` 承载原生 mpv 子窗口，同一 WPF 视觉树中的普通 Overlay 会受到 Airspace 限制。当前实现使用独立透明 owned window 作为播放器控制层，并从 mpv 原生窗口转发鼠标活动。
+播放器已从 `wid + HwndHost` 迁移到 libmpv Render API。mpv 通过 OpenGL 渲染到 `OpenTK.GLWpfControl` 提供的 FBO，再由 OpenGL/DirectX interop 进入 WPF 视觉树。因此视频、控制栏和后续弹幕可以在同一个 WPF Grid 中正常叠加，鼠标输入也直接使用 WPF 事件。
 
 已实现：
 
@@ -252,7 +252,9 @@ src/AsterPlay/Views/PlayerWindow.xaml.cs
 - 3 秒静止自动隐藏
 - 控制栏隐藏时隐藏鼠标指针
 - 双击视频切换全屏
-- 普通窗口 / 全屏共用相同控制层
+- 普通窗口 / 全屏共用同一 WPF Overlay 控制层
+- libmpv Render API + OpenTK.GLWpfControl
+- 删除旧 HwndHost / wid / 独立控制窗口 / 鼠标轮询
 - 静音按钮
 - 0.5× / 0.75× / 1× / 1.25× / 1.5× / 2× 播放速度
 - Space / Left / Right / Up / Down / M / F11 / ESC 快捷键
@@ -325,7 +327,7 @@ UI 中加入：
 
 ```text
 src/AsterPlay/Services/Mpv/MpvClient.cs
-src/AsterPlay/Controls/MpvPlayerHost.cs
+src/AsterPlay/Services/Mpv/MpvRenderContext.cs
 src/AsterPlay/Views/PlayerWindow.xaml
 src/AsterPlay/Views/PlayerWindow.xaml.cs
 ```
@@ -756,54 +758,40 @@ DPAPI 加密
 
 ### 目标
 
-只解决“如何稳定覆盖在 libmpv 视频上”，暂时不做完整弹幕系统。
+验证基于当前 Render API 架构的 WPF 弹幕 Overlay 在真实播放中的性能和同步表现。
 
-### 原因
+### 当前技术基础
 
-当前视频基于：
-
-```text
-WPF HwndHost
-```
-
-存在经典 Airspace 问题。
-
-普通：
+播放器已经使用：
 
 ```text
-Canvas
-Grid
-UserControl
+libmpv Render API
+        ↓
+OpenGL FBO
+        ↓
+OpenTK.GLWpfControl / DirectX interop
+        ↓
+WPF Visual Tree
 ```
 
-无法可靠覆盖在原生子窗口上方。
-
-### 需要验证的方案
-
-优先测试：
-
-1. 独立透明 Overlay Window
-2. 独立 Win32 Overlay
-3. DirectComposition
-4. Direct2D
-5. libmpv render API
+视频不再由 `HwndHost` 原生子窗口覆盖，因此普通 WPF `Canvas / Grid / UserControl` 可以直接叠加在视频上方。
 
 ### PoC 需要验证
 
 - 普通窗口
 - 最大化
 - 全屏
-- 移动窗口
 - Resize
 - DPI
 - 多显示器
 - Alt+Tab
-- Overlay 与视频同步
-- 鼠标穿透
+- Overlay 与视频时间轴同步
+- 大量弹幕时的 WPF 渲染性能
+- 鼠标穿透模式
 
 ### 完成标准
 
-可以在视频上方持续稳定渲染测试文字，不出现明显错位、闪烁或层级错误。
+可以在视频 WPF Surface 上方持续稳定渲染测试文字，不出现明显错位、闪烁或播放卡顿。
 
 ---
 
