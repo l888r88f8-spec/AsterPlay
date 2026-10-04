@@ -1,3 +1,4 @@
+using System.Text;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AsterPlay.Models;
@@ -343,8 +344,8 @@ public sealed class EmbyClient
         var payloadJson = JsonSerializer.Serialize(payload, _json);
         PlaybackLog.Write("EmbyReportPayload", $"path={path}, body={payloadJson}");
 
-        using var req = CreateRequest(HttpMethod.Post, path);
-        req.Content = JsonContent.Create(payload);
+        using var req = CreatePlaybackReportRequest(HttpMethod.Post, path);
+        req.Content = new StringContent(payloadJson, Encoding.UTF8, "application/json");
 
         using var response = await _http.SendAsync(req);
         PlaybackLog.Write("EmbyReport",
@@ -362,18 +363,42 @@ public sealed class EmbyClient
                ?? throw new InvalidOperationException("The server returned an empty response.");
     }
 
+    private HttpRequestMessage CreatePlaybackReportRequest(HttpMethod method, string path)
+    {
+        // Match the identity parameters used by current official Emby apps for
+        // playback check-ins. These establish the device/session auth context
+        // that /Sessions/Playing* relies on.
+        var url = Combine(path);
+        url = AppendQueryParameter(url, "X-Emby-Client", "AsterPlay");
+        url = AppendQueryParameter(url, "X-Emby-Device-Name", "Windows");
+        url = AppendQueryParameter(url, "X-Emby-Device-Id", DeviceId);
+        url = AppendQueryParameter(url, "X-Emby-Client-Version", "2.0.0");
+        url = AppendQueryParameter(url, "X-Emby-Token", AccessToken);
+        url = AppendQueryParameter(url, "reqformat", "json");
+
+        return CreateRequest(method, url);
+    }
+
     private HttpRequestMessage CreateRequest(HttpMethod method, string path, bool includeToken = true)
     {
         var request = new HttpRequestMessage(method, Combine(path));
 
-        var authorization =
-            $"Emby Client=\"AsterPlay\", Device=\"Windows\", DeviceId=\"{DeviceId}\", Version=\"2.0.0\"";
+        string authorization;
+        if (includeToken &&
+            !string.IsNullOrWhiteSpace(UserId) &&
+            !string.IsNullOrWhiteSpace(AccessToken))
+        {
+            authorization =
+                $"Emby UserId=\"{UserId}\", Client=\"AsterPlay\", Device=\"Windows\", " +
+                $"DeviceId=\"{DeviceId}\", Version=\"2.0.0\", Token=\"{AccessToken}\"";
+        }
+        else
+        {
+            authorization =
+                $"Emby Client=\"AsterPlay\", Device=\"Windows\", DeviceId=\"{DeviceId}\", Version=\"2.0.0\"";
+        }
 
-        if (includeToken && !string.IsNullOrWhiteSpace(UserId))
-            authorization += $", Emby UserId=\"{UserId}\"";
-
-        // This is the header shape used by current mature Emby clients.
-        request.Headers.TryAddWithoutValidation("Authorization", authorization);
+        request.Headers.TryAddWithoutValidation("X-Emby-Authorization", authorization);
 
         if (includeToken && !string.IsNullOrWhiteSpace(AccessToken))
             request.Headers.TryAddWithoutValidation("X-Emby-Token", AccessToken);
