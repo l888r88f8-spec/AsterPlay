@@ -1,0 +1,73 @@
+name: WinUI 3 migration build
+
+on:
+  push:
+    branches:
+      - winui3-migration
+  pull_request:
+    paths:
+      - "src/AsterPlay.Core/**"
+      - "src/AsterPlay.WinUI/**"
+      - "build-winui.ps1"
+      - ".github/workflows/winui3-migration-build.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: winui3-migration-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Bootstrap pinned portable .NET 8 SDK
+        shell: cmd
+        run: bootstrap-dotnet.cmd
+
+      - name: Build WinUI 3 x64 package
+        shell: pwsh
+        run: .\build-winui.ps1
+
+      - name: Verify WinUI migration package
+        shell: pwsh
+        run: |
+          $publish = Join-Path $PWD "dist\AsterPlay.WinUI"
+          $required = @(
+            "AsterPlay.WinUI.exe",
+            "AsterPlay.Core.dll",
+            "CustomEffectRuntimeNative.dll"
+          )
+
+          foreach ($name in $required) {
+            if (-not (Test-Path (Join-Path $publish $name))) {
+              throw "Missing WinUI migration file: $name"
+            }
+          }
+
+          Write-Host "WinUI 3 migration package verification passed."
+
+      - name: Smoke start WinUI app
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD "dist\AsterPlay.WinUI\AsterPlay.WinUI.exe"
+          $process = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 5
+
+          if ($process.HasExited) {
+            throw "AsterPlay.WinUI exited during startup smoke test with code $($process.ExitCode)."
+          }
+
+          Stop-Process -Id $process.Id -Force
+          Write-Host "AsterPlay.WinUI started successfully and stayed alive for 5 seconds."
+
+      - name: Upload WinUI migration package
+        uses: actions/upload-artifact@v4
+        with:
+          name: AsterPlay-WinUI-win-x64
+          path: dist/AsterPlay.WinUI
+          if-no-files-found: error
