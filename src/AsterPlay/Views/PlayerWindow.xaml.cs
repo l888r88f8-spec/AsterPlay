@@ -980,6 +980,7 @@ public partial class PlayerWindow : Window
             _launch.ItemId,
             _launch.Title,
             durationSeconds,
+            _launch.SeriesId,
             _launch.SeriesName,
             _launch.SeasonNumber,
             _launch.EpisodeNumber,
@@ -1069,15 +1070,15 @@ public partial class PlayerWindow : Window
         }
 
         var context = CreateDanmakuContext();
-        var currentManualMatch = _danmakuService.GetManualMatch(
-            _launch.ItemId,
+        var currentBinding = _danmakuService.GetManualSeriesMatch(
+            context,
             _danmakuSourceSettings);
 
         var dialog = new DanmakuMatchWindow(
             _danmakuService,
             context,
             _danmakuSourceSettings,
-            currentManualMatch)
+            currentBinding)
         {
             Owner = this
         };
@@ -1087,21 +1088,31 @@ public partial class PlayerWindow : Window
 
         if (dialog.UseAutomaticMatch)
         {
-            _danmakuService.ClearManualMatch(
-                _launch.ItemId,
+            _danmakuService.ClearManualSeriesMatch(
+                context,
                 _danmakuSourceSettings);
 
-            StatusBlock.Text = "LogVar：已恢复自动匹配，正在重新加载…";
+            StatusBlock.Text =
+                "LogVar：已恢复当前剧集自动匹配，正在重新加载…";
         }
-        else if (dialog.SelectedCandidate is DanmakuMatchCandidate candidate)
+        else if (
+            dialog.SelectedSeries is DanmakuSeriesMatchCandidate series &&
+            dialog.SelectedEpisode is DanmakuMatchCandidate episode)
         {
-            _danmakuService.SetManualMatch(
-                _launch.ItemId,
+            var binding = _danmakuService.SetManualSeriesMatch(
+                context,
                 _danmakuSourceSettings,
-                candidate);
+                series,
+                episode);
+
+            var offsetText = binding.EpisodeOffset == 0
+                ? "集数一一对应"
+                : binding.EpisodeOffset > 0
+                    ? $"集数偏移 +{binding.EpisodeOffset}"
+                    : $"集数偏移 {binding.EpisodeOffset}";
 
             StatusBlock.Text =
-                $"LogVar：已选 {candidate.DisplayTitle}，正在重新加载…";
+                $"LogVar：已绑定 {series.AnimeTitle}（{offsetText}），正在重新加载…";
         }
         else
         {
