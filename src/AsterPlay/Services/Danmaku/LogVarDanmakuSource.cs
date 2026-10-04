@@ -30,7 +30,7 @@ public sealed class LogVarDanmakuSource : IDanmakuSource
     {
         ValidateBaseUrl();
 
-        var candidates = new List<ApiMatchCandidate>();
+        var candidates = new List<DanmakuMatchCandidate>();
         var fileName = DanmakuApiSupport.BuildMatchFileName(context);
 
         if (!string.IsNullOrWhiteSpace(fileName))
@@ -161,8 +161,64 @@ public sealed class LogVarDanmakuSource : IDanmakuSource
             cancellationToken);
     }
 
+    public async Task<IReadOnlyList<DanmakuMatchCandidate>> SearchCandidatesAsync(
+        DanmakuContext context,
+        string? manualKeyword,
+        CancellationToken cancellationToken)
+    {
+        ValidateBaseUrl();
+
+        var keyword = manualKeyword?.Trim();
+        if (string.IsNullOrWhiteSpace(keyword))
+            keyword = DanmakuApiSupport.BuildSearchSubject(context);
+
+        if (string.IsNullOrWhiteSpace(keyword))
+            return Array.Empty<DanmakuMatchCandidate>();
+
+        var episode = DanmakuApiSupport.IsEpisode(context)
+            ? context.EpisodeNumber?.ToString(
+                System.Globalization.CultureInfo.InvariantCulture) ?? ""
+            : "movie";
+
+        var root = await GetJsonAsync(
+            "/api/v2/search/episodes",
+            new Dictionary<string, string?>
+            {
+                ["anime"] = keyword,
+                ["episode"] = episode
+            },
+            cancellationToken);
+
+        DanmakuApiSupport.EnsureSuccessfulResponse(
+            root,
+            "LogVar episode search");
+
+        var candidates =
+            DanmakuApiSupport.ParseEpisodeSearchCandidates(
+                root,
+                context,
+                keyword);
+
+        PlaybackLog.Write(
+            "DanmakuSource",
+            $"LogVar manual search: itemId={context.ItemId}, keyword={keyword}, episode={episode}, " +
+            $"candidates={candidates.Count}, topScore={candidates.FirstOrDefault()?.Score:0.##}");
+
+        return candidates;
+    }
+
+    public Task<IReadOnlyList<DanmakuComment>> LoadCandidateAsync(
+        DanmakuMatchCandidate selected,
+        CancellationToken cancellationToken)
+    {
+        ValidateBaseUrl();
+        return FetchCommentsAsync(
+            selected,
+            cancellationToken);
+    }
+
     private async Task<IReadOnlyList<DanmakuComment>> FetchCommentsAsync(
-        ApiMatchCandidate selected,
+        DanmakuMatchCandidate selected,
         CancellationToken cancellationToken)
     {
         var root = await GetJsonAsync(
