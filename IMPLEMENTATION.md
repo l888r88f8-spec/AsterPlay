@@ -357,6 +357,8 @@ src/AsterPlay/Views/PlayerWindow.xaml.cs
 
 ## Step 4：扩充 Emby 详情 API 层
 
+> 状态：已实现（2026-10-04）
+
 ### 目标
 
 先补齐详情页所需数据能力，再重做详情 UI。
@@ -425,6 +427,28 @@ MediaStreamViewModel
 ### 完成标准
 
 给定一个 ItemId，可以取得构建电影或剧集完整详情页所需的数据。
+
+### 实现说明
+
+已实现：
+
+- 单 Item 使用官方 `GET /Users/{UserId}/Items/{Id}` 获取完整 BaseItemDto
+- Series Seasons 使用官方 `GET /Shows/{Id}/Seasons`
+- Season Episodes 使用官方 `GET /Shows/{Id}/Episodes?SeasonId=...`
+- Season / Episode 列表请求官方支持的扩展 Fields
+- 扩展 People / Studios / Tags / Taglines / ProviderIds
+- 扩展 MediaSources / MediaStreams
+- 扩展视频 Codec、音频 Codec、容器、分辨率、码率、声道、HDR 相关色彩字段
+- 扩展 SeriesId / SeasonId / SeriesName / SeasonName
+- 扩展 Played / PlayCount / LastPlayedDate
+- 新增人物图片 URL 构建
+- 新增 `DetailsViewModel`
+- 新增 `SeasonViewModel`
+- 新增 `EpisodeViewModel`
+- 新增 `MediaSourceViewModel`
+- 新增 `MediaStreamViewModel`
+
+Windows x64 self-contained publish 已通过。真实服务器字段展示将在 Step 5/6 页面接入时验证。
 
 ---
 
@@ -1043,9 +1067,10 @@ Step 1 已完成：
 
 Step 2 已完成。
 Step 3 已完成。
+Step 4 已完成。
 
 当前下一项实际开发任务：
 
 ```text
-Step 4：扩充 Emby 详情 API 层
+Step 5：完整电影详情页
 ```
