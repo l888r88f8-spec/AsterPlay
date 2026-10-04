@@ -1016,6 +1016,9 @@ public partial class PlayerWindow : Window
         catch (Exception ex)
         {
             PlaybackLog.Error("DanmakuLoad", ex);
+
+            if (!_stopHandled)
+                StatusBlock.Text = $"LogVar 弹幕加载失败：{ex.Message}";
         }
     }
 
