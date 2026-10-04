@@ -229,6 +229,7 @@ public sealed class SeasonViewModel
     public string Title { get; }
     public string PosterUrl { get; }
     public int? Number => Item.IndexNumber;
+    public bool IsSpecials => Number == 0;
 }
 
 public sealed class EpisodeViewModel
@@ -248,12 +249,36 @@ public sealed class EpisodeViewModel
     public int? EpisodeNumber => Item.IndexNumber;
     public long ResumePositionTicks => Item.UserData?.PlaybackPositionTicks ?? 0;
     public double PlayedPercentage => Math.Clamp(Item.UserData?.PlayedPercentage ?? 0, 0, 100);
+    public bool IsPlayed => Item.UserData?.Played == true;
+    public bool HasResumePosition => ResumePositionTicks > 0 && !IsPlayed;
+    public string PlayLabel => HasResumePosition ? "继续播放" : "播放";
 
     public string EpisodeLabel =>
         SeasonNumber is >= 0 && EpisodeNumber is >= 0
             ? $"S{SeasonNumber:00}E{EpisodeNumber:00}"
             : EpisodeNumber is >= 0
                 ? $"E{EpisodeNumber:00}"
+                : "";
+
+    public string RuntimeLabel
+    {
+        get
+        {
+            if (Item.RunTimeTicks is not > 0)
+                return "";
+
+            var minutes = Item.RunTimeTicks.Value / 600_000_000L;
+            return minutes >= 60
+                ? $"{minutes / 60}h {minutes % 60}m"
+                : $"{minutes}m";
+        }
+    }
+
+    public string WatchStateLabel =>
+        IsPlayed
+            ? "已播放"
+            : PlayedPercentage > 0
+                ? $"已观看 {PlayedPercentage:0}%"
                 : "";
 }
 
