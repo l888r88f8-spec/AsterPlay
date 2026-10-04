@@ -371,7 +371,7 @@ public sealed class EmbyClient
 
         var decision = PlaybackDecisionSelector.Select(
             info.MediaSources,
-            requiresServerStartOffset: resumeTicks > 0);
+            hasStartPosition: resumeTicks > 0);
 
         var media = decision.MediaSource;
 
@@ -411,45 +411,25 @@ public sealed class EmbyClient
                 break;
 
             case PlaybackDecisionKind.DirectStream:
-                usesServerStartOffset = resumeTicks > 0;
+                // Emby's official video-streaming contract says Direct Stream
+                // should use static=true. The static response supports normal
+                // client-side seeking, so StartTimeTicks does not belong on
+                // this URL; mpv applies resume/seek against the file timeline.
+                usesServerStartOffset = false;
 
-                if (!string.IsNullOrWhiteSpace(media.DirectStreamUrl))
-                {
-                    url = Combine(media.DirectStreamUrl);
+                var directStreamContainer = media.Container.Trim().TrimStart('.');
+                if (string.IsNullOrWhiteSpace(directStreamContainer))
+                    directStreamContainer = "mp4";
 
-                    if (resumeTicks > 0)
-                    {
-                        url = AppendQueryParameter(
-                            url,
-                            "StartTimeTicks",
-                            resumeTicks.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                    }
+                url = WithToken(
+                    $"/Videos/{Esc(playable.Id)}/stream.{Esc(directStreamContainer)}?static=true" +
+                    $"&MediaSourceId={Esc(media.Id)}" +
+                    $"&PlaySessionId={Esc(playSessionId)}" +
+                    $"&DeviceId={Esc(DeviceId)}");
 
-                    url = AppendToken(url);
-                    PlaybackLog.Write(
-                        "PlaybackDecision",
-                        "URL strategy: negotiated DirectStreamUrl");
-                }
-                else
-                {
-                    var container = media.Container.Trim().TrimStart('.');
-                    if (string.IsNullOrWhiteSpace(container))
-                        container = "mp4";
-
-                    var directStreamPath =
-                        $"/Videos/{Esc(playable.Id)}/stream.{Esc(container)}" +
-                        $"?MediaSourceId={Esc(media.Id)}" +
-                        $"&PlaySessionId={Esc(playSessionId)}" +
-                        $"&DeviceId={Esc(DeviceId)}";
-
-                    if (resumeTicks > 0)
-                        directStreamPath += $"&StartTimeTicks={resumeTicks}";
-
-                    url = WithToken(directStreamPath);
-                    PlaybackLog.Write(
-                        "PlaybackDecision",
-                        "URL strategy: dynamic DirectStream endpoint");
-                }
+                PlaybackLog.Write(
+                    "PlaybackDecision",
+                    $"URL strategy: static DirectStream endpoint with client-side seek, container=.{directStreamContainer}");
                 break;
 
             case PlaybackDecisionKind.Transcode:

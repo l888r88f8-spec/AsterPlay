@@ -148,7 +148,16 @@ public partial class PlayerWindow : Window
                     $"size={VideoSurface.FrameBufferWidth}x{VideoSurface.FrameBufferHeight}");
 
                 _mpv.SetVolume(100);
-                _mpv.Load(_launch.Url);
+
+                var initialStartSeconds = _launch.UsesServerStartOffset
+                    ? 0
+                    : Math.Max(0, _launch.ResumePositionTicks / 10_000_000d);
+
+                PlaybackLog.Write(
+                    "Player",
+                    $"Initial load: clientStart={initialStartSeconds:0.###}, serverOffset={_launch.UsesServerStartOffset}");
+
+                _mpv.Load(_launch.Url, initialStartSeconds);
                 _playbackLoaded = true;
             }
 
