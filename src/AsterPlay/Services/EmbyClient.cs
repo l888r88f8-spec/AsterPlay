@@ -472,6 +472,25 @@ public sealed class EmbyClient
                 : $"E{playable.IndexNumber:00} · {playable.Name}"
             : playable.Name;
 
+        var sourceVideo = media.MediaStreams.FirstOrDefault(stream =>
+            string.Equals(stream.Type, "Video", StringComparison.OrdinalIgnoreCase));
+
+        var sourceAudio = media.MediaStreams.FirstOrDefault(stream =>
+                              string.Equals(stream.Type, "Audio", StringComparison.OrdinalIgnoreCase) &&
+                              stream.IsDefault)
+                          ?? media.MediaStreams.FirstOrDefault(stream =>
+                              string.Equals(stream.Type, "Audio", StringComparison.OrdinalIgnoreCase));
+
+        var negotiatedContainer = decision.Kind == PlaybackDecisionKind.Transcode &&
+                                  !string.IsNullOrWhiteSpace(media.TranscodingContainer)
+            ? media.TranscodingContainer
+            : media.Container;
+
+        var negotiatedProtocol = decision.Kind == PlaybackDecisionKind.Transcode &&
+                                 !string.IsNullOrWhiteSpace(media.TranscodingSubProtocol)
+            ? media.TranscodingSubProtocol
+            : media.Protocol;
+
         return new PlaybackLaunch
         {
             Url = url,
@@ -482,7 +501,16 @@ public sealed class EmbyClient
             ResumePositionTicks = resumeTicks,
             RunTimeTicks = playable.RunTimeTicks ?? media.RunTimeTicks,
             UsesServerStartOffset = usesServerStartOffset,
-            PlayMethod = playMethod
+            PlayMethod = playMethod,
+            DecisionReason = decision.Reason,
+            SourceContainer = media.Container,
+            SourceProtocol = media.Protocol,
+            NegotiatedContainer = negotiatedContainer,
+            NegotiatedProtocol = negotiatedProtocol,
+            SourceVideoCodec = sourceVideo?.Codec ?? "",
+            SourceAudioCodec = sourceAudio?.Codec ?? "",
+            SourceWidth = sourceVideo?.Width,
+            SourceHeight = sourceVideo?.Height
         };
     }
 
