@@ -61,10 +61,19 @@ public partial class MainWindow : Window
                 ShowHome();
                 return;
             }
-            catch
+            catch (Exception ex) when (UserError.IsAuthenticationFailure(ex))
             {
+                PlaybackLog.Error("SessionRestoreAuth", ex);
                 AppStateStore.Clear();
                 _client.Reset();
+                ShowLogin("登录状态已失效，请重新登录。");
+                return;
+            }
+            catch (Exception ex)
+            {
+                PlaybackLog.Error("SessionRestore", ex);
+                ShowLogin(UserError.GetMessage(ex, "连接服务器"));
+                return;
             }
         }
 
