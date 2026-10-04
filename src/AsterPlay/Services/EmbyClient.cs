@@ -7,6 +7,7 @@ namespace AsterPlay.Services;
 
 public sealed class EmbyClient
 {
+    public event EventHandler? PlaybackStateChanged;
     private const string DetailListFields =
         "Genres,MediaStreams,Overview,ParentId,Path,People,ProviderIds," +
         "PrimaryImageAspectRatio,Studios,Taglines";
@@ -432,6 +433,17 @@ public sealed class EmbyClient
             $"{eventName ?? Path.GetFileName(path)}: status={(int)response.StatusCode}, itemId={launch.ItemId}, " +
             $"positionTicks={positionTicks}, paused={isPaused}, volume={volume:0.##}, playSessionId={launch.PlaySessionId}, playMethod={launch.PlayMethod}");
         await EnsureSuccess(response, "Playback session update failed");
+
+        try
+        {
+            PlaybackStateChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            // UI refresh listeners must never make a successful Emby playback
+            // report look like a playback-report failure.
+            PlaybackLog.Error("PlaybackStateChanged", ex);
+        }
     }
 
     private async Task<T> GetAsync<T>(string path)
