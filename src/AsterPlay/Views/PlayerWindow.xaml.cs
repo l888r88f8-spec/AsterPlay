@@ -33,6 +33,7 @@ public partial class PlayerWindow : Window
     private DateTime _lastControlsActivityUtc;
     private int _renderInvalidationQueued;
     private int _reportSeconds;
+    private int _stateLogSeconds;
     private int _danmakuLogSeconds;
     private int _seekRequestVersion;
     private double? _serverSeekUiTargetSeconds;
@@ -139,7 +140,7 @@ public partial class PlayerWindow : Window
         {
             PlaybackLog.Error("Player", ex);
             MessageBox.Show(
-                $"{ex.Message}\n\n日志：{PlaybackLog.LogPath}",
+                $"{UserError.GetMessage(ex, "初始化播放器")}\n\n日志：{PlaybackLog.LogPath}",
                 "player",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -308,10 +309,15 @@ public partial class PlayerWindow : Window
                     _mpv.Volume));
         }
 
-        PlaybackLog.Write("PlayerState",
-            $"mpvPos={mpvPosition:0.###}, absolutePos={position:0.###}, offset={_timelineOffsetSeconds:0.###}, " +
-            $"duration={duration:0.###}, paused={_mpv.IsPaused}, buffering={_mpv.IsBuffering}, " +
-            $"volume={_mpv.Volume:0.##}, speed={_mpv.Speed:0.##} | {_mpv.DiagnosticState}");
+        _stateLogSeconds++;
+        if (_stateLogSeconds >= 5)
+        {
+            _stateLogSeconds = 0;
+            PlaybackLog.Write("PlayerState",
+                $"mpvPos={mpvPosition:0.###}, absolutePos={position:0.###}, offset={_timelineOffsetSeconds:0.###}, " +
+                $"duration={duration:0.###}, paused={_mpv.IsPaused}, buffering={_mpv.IsBuffering}, " +
+                $"volume={_mpv.Volume:0.##}, speed={_mpv.Speed:0.##} | {_mpv.DiagnosticState}");
+        }
 
         UpdateControls(
             position,
