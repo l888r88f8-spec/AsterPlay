@@ -35,6 +35,7 @@ public partial class HomeView : UserControl
 
         ApplyResponsiveHeroLayout(ActualWidth);
         LoadingOverlay.Visibility = Visibility.Visible;
+        var loadTimer = System.Diagnostics.Stopwatch.StartNew();
 
         try
         {
@@ -51,6 +52,12 @@ public partial class HomeView : UserControl
         finally
         {
             LoadingOverlay.Visibility = Visibility.Collapsed;
+            loadTimer.Stop();
+            PlaybackLog.Write(
+                "Performance",
+                $"Home initial load: {loadTimer.Elapsed.TotalMilliseconds:0} ms, " +
+                $"libraries={_viewModel.Libraries.Count}, resume={_viewModel.ResumeItems.Count}, latest={_viewModel.LatestItems.Count}, " +
+                $"workingSet={Environment.WorkingSet / 1024d / 1024d:0.0} MB, managed={GC.GetTotalMemory(false) / 1024d / 1024d:0.0} MB");
         }
     }
 
