@@ -243,8 +243,9 @@ public sealed class EmbyClient
                     $"&PlaySessionId={Esc(playSessionId)}" +
                     $"&StartTimeTicks={resumeTicks}" +
                     $"&DeviceId={Esc(DeviceId)}");
-                playMethod = "Transcode";
-                PlaybackLog.Write("Emby", "Resume strategy: dynamic stream with StartTimeTicks");
+                playMethod = "DirectStream";
+                PlaybackLog.Write("Emby",
+                    "Resume strategy: dynamic stream with StartTimeTicks (stream copy/direct stream)");
             }
         }
         else
@@ -304,7 +305,7 @@ public sealed class EmbyClient
     {
         var payload = new Dictionary<string, object?>
         {
-            ["QueueableMediaTypes"] = new[] { "Video" },
+            ["QueueableMediaTypes"] = new[] { "Audio", "Video", "Photo" },
             ["CanSeek"] = true,
             ["ItemId"] = launch.ItemId,
             ["MediaSourceId"] = launch.MediaSourceId,
@@ -314,8 +315,24 @@ public sealed class EmbyClient
             ["IsMuted"] = volume <= 0.01,
             ["VolumeLevel"] = (int)Math.Clamp(Math.Round(volume), 0, 100),
             ["PlayMethod"] = launch.PlayMethod,
-            ["PlaybackRate"] = 1.0
+            ["PlaybackRate"] = 1.0,
+            ["Shuffle"] = false,
+            ["RepeatMode"] = "RepeatNone",
+            ["PlaylistIndex"] = 0,
+            ["PlaylistLength"] = 1
         };
+
+        if (long.TryParse(launch.ItemId, out var queueItemId))
+        {
+            payload["NowPlayingQueue"] = new[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["Id"] = queueItemId,
+                    ["PlaylistItemId"] = "0"
+                }
+            };
+        }
 
         if (launch.RunTimeTicks is > 0)
             payload["RunTimeTicks"] = launch.RunTimeTicks.Value;
@@ -349,22 +366,14 @@ public sealed class EmbyClient
     {
         var request = new HttpRequestMessage(method, Combine(path));
 
-        string authorization;
-        if (includeToken &&
-            !string.IsNullOrWhiteSpace(UserId) &&
-            !string.IsNullOrWhiteSpace(AccessToken))
-        {
-            authorization =
-                $"Emby UserId=\"{UserId}\", Client=\"AsterPlay\", Device=\"Windows\", " +
-                $"DeviceId=\"{DeviceId}\", Version=\"2.0.0\", Token=\"{AccessToken}\"";
-        }
-        else
-        {
-            authorization =
-                $"Emby Client=\"AsterPlay\", Device=\"Windows\", DeviceId=\"{DeviceId}\", Version=\"2.0.0\"";
-        }
+        var authorization =
+            $"Emby Client=\"AsterPlay\", Device=\"Windows\", DeviceId=\"{DeviceId}\", Version=\"2.0.0\"";
 
-        request.Headers.TryAddWithoutValidation("X-Emby-Authorization", authorization);
+        if (includeToken && !string.IsNullOrWhiteSpace(UserId))
+            authorization += $", Emby UserId=\"{UserId}\"";
+
+        // This is the header shape used by current mature Emby clients.
+        request.Headers.TryAddWithoutValidation("Authorization", authorization);
 
         if (includeToken && !string.IsNullOrWhiteSpace(AccessToken))
             request.Headers.TryAddWithoutValidation("X-Emby-Token", AccessToken);
