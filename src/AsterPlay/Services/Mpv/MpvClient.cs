@@ -85,8 +85,54 @@ public sealed class MpvClient : IDisposable
     public void SetSpeed(double speed) =>
         SetProperty("speed", Math.Clamp(speed, 0.25, 4.0).ToString("0.###", CultureInfo.InvariantCulture));
 
-    public void CycleAudio() => Command("cycle", "audio");
-    public void CycleSubtitle() => Command("cycle", "sub");
+    public IReadOnlyList<PlayerTrack> GetTracks()
+    {
+        var count = GetIntProperty("track-list/count");
+        if (count <= 0)
+            return Array.Empty<PlayerTrack>();
+
+        var tracks = new List<PlayerTrack>(count);
+
+        for (var index = 0; index < count; index++)
+        {
+            var prefix = $"track-list/{index}";
+            var id = GetStringProperty($"{prefix}/id");
+            var type = GetStringProperty($"{prefix}/type");
+
+            if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(type))
+                continue;
+
+            var channelCount = GetNullableIntProperty($"{prefix}/demux-channel-count");
+
+            tracks.Add(new PlayerTrack(
+                id,
+                type,
+                GetStringProperty($"{prefix}/lang"),
+                GetStringProperty($"{prefix}/title"),
+                GetStringProperty($"{prefix}/codec"),
+                GetBoolProperty($"{prefix}/selected"),
+                GetBoolProperty($"{prefix}/external"),
+                GetBoolProperty($"{prefix}/default"),
+                GetBoolProperty($"{prefix}/forced"),
+                channelCount,
+                GetStringProperty($"{prefix}/demux-channels")));
+        }
+
+        return tracks;
+    }
+
+    public void SetAudioTrack(string id)
+    {
+        PlaybackLog.Write("mpv-track", $"select audio id={id}");
+        SetProperty("aid", id);
+    }
+
+    public void SetSubtitleTrack(string? id)
+    {
+        var value = string.IsNullOrWhiteSpace(id) ? "no" : id;
+        PlaybackLog.Write("mpv-track", $"select subtitle id={value}");
+        SetProperty("sid", value);
+    }
 
     public double PositionSeconds => GetDoubleProperty("time-pos");
     public double DurationSeconds => GetDoubleProperty("duration");
@@ -277,6 +323,22 @@ public sealed class MpvClient : IDisposable
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var result)
             ? result
             : fallback;
+    }
+
+    private int GetIntProperty(string name, int fallback = 0)
+    {
+        var value = GetStringProperty(name);
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result)
+            ? result
+            : fallback;
+    }
+
+    private int? GetNullableIntProperty(string name)
+    {
+        var value = GetStringProperty(name);
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result)
+            ? result
+            : null;
     }
 
     private bool GetBoolProperty(string name)
