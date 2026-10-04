@@ -970,27 +970,32 @@ public partial class PlayerWindow : Window
         return string.Join(" · ", parts);
     }
 
+    private DanmakuContext CreateDanmakuContext()
+    {
+        var durationSeconds = _launch.RunTimeTicks is > 0
+            ? _launch.RunTimeTicks.Value / 10_000_000d
+            : 0;
+
+        return new DanmakuContext(
+            _launch.ItemId,
+            _launch.Title,
+            durationSeconds,
+            _launch.SeriesName,
+            _launch.SeasonNumber,
+            _launch.EpisodeNumber,
+            _launch.OriginalTitle,
+            _launch.ItemType,
+            _launch.SourcePath,
+            _launch.SourceFileName);
+    }
+
     private async Task LoadDanmakuAsync()
     {
         try
         {
-            var durationSeconds = _launch.RunTimeTicks is > 0
-                ? _launch.RunTimeTicks.Value / 10_000_000d
-                : 0;
-
             var loadVersion = ++_danmakuLoadVersion;
             var document = await _danmakuService.LoadAsync(
-                new DanmakuContext(
-                    _launch.ItemId,
-                    _launch.Title,
-                    durationSeconds,
-                    _launch.SeriesName,
-                    _launch.SeasonNumber,
-                    _launch.EpisodeNumber,
-                    _launch.OriginalTitle,
-                    _launch.ItemType,
-                    _launch.SourcePath,
-                    _launch.SourceFileName),
+                CreateDanmakuContext(),
                 _danmakuSourceSettings,
                 _danmakuLoadCts.Token);
 
@@ -1043,6 +1048,65 @@ public partial class PlayerWindow : Window
         DanmakuSourceSettingsStore.Save(_danmakuSourceSettings);
 
         StatusBlock.Text = "LogVar：正在重新匹配弹幕…";
+
+        DanmakuOverlay.SetDocument(
+            new DanmakuDocument(
+                "LogVar",
+                Array.Empty<DanmakuComment>()));
+
+        _ = LoadDanmakuAsync();
+        ShowControls();
+    }
+
+    private void DanmakuMatch_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(
+                _danmakuSourceSettings.LogVarBaseUrl))
+        {
+            StatusBlock.Text = "请先配置 LogVar 服务器地址。";
+            ShowControls();
+            return;
+        }
+
+        var context = CreateDanmakuContext();
+        var currentManualMatch = _danmakuService.GetManualMatch(
+            _launch.ItemId,
+            _danmakuSourceSettings);
+
+        var dialog = new DanmakuMatchWindow(
+            _danmakuService,
+            context,
+            _danmakuSourceSettings,
+            currentManualMatch)
+        {
+            Owner = this
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        if (dialog.UseAutomaticMatch)
+        {
+            _danmakuService.ClearManualMatch(
+                _launch.ItemId,
+                _danmakuSourceSettings);
+
+            StatusBlock.Text = "LogVar：已恢复自动匹配，正在重新加载…";
+        }
+        else if (dialog.SelectedCandidate is DanmakuMatchCandidate candidate)
+        {
+            _danmakuService.SetManualMatch(
+                _launch.ItemId,
+                _danmakuSourceSettings,
+                candidate);
+
+            StatusBlock.Text =
+                $"LogVar：已选 {candidate.DisplayTitle}，正在重新加载…";
+        }
+        else
+        {
+            return;
+        }
 
         DanmakuOverlay.SetDocument(
             new DanmakuDocument(
