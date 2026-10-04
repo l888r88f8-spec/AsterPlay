@@ -1072,7 +1072,7 @@ WPF Visual Tree
 
 已实现：
 
-- 新增 `Controls/DanmakuPocOverlay.cs`
+- PoC 阶段新增 `Controls/DanmakuPocOverlay.cs`；进入 Step 13 后已演进为正式 `Controls/DanmakuOverlay.cs`
 - Overlay 直接位于视频 WPF Visual Tree 上方，不使用额外 HWND
 - Overlay `IsHitTestVisible=false`，验证鼠标穿透路径
 - 播放器控制栏新增“弹幕 PoC”按钮
@@ -1109,6 +1109,8 @@ Step 12 验收完成，允许进入 Step 13。
 ---
 
 ## Step 13：完整弹幕系统
+
+> 状态：进行中，正式架构第一阶段已实现（2026-10-04）
 
 ### 前提
 
@@ -1154,6 +1156,46 @@ DanmakuFilter
 - 防重叠
 - 性能限制
 - 高 DPI
+
+### 当前实现进度
+
+第一阶段已完成：
+
+- 新增正式弹幕数据模型：
+  - `DanmakuComment`
+  - `DanmakuMode`
+  - `DanmakuDocument`
+  - `DanmakuContext`
+  - `DanmakuSettings`
+- 新增 `IDanmakuSource` 数据源抽象，真实弹幕来源可以独立接入，不与播放器或渲染器耦合。
+- 新增 `DanmakuService`，负责加载弹幕文档。
+- 当前接入 `BuiltInDanmakuSource` 作为 Step 13 开发/验收数据源；计划文档尚未指定真实弹幕协议或第三方来源，因此暂不绑定具体平台。
+- PoC Overlay 已升级为正式 `DanmakuOverlay`，旧 `DanmakuPocOverlay.cs` 已移除。
+- 正式 Overlay 支持：
+  - 滚动弹幕
+  - 顶部固定弹幕
+  - 底部固定弹幕
+  - 字号
+  - 滚动速度
+  - 固定弹幕持续时间
+  - 透明度
+  - 屏幕高度占比
+  - 开关
+- 时间轴使用有序弹幕列表 + 二分范围查询，不再每帧扫描完整弹幕集合。
+- 保留 Step 12 已验收的 Seek 行为：
+  - Seek 开始立即隐藏弹幕
+  - 跳转期间不暴露中间校时
+  - 目标附近恢复连续播放后重新同步并显示
+- 播放信息面板现在显示正式弹幕源、已加载数量、活动数量以及渲染耗时。
+- `D` 快捷键和播放器“弹幕”按钮继续作为开关。
+- Windows x64 self-contained publish 已通过。
+
+下一阶段：
+
+- 接入实际弹幕数据来源 / 解析器。
+- 增加弹幕设置 UI，并把 `DanmakuSettings` 的字号、速度、透明度等暴露给用户。
+- 增加屏蔽词、用户屏蔽、密度控制、防重叠与性能限制。
+- 对真实大弹幕量继续做长时间运行验收。
 
 ### 完成标准
 
