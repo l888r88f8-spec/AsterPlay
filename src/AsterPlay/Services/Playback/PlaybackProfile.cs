@@ -227,23 +227,40 @@ public static class PlaybackDecisionSelector
 {
     public static PlaybackDecision Select(
         IReadOnlyList<MediaSource> sources,
-        bool hasStartPosition)
+        bool requiresServerStartOffset)
     {
         if (sources.Count == 0)
             throw new InvalidOperationException("No media source is available.");
 
-        // Emby's documented direct-streaming path is a static HTTP stream.
-        // That path is client-seekable, so a resume position must not force us
-        // into a dynamic server-offset stream.
-        var directPlay = sources.FirstOrDefault(source => source.SupportsDirectPlay);
-        if (directPlay is not null)
+        if (!requiresServerStartOffset)
         {
-            return new PlaybackDecision(
-                directPlay,
-                PlaybackDecisionKind.DirectPlay,
-                hasStartPosition
-                    ? "server marked source as DirectPlay compatible; resume will use client-side seek"
-                    : "server marked source as DirectPlay compatible");
+            // Large/poorly interleaved MP4-family files can be technically
+            // DirectPlay-compatible while still performing very badly over a
+            // remote HTTP connection: the demuxer may bounce between distant
+            // byte ranges for audio/video chunks. Prefer a server-side remux
+            // when Emby says DirectStream is available. This keeps codecs
+            // untouched while turning the input into a sequential stream.
+            var remuxFriendlyMp4 = sources.FirstOrDefault(source =>
+                source.SupportsDirectStream &&
+                IsMp4Family(source.Container) &&
+                string.Equals(source.Protocol, "File", StringComparison.OrdinalIgnoreCase));
+
+            if (remuxFriendlyMp4 is not null)
+            {
+                return new PlaybackDecision(
+                    remuxFriendlyMp4,
+                    PlaybackDecisionKind.DirectStream,
+                    "MP4 file source prefers server remux to avoid remote HTTP range-seek thrashing");
+            }
+
+            var directPlay = sources.FirstOrDefault(source => source.SupportsDirectPlay);
+            if (directPlay is not null)
+            {
+                return new PlaybackDecision(
+                    directPlay,
+                    PlaybackDecisionKind.DirectPlay,
+                    "server marked source as DirectPlay compatible");
+            }
         }
 
         var directStream = sources.FirstOrDefault(source => source.SupportsDirectStream);
@@ -252,9 +269,25 @@ public static class PlaybackDecisionSelector
             return new PlaybackDecision(
                 directStream,
                 PlaybackDecisionKind.DirectStream,
-                hasStartPosition
-                    ? "server marked source as DirectStream compatible; static HTTP stream will use client-side seek"
-                    : "server marked source as DirectStream compatible; using static HTTP stream");
+                requiresServerStartOffset
+                    ? "resume requires server-side StartTimeTicks and source supports DirectStream"
+                    : "DirectPlay unavailable; server marked source as DirectStream compatible");
+        }
+
+        // Preserve the proven AsterPlay resume architecture. When the source is
+        // directly playable but Emby does not separately advertise DirectStream,
+        // the dynamic /Videos/{id}/stream.{container} endpoint can still apply
+        // StartTimeTicks without asking mpv to seek from the original file.
+        if (requiresServerStartOffset)
+        {
+            var resumeDirectPlay = sources.FirstOrDefault(source => source.SupportsDirectPlay);
+            if (resumeDirectPlay is not null)
+            {
+                return new PlaybackDecision(
+                    resumeDirectPlay,
+                    PlaybackDecisionKind.DirectStream,
+                    "DirectPlay source adapted to dynamic stream so Emby applies resume StartTimeTicks");
+            }
         }
 
         var transcode = sources.FirstOrDefault(source =>
@@ -266,9 +299,7 @@ public static class PlaybackDecisionSelector
             return new PlaybackDecision(
                 transcode,
                 PlaybackDecisionKind.Transcode,
-                hasStartPosition
-                    ? "DirectPlay/DirectStream unavailable; transcoding will use server-side StartTimeTicks"
-                    : "DirectPlay/DirectStream unavailable; using negotiated TranscodingUrl");
+                "DirectPlay/DirectStream unavailable; using negotiated TranscodingUrl");
         }
 
         // Compatibility fallback for older Emby servers that return URLs but do
@@ -286,5 +317,16 @@ public static class PlaybackDecisionSelector
 
         throw new InvalidOperationException(
             "Emby did not return a playable DirectPlay, DirectStream, or Transcode source.");
+    }
+
+    private static bool IsMp4Family(string? container)
+    {
+        if (string.IsNullOrWhiteSpace(container))
+            return false;
+
+        var normalized = container.Trim().TrimStart('.');
+        return string.Equals(normalized, "mp4", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(normalized, "m4v", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(normalized, "mov", StringComparison.OrdinalIgnoreCase);
     }
 }
