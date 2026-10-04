@@ -14,6 +14,36 @@ $AssetName = "mpv-dev-lgpl-x86_64-20260929-git-b4b5d69a44.7z"
 $ExpectedSha256 = "8c80c506cf95f403d8a2b9d672d5f88d965885666f25c850f711a06b9510dfc8"
 $DownloadUrl = "https://github.com/zhongfly/mpv-winbuild/releases/download/$PinnedRelease/$AssetName"
 
+# Windows' built-in tar.exe is not guaranteed to support 7z/LZMA. Use a pinned
+# official 7-Zip standalone extractor so clean Windows machines behave the same.
+$SevenZipVersion = "26.03"
+$SevenZipAssetName = "7zr.exe"
+$SevenZipExpectedSha256 = "ad4c82fadcbdf93c03b4fc440f300509c7d60c5c2f4d183e35d9d70d6957037d"
+$SevenZipDownloadUrl = "https://github.com/ip7z/7zip/releases/download/$SevenZipVersion/$SevenZipAssetName"
+
+function Get-PinnedSevenZipExtractor {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$TempDirectory
+    )
+
+    $extractor = Join-Path $TempDirectory $SevenZipAssetName
+
+    Write-Host "Downloading pinned 7-Zip extractor:"
+    Write-Host "  Version: $SevenZipVersion"
+    Write-Host "  Asset:   $SevenZipAssetName"
+
+    Invoke-WebRequest -UseBasicParsing -Headers @{ "User-Agent" = "AsterPlay-build" } -Uri $SevenZipDownloadUrl -OutFile $extractor
+
+    $actualSha256 = (Get-FileHash -Path $extractor -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actualSha256 -ne $SevenZipExpectedSha256) {
+        throw "7zr.exe SHA-256 mismatch. Expected $SevenZipExpectedSha256 but got $actualSha256."
+    }
+
+    Write-Host "7-Zip extractor SHA-256 verified: $actualSha256"
+    return $extractor
+}
+
 function Test-PinnedRuntime {
     if (-not (Test-Path $Dll) -or -not (Test-Path $SourceInfo)) {
         return $false
@@ -54,23 +84,10 @@ try {
 
     Write-Host "SHA-256 verified: $actualSha256"
 
-    $tar = Get-Command tar.exe -ErrorAction SilentlyContinue
-    if ($tar) {
-        & $tar.Source -xf $Archive -C $Extract
-        if ($LASTEXITCODE -ne 0) {
-            throw "tar.exe failed to extract the pinned libmpv archive."
-        }
-    }
-    else {
-        $sevenZip = Get-Command 7z.exe -ErrorAction SilentlyContinue
-        if (-not $sevenZip) {
-            throw "Neither tar.exe nor 7z.exe is available to extract the pinned libmpv archive."
-        }
-
-        & $sevenZip.Source x $Archive "-o$Extract" -y | Out-Host
-        if ($LASTEXITCODE -ne 0) {
-            throw "7z.exe failed to extract the pinned libmpv archive."
-        }
+    $sevenZip = Get-PinnedSevenZipExtractor -TempDirectory $Temp
+    & $sevenZip x $Archive "-o$Extract" -y | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        throw "Pinned 7zr.exe failed to extract the pinned libmpv archive."
     }
 
     $Found = Get-ChildItem -Path $Extract -Filter "libmpv-2.dll" -File -Recurse | Select-Object -First 1
