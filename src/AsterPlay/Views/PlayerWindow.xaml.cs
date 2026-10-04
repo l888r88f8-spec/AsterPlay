@@ -49,6 +49,7 @@ public partial class PlayerWindow : Window
     private bool _startReportSent;
     private bool _stopHandled;
     private bool _renderFailureShown;
+    private bool _sourceFailureShown;
     private bool _trackMenuOpen;
     private bool _diagnosticsVisible;
     private bool _danmakuVisible;
@@ -101,6 +102,7 @@ public partial class PlayerWindow : Window
                 "Render API mode: mpv renders into the WPF OpenGL framebuffer; no wid/HwndHost is used.");
 
             _mpv = new MpvClient();
+            _mpv.PlaybackEnded += Mpv_PlaybackEnded;
             _lastAudibleVolume = 100;
             _lastPositionTicks = _launch.ResumePositionTicks;
 
@@ -143,6 +145,42 @@ public partial class PlayerWindow : Window
                 MessageBoxImage.Error);
             Close();
         }
+    }
+
+    private void Mpv_PlaybackEnded(object? sender, MpvPlaybackEndedEventArgs e)
+    {
+        if (!e.IsError || _stopHandled || _sourceFailureShown)
+            return;
+
+        _sourceFailureShown = true;
+        PlaybackLog.Write(
+            "PlayerSource",
+            $"Playback source failed: playMethod={_launch.PlayMethod}, reason={e.ReasonName}, error={e.Error} ({e.ErrorText})");
+
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Normal,
+            new Action(() =>
+            {
+                if (_stopHandled)
+                    return;
+
+                var isTranscode = string.Equals(
+                    _launch.PlayMethod,
+                    "Transcode",
+                    StringComparison.OrdinalIgnoreCase);
+
+                StatusBlock.Text = isTranscode ? "转码流播放失败" : "视频源播放失败";
+
+                var message = isTranscode
+                    ? "Emby 转码流播放失败。请检查服务端转码任务、磁盘空间和媒体源状态。"
+                    : "视频源已失效、不可访问，或 mpv 无法打开该媒体流。";
+
+                MessageBox.Show(
+                    $"{message}\n\nmpv：{e.ErrorText}\n日志：{PlaybackLog.LogPath}",
+                    isTranscode ? "Transcode failed" : "Playback source failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }));
     }
 
     private void VideoSurface_OnRender(TimeSpan delta)
@@ -1770,6 +1808,8 @@ public partial class PlayerWindow : Window
 
         if (mpv is null)
             return;
+
+        mpv.PlaybackEnded -= Mpv_PlaybackEnded;
 
         try
         {
