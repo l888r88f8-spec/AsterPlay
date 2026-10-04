@@ -12,6 +12,11 @@ public static class PlaybackLog
     private static readonly string LogFilePath =
         Path.Combine(DirectoryPath, "playback.log");
 
+    private static readonly string PreviousLogFilePath =
+        Path.Combine(DirectoryPath, "playback.previous.log");
+
+    private const long MaxLogBytes = 8L * 1024 * 1024;
+
     private static readonly string SessionStartedAt =
         DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
 
@@ -28,6 +33,8 @@ public static class PlaybackLog
 
             lock (Sync)
             {
+                RotateIfNeeded();
+
                 if (!_sessionHeaderWritten)
                 {
                     File.AppendAllText(
@@ -42,6 +49,28 @@ public static class PlaybackLog
         catch
         {
             // Diagnostics must never break playback.
+        }
+    }
+
+    private static void RotateIfNeeded()
+    {
+        try
+        {
+            if (!File.Exists(LogFilePath) ||
+                new FileInfo(LogFilePath).Length < MaxLogBytes)
+            {
+                return;
+            }
+
+            if (File.Exists(PreviousLogFilePath))
+                File.Delete(PreviousLogFilePath);
+
+            File.Move(LogFilePath, PreviousLogFilePath);
+            _sessionHeaderWritten = false;
+        }
+        catch
+        {
+            // Rotation is best-effort; diagnostics must never affect playback.
         }
     }
 
