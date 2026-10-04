@@ -59,27 +59,33 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="SidebarNavButton" TargetType="Button">
-            <Setter Property="Height" Value="44"/>
-            <Setter Property="Margin" Value="10,3"/>
-            <Setter Property="Padding" Value="14,0"/>
-            <Setter Property="Foreground" Value="#B7BBC4"/>
+        <Style x:Key="FloatingNavButton" TargetType="Button">
+            <Setter Property="Width" Value="104"/>
+            <Setter Property="Height" Value="56"/>
+            <Setter Property="Margin" Value="3"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Foreground" Value="#9CA1AC"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
-                                CornerRadius="11" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter VerticalAlignment="Center"/>
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="16"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#12FFFFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#18FFFFFF"/>
                                 <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#26FFFFFF"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -94,7 +100,10 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#F5111216" BorderBrush="#10FFFFFF" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0"
+                Background="#F5111216"
+                BorderBrush="#10FFFFFF"
+                BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="220"/>
@@ -104,12 +113,18 @@
                     <ColumnDefinition Width="46"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
+                <StackPanel Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Margin="18,0,0,0">
                     <Border Width="24" Height="24" CornerRadius="7" Background="#0A84FF">
-                        <TextBlock Text="A" Foreground="White" FontWeight="Bold"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="A"
+                                   Foreground="White"
+                                   FontWeight="Bold"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
                     </Border>
-                    <TextBlock Text="AsterPlay" Margin="10,0,0,0"
+                    <TextBlock Text="AsterPlay"
+                               Margin="10,0,0,0"
                                VerticalAlignment="Center"
                                Foreground="#F5F5F7"
                                FontSize="14"
@@ -124,88 +139,98 @@
                            Foreground="#A9ADB6"
                            FontSize="13"/>
 
-                <Button Grid.Column="2" Style="{StaticResource CaptionButton}"
-                        Content="—" Click="Minimize_Click"/>
-                <Button x:Name="MaximizeButton" Grid.Column="3"
+                <Button Grid.Column="2"
                         Style="{StaticResource CaptionButton}"
-                        Content="□" Click="Maximize_Click"/>
-                <Button Grid.Column="4" Style="{StaticResource CloseCaptionButton}"
-                        Content="✕" Click="Close_Click"/>
+                        Content="—"
+                        Click="Minimize_Click"/>
+                <Button x:Name="MaximizeButton"
+                        Grid.Column="3"
+                        Style="{StaticResource CaptionButton}"
+                        Content="□"
+                        Click="Maximize_Click"/>
+                <Button Grid.Column="4"
+                        Style="{StaticResource CloseCaptionButton}"
+                        Content="✕"
+                        Click="Close_Click"/>
             </Grid>
         </Border>
 
         <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition x:Name="SidebarColumn" Width="220"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <Border x:Name="Sidebar"
-                    Grid.Column="0"
-                    Background="#F5111216"
-                    BorderBrush="#10FFFFFF"
-                    BorderThickness="0,0,1,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <StackPanel Margin="0,16,0,0">
-                        <Button x:Name="HomeNavButton"
-                                Style="{StaticResource SidebarNavButton}"
-                                Click="HomeNav_Click">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="⌂" Width="28" FontSize="18"/>
-                                <TextBlock Text="首页" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <Button x:Name="LibraryNavButton"
-                                Style="{StaticResource SidebarNavButton}"
-                                Click="LibraryNav_Click">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="▦" Width="28" FontSize="17"/>
-                                <TextBlock Text="媒体库" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <Button x:Name="ServersNavButton"
-                                Style="{StaticResource SidebarNavButton}"
-                                Click="ServersNav_Click">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="◫" Width="28" FontSize="16"/>
-                                <TextBlock Text="服务器" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <Button x:Name="SettingsNavButton"
-                                Style="{StaticResource SidebarNavButton}"
-                                Click="SettingsNav_Click">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="⚙" Width="28" FontSize="16"/>
-                                <TextBlock Text="设置" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-
-                    <Border Grid.Row="2" Margin="14,0,14,16"
-                            Padding="12"
-                            CornerRadius="12"
-                            Background="#0FFFFFFF">
-                        <StackPanel>
-                            <TextBlock Text="AsterPlay" Foreground="#D8DAE0" FontSize="12" FontWeight="SemiBold"/>
-                            <TextBlock Text="Native Emby Client" Foreground="#676D78" FontSize="11" Margin="0,3,0,0"/>
-                        </StackPanel>
-                    </Border>
-                </Grid>
-            </Border>
-
-            <Border Grid.Column="1"
-                    x:Name="ContentSurface"
+            <Border x:Name="ContentSurface"
                     Background="{StaticResource AppBackground}">
                 <ContentControl x:Name="RootContent"/>
+            </Border>
+
+            <Border x:Name="BottomNavigation"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom"
+                    Margin="0,0,0,20"
+                    Padding="7"
+                    CornerRadius="24"
+                    Background="#E61A1B20"
+                    BorderBrush="#24FFFFFF"
+                    BorderThickness="1"
+                    Panel.ZIndex="50">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="28"
+                                      ShadowDepth="8"
+                                      Opacity="0.34"
+                                      Color="Black"/>
+                </Border.Effect>
+
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="HomeNavButton"
+                            Style="{StaticResource FloatingNavButton}"
+                            Click="HomeNav_Click">
+                        <StackPanel>
+                            <TextBlock Text="⌂"
+                                       FontSize="20"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="首页"
+                                       Margin="0,3,0,0"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="LibraryNavButton"
+                            Style="{StaticResource FloatingNavButton}"
+                            Click="LibraryNav_Click">
+                        <StackPanel>
+                            <TextBlock Text="▦"
+                                       FontSize="18"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="媒体库"
+                                       Margin="0,3,0,0"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="ServersNavButton"
+                            Style="{StaticResource FloatingNavButton}"
+                            Click="ServersNav_Click">
+                        <StackPanel>
+                            <TextBlock Text="◫"
+                                       FontSize="18"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="服务器"
+                                       Margin="0,3,0,0"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="SettingsNavButton"
+                            Style="{StaticResource FloatingNavButton}"
+                            Click="SettingsNav_Click">
+                        <StackPanel>
+                            <TextBlock Text="⚙"
+                                       FontSize="17"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="设置"
+                                       Margin="0,3,0,0"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </Border>
         </Grid>
     </Grid>
