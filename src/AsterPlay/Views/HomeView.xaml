@@ -11,6 +11,23 @@
             <Setter Property="FontSize" Value="15"/>
             <Setter Property="MinHeight" Value="46"/>
         </Style>
+        <Style x:Key="MediaCardButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Top"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="Transparent">
+                            <ContentPresenter/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style x:Key="LibraryTab" TargetType="Button">
             <Setter Property="Foreground" Value="#CCD1DB"/>
             <Setter Property="Background" Value="#18FFFFFF"/>
@@ -230,21 +247,25 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel Width="260" Margin="0,0,16,0">
-                                        <Border Height="146" CornerRadius="10"
-                                                Background="#15151C" ClipToBounds="True">
-                                            <Grid>
-                                                <Image Source="{Binding BackdropUrl}"
-                                                       Stretch="UniformToFill"/>
-                                                <ProgressBar Value="{Binding PlayedPercentage, Mode=OneWay}"
-                                                             Maximum="100" Height="4"
-                                                             VerticalAlignment="Bottom"/>
-                                            </Grid>
-                                        </Border>
-                                        <TextBlock Text="{Binding ResumeTitle}" Foreground="#F5F6F8"
-                                                   FontSize="16" FontWeight="SemiBold"
-                                                   Margin="3,8,3,0" TextTrimming="CharacterEllipsis"/>
-                                    </StackPanel>
+                                    <Button Width="260" Margin="0,0,16,0"
+                                            Style="{StaticResource MediaCardButton}"
+                                            Tag="{Binding}" Click="ResumeCard_Click">
+                                        <StackPanel>
+                                            <Border Height="146" CornerRadius="10"
+                                                    Background="#15151C" ClipToBounds="True">
+                                                <Grid>
+                                                    <Image Source="{Binding BackdropUrl}"
+                                                           Stretch="UniformToFill"/>
+                                                    <ProgressBar Value="{Binding PlayedPercentage, Mode=OneWay}"
+                                                                 Maximum="100" Height="4"
+                                                                 VerticalAlignment="Bottom"/>
+                                                </Grid>
+                                            </Border>
+                                            <TextBlock Text="{Binding ResumeTitle}" Foreground="#F5F6F8"
+                                                       FontSize="16" FontWeight="SemiBold"
+                                                       Margin="3,8,3,0" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Button>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -262,17 +283,21 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel Width="168" Margin="0,0,16,0">
-                                        <Border Height="245" CornerRadius="10"
-                                                Background="#15151C" ClipToBounds="True">
-                                            <Image Source="{Binding PosterUrl}"
-                                                   Stretch="UniformToFill"/>
-                                        </Border>
-                                        <TextBlock Text="{Binding Title}" Foreground="#F5F6F8"
-                                                   FontSize="16" FontWeight="SemiBold"
-                                                   Margin="3,8,3,0"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                    </StackPanel>
+                                    <Button Width="168" Margin="0,0,16,0"
+                                            Style="{StaticResource MediaCardButton}"
+                                            Tag="{Binding}" Click="LatestCard_Click">
+                                        <StackPanel>
+                                            <Border Height="245" CornerRadius="10"
+                                                    Background="#15151C" ClipToBounds="True">
+                                                <Image Source="{Binding PosterUrl}"
+                                                       Stretch="UniformToFill"/>
+                                            </Border>
+                                            <TextBlock Text="{Binding Title}" Foreground="#F5F6F8"
+                                                       FontSize="16" FontWeight="SemiBold"
+                                                       Margin="3,8,3,0"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Button>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
