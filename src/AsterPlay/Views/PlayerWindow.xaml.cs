@@ -81,7 +81,9 @@ public partial class PlayerWindow : Window
             {
                 MajorVersion = 3,
                 MinorVersion = 3,
-                RenderContinuously = false,
+                // Let GLWpfControl render on WPF's normal composition cadence.
+                // This avoids flooding DispatcherPriority.Render and starving mouse input.
+                RenderContinuously = true,
                 UseDeviceDpi = true,
                 Samples = 0
             };
@@ -180,7 +182,7 @@ public partial class PlayerWindow : Window
         try
         {
             Dispatcher.BeginInvoke(
-                DispatcherPriority.Render,
+                DispatcherPriority.Background,
                 new Action(() =>
                 {
                     Interlocked.Exchange(ref _renderInvalidationQueued, 0);
@@ -298,6 +300,10 @@ public partial class PlayerWindow : Window
     private void PlayerRoot_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         ShowControls();
+
+        PlaybackLog.Write(
+            "PlayerInput",
+            $"MouseLeftDown clicks={e.ClickCount}, overControls={ControlsPanel.IsMouseOver}");
 
         if (e.ClickCount == 2 && !ControlsPanel.IsMouseOver)
         {
@@ -486,7 +492,11 @@ public partial class PlayerWindow : Window
         ShowControls();
     }
 
-    private void Fullscreen_Click(object sender, RoutedEventArgs e) => ToggleFullscreen();
+    private void Fullscreen_Click(object sender, RoutedEventArgs e)
+    {
+        PlaybackLog.Write("PlayerInput", "Fullscreen button clicked");
+        ToggleFullscreen();
+    }
 
     private void ToggleFullscreen()
     {
