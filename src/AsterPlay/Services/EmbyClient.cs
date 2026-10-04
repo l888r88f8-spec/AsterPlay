@@ -816,6 +816,9 @@ public sealed class EmbyClient
         if (body.Length > 300)
             body = body[..300];
 
-        throw new HttpRequestException($"{prefix}: HTTP {(int)response.StatusCode} {response.ReasonPhrase}. {body}");
+        throw new HttpRequestException(
+            ${prefix}: HTTP ${(int)response.StatusCode} ${response.ReasonPhrase}. ${body},
+            inner: null,
+            statusCode: response.StatusCode);
     }
 }
