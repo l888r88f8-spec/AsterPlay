@@ -11,11 +11,24 @@ public sealed class MpvPlayerHost : HwndHost
     private const int WsClipChildren = 0x02000000;
     private const int WsClipSiblings = 0x04000000;
 
+    private const int WmSetCursor = 0x0020;
+    private const int WmMouseMove = 0x0200;
+    private const int WmLButtonDown = 0x0201;
+    private const int SmCxDoubleClk = 36;
+    private const int SmCyDoubleClk = 37;
+    private const int IdcArrow = 32512;
+
     private IntPtr _hwnd;
     private MpvClient? _mpv;
     private string? _pendingUrl;
-
     private double _pendingStartSeconds;
+    private bool _cursorHidden;
+    private long _lastClickTick;
+    private int _lastClickX;
+    private int _lastClickY;
+
+    public event Action? NativeMouseActivity;
+    public event Action? NativeDoubleClick;
 
     public void Load(string url, double startSeconds = 0)
     {
@@ -47,15 +60,76 @@ public sealed class MpvPlayerHost : HwndHost
     public void Seek(double seconds) => _mpv?.Seek(seconds);
     public void SeekAbsolute(double seconds) => _mpv?.SeekAbsolute(seconds);
     public void SetVolume(double volume) => _mpv?.SetVolume(volume);
+    public void SetSpeed(double speed) => _mpv?.SetSpeed(speed);
     public void CycleAudio() => _mpv?.CycleAudio();
     public void CycleSubtitle() => _mpv?.CycleSubtitle();
 
     public double PositionSeconds => _mpv?.PositionSeconds ?? 0;
     public double DurationSeconds => _mpv?.DurationSeconds ?? 0;
     public double Volume => _mpv?.Volume ?? 100;
+    public double Speed => _mpv?.Speed ?? 1;
     public bool IsPaused => _mpv?.IsPaused ?? false;
     public bool IsBuffering => _mpv?.IsBuffering ?? false;
     public string DiagnosticState => _mpv?.DiagnosticState ?? "mpv=null";
+
+    public void SetCursorHidden(bool hidden)
+    {
+        _cursorHidden = hidden;
+        if (_hwnd == IntPtr.Zero)
+            return;
+
+        SetCursor(hidden ? IntPtr.Zero : LoadCursor(IntPtr.Zero, new IntPtr(IdcArrow)));
+    }
+
+    protected override IntPtr WndProc(
+        IntPtr hwnd,
+        int msg,
+        IntPtr wParam,
+        IntPtr lParam,
+        ref bool handled)
+    {
+        switch (msg)
+        {
+            case WmMouseMove:
+                NativeMouseActivity?.Invoke();
+                break;
+
+            case WmLButtonDown:
+                NativeMouseActivity?.Invoke();
+
+                var packed = lParam.ToInt64();
+                var x = unchecked((short)(packed & 0xFFFF));
+                var y = unchecked((short)((packed >> 16) & 0xFFFF));
+                var now = Environment.TickCount64;
+                var maxDx = Math.Max(1, GetSystemMetrics(SmCxDoubleClk));
+                var maxDy = Math.Max(1, GetSystemMetrics(SmCyDoubleClk));
+
+                if (_lastClickTick > 0 &&
+                    now - _lastClickTick <= GetDoubleClickTime() &&
+                    Math.Abs(x - _lastClickX) <= maxDx &&
+                    Math.Abs(y - _lastClickY) <= maxDy)
+                {
+                    _lastClickTick = 0;
+                    NativeDoubleClick?.Invoke();
+                }
+                else
+                {
+                    _lastClickTick = now;
+                    _lastClickX = x;
+                    _lastClickY = y;
+                }
+                break;
+
+            case WmSetCursor:
+                SetCursor(_cursorHidden
+                    ? IntPtr.Zero
+                    : LoadCursor(IntPtr.Zero, new IntPtr(IdcArrow)));
+                handled = true;
+                return IntPtr.Zero;
+        }
+
+        return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
+    }
 
     protected override HandleRef BuildWindowCore(HandleRef hwndParent)
     {
@@ -107,6 +181,18 @@ public sealed class MpvPlayerHost : HwndHost
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool DestroyWindow(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetCursor(IntPtr cursor);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr LoadCursor(IntPtr instance, IntPtr cursorName);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDoubleClickTime();
+
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetrics(int index);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool SetWindowPos(
