@@ -6,6 +6,8 @@ namespace AsterPlay.WinUI.Views;
 
 public sealed partial class ServerManagementView : UserControl
 {
+    public event EventHandler? DoneRequested;
+
     public ServerManagementView()
     {
         InitializeComponent();
@@ -45,4 +47,7 @@ public sealed partial class ServerManagementView : UserControl
         UrlBox.Text = "http://127.0.0.1:8096";
         Reload();
     }
+
+    private void Done_Click(object sender, RoutedEventArgs e) =>
+        DoneRequested?.Invoke(this, EventArgs.Empty);
 }
