@@ -36,6 +36,7 @@ public sealed class MpvPlayerHost : HwndHost
     public double Volume => _mpv?.Volume ?? 100;
     public bool IsPaused => _mpv?.IsPaused ?? false;
     public bool IsBuffering => _mpv?.IsBuffering ?? false;
+    public string DiagnosticState => _mpv?.DiagnosticState ?? "mpv=null";
 
     protected override HandleRef BuildWindowCore(HandleRef hwndParent)
     {
