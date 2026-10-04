@@ -7,6 +7,11 @@ namespace AsterPlay.Services;
 
 public sealed class EmbyClient
 {
+    private const string DetailFields =
+        "Overview,Genres,ProductionYear,CommunityRating,RunTimeTicks,UserData," +
+        "People,Studios,Taglines,MediaStreams,MediaSources,ProviderIds,Path," +
+        "PremiereDate,OfficialRating,Tags,PrimaryImageAspectRatio";
+
     private readonly HttpClient _http = new()
     {
         Timeout = TimeSpan.FromSeconds(25)
@@ -125,7 +130,42 @@ public sealed class EmbyClient
     public Task<EmbyItem> GetItemAsync(string itemId) =>
         GetAsync<EmbyItem>(
             $"/Users/{Esc(UserId)}/Items/{Esc(itemId)}" +
-            "?Fields=Overview,Genres,ProductionYear,CommunityRating,RunTimeTicks,UserData");
+            $"?Fields={Esc(DetailFields)}" +
+            "&EnableImages=true&EnableUserData=true");
+
+    public async Task<List<EmbyItem>> GetSeasonsAsync(string seriesId)
+    {
+        var path =
+            $"/Shows/{Esc(seriesId)}/Seasons" +
+            $"?UserId={Esc(UserId)}" +
+            $"&Fields={Esc(DetailFields)}" +
+            "&EnableImages=true&EnableUserData=true" +
+            "&ImageTypeLimit=1&EnableImageTypes=Primary,Backdrop,Thumb";
+
+        var result = await GetAsync<EmbyItemsResponse>(path);
+        return result.Items
+            .OrderBy(item => item.IndexNumber ?? int.MaxValue)
+            .ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    public async Task<List<EmbyItem>> GetEpisodesAsync(string seriesId, string seasonId)
+    {
+        var path =
+            $"/Shows/{Esc(seriesId)}/Episodes" +
+            $"?UserId={Esc(UserId)}" +
+            $"&SeasonId={Esc(seasonId)}" +
+            $"&Fields={Esc(DetailFields)}" +
+            "&EnableImages=true&EnableUserData=true" +
+            "&ImageTypeLimit=1&EnableImageTypes=Primary,Backdrop,Thumb";
+
+        var result = await GetAsync<EmbyItemsResponse>(path);
+        return result.Items
+            .OrderBy(item => item.ParentIndexNumber ?? int.MaxValue)
+            .ThenBy(item => item.IndexNumber ?? int.MaxValue)
+            .ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
 
     public async Task<bool> SetFavoriteAsync(string itemId, bool favorite)
     {
@@ -149,6 +189,11 @@ public sealed class EmbyClient
 
     public string BuildPrimaryUrl(EmbyItem item, int maxWidth = 500) =>
         WithToken($"/Items/{Esc(item.Id)}/Images/Primary?maxWidth={maxWidth}&quality=90");
+
+    public string BuildPersonPrimaryUrl(EmbyPerson person, int maxWidth = 400) =>
+        string.IsNullOrWhiteSpace(person.Id)
+            ? ""
+            : WithToken($"/Items/{Esc(person.Id)}/Images/Primary?maxWidth={maxWidth}&quality=90");
 
     public async Task<PlaybackLaunch> GetPlayableStreamAsync(EmbyItem source)
     {
