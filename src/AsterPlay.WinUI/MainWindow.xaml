@@ -4,7 +4,23 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:lg="using:LiquidGlassWinUI"
     Title="AsterPlay">
-    <Grid Background="#080A0F">
+
+    <Window.Resources>
+        <Style x:Key="DockButtonStyle" TargetType="Button">
+            <Setter Property="MinWidth" Value="104"/>
+            <Setter Property="Height" Value="54"/>
+            <Setter Property="Margin" Value="3"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#C7CED8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid x:Name="RootGrid"
+          Background="#080A0F"
+          Loaded="RootGrid_Loaded">
         <Grid.RowDefinitions>
             <RowDefinition Height="48"/>
             <RowDefinition Height="*"/>
@@ -12,15 +28,34 @@
 
         <Grid x:Name="AppTitleBar"
               Grid.Row="0"
-              Background="#121722">
+              Background="#C90D1118">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="220"/>
+            </Grid.ColumnDefinitions>
+
             <StackPanel Orientation="Horizontal"
                         VerticalAlignment="Center"
                         Spacing="10"
                         Margin="18,0,0,0">
-                <Border Width="26"
-                        Height="26"
-                        CornerRadius="9"
-                        Background="#397FD4">
+                <Border Width="27"
+                        Height="27"
+                        CornerRadius="9">
+                    <Border.Background>
+                        <lg:LiquidGlassBrush BlurAmount="1.2"
+                                             BloomAmount="0.20"
+                                             RefThickness="18"
+                                             RefFactor="1.7"
+                                             RefDispersion="3.5"
+                                             GlareFactor="58"
+                                             TintA="0.16"
+                                             TintR="70"
+                                             TintG="145"
+                                             TintB="255"
+                                             ShapeRadius="0.94"
+                                             ShapeRoundness="3.8"/>
+                    </Border.Background>
                     <TextBlock Text="A"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
@@ -33,56 +68,79 @@
                            FontWeight="SemiBold"
                            VerticalAlignment="Center"/>
             </StackPanel>
+
+            <TextBlock x:Name="PageTitleBlock"
+                       Grid.Column="1"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Foreground="#AEB6C4"
+                       FontSize="13"/>
         </Grid>
 
         <Grid Grid.Row="1">
-            <StackPanel HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        MaxWidth="720"
-                        Spacing="14">
-                <TextBlock Text="AsterPlay · WinUI 3"
-                           HorizontalAlignment="Center"
-                           Foreground="White"
-                           FontSize="42"
-                           FontWeight="SemiBold"/>
-                <TextBlock x:Name="CoreStatusText"
-                           Text="正在读取共享核心状态…"
-                           HorizontalAlignment="Center"
-                           Foreground="#A5ADBA"
-                           TextAlignment="Center"
-                           TextWrapping="Wrap"/>
-                <TextBlock x:Name="ServerStatusText"
-                           Text=""
-                           HorizontalAlignment="Center"
-                           Foreground="#A5ADBA"
-                           TextAlignment="Center"
-                           TextWrapping="Wrap"/>
-            </StackPanel>
+            <Grid IsHitTestVisible="False">
+                <Ellipse Width="720"
+                         Height="520"
+                         HorizontalAlignment="Left"
+                         VerticalAlignment="Top"
+                         Margin="-240,-300,0,0"
+                         Fill="#252F79CE"/>
+                <Ellipse Width="620"
+                         Height="460"
+                         HorizontalAlignment="Right"
+                         VerticalAlignment="Bottom"
+                         Margin="0,0,-220,-260"
+                         Fill="#182F79A8"/>
+            </Grid>
 
-            <Border HorizontalAlignment="Center"
+            <ContentControl x:Name="PageHost"/>
+
+            <Border x:Name="NavigationDock"
+                    HorizontalAlignment="Center"
                     VerticalAlignment="Bottom"
-                    Margin="0,0,0,24"
+                    Margin="0,0,0,22"
                     Padding="8"
-                    CornerRadius="28">
+                    CornerRadius="30"
+                    Visibility="Collapsed">
                 <Border.Background>
-                    <lg:LiquidGlassBrush BlurAmount="1.5"
+                    <lg:LiquidGlassBrush BlurAmount="1.9"
                                          BloomAmount="0.18"
-                                         RefThickness="28"
-                                         RefFactor="1.8"
-                                         RefDispersion="3.5"
-                                         GlareFactor="58"
-                                         TintA="0.08"
-                                         TintR="190"
-                                         TintG="220"
+                                         Brightness="0.02"
+                                         Contrast="1.06"
+                                         Saturation="1.10"
+                                         RefThickness="42"
+                                         RefFactor="2.35"
+                                         RefDispersion="5"
+                                         DispersionRange="0.42"
+                                         RefFresnelFactor="26"
+                                         GlareAngle="-145"
+                                         GlareFactor="70"
+                                         GlareRange="38"
+                                         TintA="0.09"
+                                         TintR="185"
+                                         TintG="215"
                                          TintB="255"
-                                         ShapeRadius="0.92"
-                                         ShapeRoundness="3.8"/>
+                                         ShapeRadius="0.96"
+                                         ShapeRoundness="3.7"/>
                 </Border.Background>
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                    <Button Content="首页" Click="Home_Click"/>
-                    <Button Content="媒体库" Click="Library_Click"/>
-                    <Button Content="服务器" Click="Servers_Click"/>
-                    <Button Content="设置" Click="Settings_Click"/>
+                <StackPanel Orientation="Horizontal"
+                            Spacing="2">
+                    <Button x:Name="HomeButton"
+                            Style="{StaticResource DockButtonStyle}"
+                            Content="⌂  首页"
+                            Click="Home_Click"/>
+                    <Button x:Name="LibraryButton"
+                            Style="{StaticResource DockButtonStyle}"
+                            Content="▦  媒体库"
+                            Click="Library_Click"/>
+                    <Button x:Name="ServersButton"
+                            Style="{StaticResource DockButtonStyle}"
+                            Content="◫  服务器"
+                            Click="Servers_Click"/>
+                    <Button x:Name="SettingsButton"
+                            Style="{StaticResource DockButtonStyle}"
+                            Content="⚙  设置"
+                            Click="Settings_Click"/>
                 </StackPanel>
             </Border>
         </Grid>
