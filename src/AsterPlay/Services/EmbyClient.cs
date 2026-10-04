@@ -568,6 +568,9 @@ public sealed class EmbyClient
             SeriesName = playable.SeriesName,
             SeasonNumber = playable.ParentIndexNumber,
             EpisodeNumber = playable.IndexNumber,
+            ItemType = playable.Type,
+            SourcePath = playable.Path,
+            SourceFileName = GetMediaFileName(playable.Path),
             ItemId = playable.Id,
             MediaSourceId = media.Id,
             PlaySessionId = playSessionId,
@@ -777,6 +780,28 @@ public sealed class EmbyClient
             throw new ArgumentException("Enter a valid http:// or https:// Emby server address.");
 
         return value;
+    }
+
+    private static string GetMediaFileName(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return "";
+
+        try
+        {
+            var normalized = path.Trim();
+            if (Uri.TryCreate(normalized, UriKind.Absolute, out var uri) &&
+                !string.IsNullOrWhiteSpace(uri.LocalPath))
+            {
+                normalized = uri.LocalPath;
+            }
+
+            return Path.GetFileNameWithoutExtension(normalized) ?? "";
+        }
+        catch
+        {
+            return "";
+        }
     }
 
     private static string Esc(string value) => Uri.EscapeDataString(value ?? "");
