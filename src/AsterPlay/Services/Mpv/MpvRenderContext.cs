@@ -117,7 +117,7 @@ public sealed class MpvRenderContext : IDisposable
         };
 
         Marshal.StructureToPtr(target, _fbo, false);
-        Marshal.WriteInt32(_flipY, 0);
+        // GLWpfControl flips its OpenGL framebuffer when presenting it through D3DImage.\n        // Ask libmpv to render flipped so the final WPF image is upright.\n        Marshal.WriteInt32(_flipY, 1);
 
         Native.mpv_render_context_render(_renderContext, _renderParams);
     }
