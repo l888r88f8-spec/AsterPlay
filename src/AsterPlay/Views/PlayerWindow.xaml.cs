@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
 using AsterPlay.Models;
@@ -31,6 +32,8 @@ public partial class PlayerWindow : Window
     private bool _startReportSent;
     private bool _stopHandled;
     private bool _renderFailureShown;
+    private bool _trackMenuOpen;
+    private ContextMenu? _activeTrackMenu;
     private long _lastPositionTicks;
     private double _lastAudibleVolume = 100;
     private WindowState _windowedState = WindowState.Normal;
@@ -237,6 +240,8 @@ public partial class PlayerWindow : Window
             _mpv.Volume,
             _mpv.Speed);
 
+        RefreshTrackButtons();
+
         if (_startReportSent)
         {
             _reportSeconds++;
@@ -286,7 +291,8 @@ public partial class PlayerWindow : Window
     private void ControlsTimer_Tick(object? sender, EventArgs e)
     {
         if (ControlsPanel.Visibility != Visibility.Visible ||
-            ControlsPanel.IsMouseOver)
+            ControlsPanel.IsMouseOver ||
+            _trackMenuOpen)
         {
             return;
         }
@@ -477,9 +483,11 @@ public partial class PlayerWindow : Window
         if (_mpv is null)
             return;
 
-        _mpv.CycleAudio();
-        StatusBlock.Text = "已切换音轨";
-        ShowControls();
+        var tracks = _mpv.GetTracks()
+            .Where(track => string.Equals(track.Type, "audio", StringComparison.Ordinal))
+            .ToArray();
+
+        OpenTrackMenu(AudioButton, tracks, isSubtitleMenu: false);
     }
 
     private void Subtitle_Click(object sender, RoutedEventArgs e)
@@ -487,9 +495,199 @@ public partial class PlayerWindow : Window
         if (_mpv is null)
             return;
 
-        _mpv.CycleSubtitle();
-        StatusBlock.Text = "已切换字幕";
+        var tracks = _mpv.GetTracks()
+            .Where(track => string.Equals(track.Type, "sub", StringComparison.Ordinal))
+            .ToArray();
+
+        OpenTrackMenu(SubtitleButton, tracks, isSubtitleMenu: true);
+    }
+
+    private void OpenTrackMenu(
+        Button anchor,
+        IReadOnlyList<PlayerTrack> tracks,
+        bool isSubtitleMenu)
+    {
+        if (_activeTrackMenu?.IsOpen == true)
+            _activeTrackMenu.IsOpen = false;
+
+        var menu = new ContextMenu
+        {
+            PlacementTarget = anchor,
+            Placement = PlacementMode.Top,
+            StaysOpen = false
+        };
+
+        if (isSubtitleMenu)
+        {
+            var subtitlesOff = new MenuItem
+            {
+                Header = "关闭字幕",
+                IsCheckable = true,
+                IsChecked = tracks.All(track => !track.Selected)
+            };
+            subtitlesOff.Click += (_, _) => SelectSubtitleTrack(null);
+            menu.Items.Add(subtitlesOff);
+
+            if (tracks.Count > 0)
+                menu.Items.Add(new Separator());
+        }
+
+        if (tracks.Count == 0)
+        {
+            menu.Items.Add(new MenuItem
+            {
+                Header = isSubtitleMenu ? "没有可用字幕" : "没有可用音轨",
+                IsEnabled = false
+            });
+        }
+        else
+        {
+            foreach (var track in tracks)
+            {
+                var item = new MenuItem
+                {
+                    Header = FormatTrackMenuLabel(track),
+                    IsCheckable = true,
+                    IsChecked = track.Selected
+                };
+
+                if (isSubtitleMenu)
+                {
+                    item.Click += (_, _) => SelectSubtitleTrack(track);
+                }
+                else
+                {
+                    item.Click += (_, _) => SelectAudioTrack(track);
+                }
+
+                menu.Items.Add(item);
+            }
+        }
+
+        menu.Closed += (_, _) =>
+        {
+            _trackMenuOpen = false;
+            if (ReferenceEquals(_activeTrackMenu, menu))
+                _activeTrackMenu = null;
+            ShowControls();
+        };
+
+        _activeTrackMenu = menu;
+        _trackMenuOpen = true;
         ShowControls();
+        menu.IsOpen = true;
+    }
+
+    private void SelectAudioTrack(PlayerTrack track)
+    {
+        if (_mpv is null)
+            return;
+
+        _mpv.SetAudioTrack(track.Id);
+        AudioButton.Content = $"音轨 · {FormatTrackButtonLabel(track)}";
+        StatusBlock.Text = $"音轨：{FormatTrackMenuLabel(track)}";
+        PlaybackLog.Write("PlayerTrack", $"Audio selected: {FormatTrackMenuLabel(track)}");
+        _ = ReportProgressAsync("AudioTrackChange");
+        ShowControls();
+    }
+
+    private void SelectSubtitleTrack(PlayerTrack? track)
+    {
+        if (_mpv is null)
+            return;
+
+        _mpv.SetSubtitleTrack(track?.Id);
+
+        if (track is null)
+        {
+            SubtitleButton.Content = "字幕 · 关闭";
+            StatusBlock.Text = "字幕已关闭";
+            PlaybackLog.Write("PlayerTrack", "Subtitle disabled");
+        }
+        else
+        {
+            SubtitleButton.Content = $"字幕 · {FormatTrackButtonLabel(track)}";
+            StatusBlock.Text = $"字幕：{FormatTrackMenuLabel(track)}";
+            PlaybackLog.Write("PlayerTrack", $"Subtitle selected: {FormatTrackMenuLabel(track)}");
+        }
+
+        _ = ReportProgressAsync("SubtitleTrackChange");
+        ShowControls();
+    }
+
+    private void RefreshTrackButtons()
+    {
+        if (_mpv is null || !_playbackLoaded)
+            return;
+
+        var tracks = _mpv.GetTracks();
+        var selectedAudio = tracks.FirstOrDefault(track =>
+            string.Equals(track.Type, "audio", StringComparison.Ordinal) &&
+            track.Selected);
+        var selectedSubtitle = tracks.FirstOrDefault(track =>
+            string.Equals(track.Type, "sub", StringComparison.Ordinal) &&
+            track.Selected);
+
+        AudioButton.Content = selectedAudio is null
+            ? "音轨"
+            : $"音轨 · {FormatTrackButtonLabel(selectedAudio)}";
+
+        SubtitleButton.Content = selectedSubtitle is null
+            ? "字幕 · 关闭"
+            : $"字幕 · {FormatTrackButtonLabel(selectedSubtitle)}";
+    }
+
+    private static string FormatTrackButtonLabel(PlayerTrack track)
+    {
+        if (!string.IsNullOrWhiteSpace(track.Language))
+            return track.Language.ToUpperInvariant();
+
+        if (!string.IsNullOrWhiteSpace(track.Title))
+            return track.Title;
+
+        if (!string.IsNullOrWhiteSpace(track.Codec))
+            return track.Codec.ToUpperInvariant();
+
+        return $"#{track.Id}";
+    }
+
+    private static string FormatTrackMenuLabel(PlayerTrack track)
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(track.Language))
+            parts.Add(track.Language.ToUpperInvariant());
+
+        if (!string.IsNullOrWhiteSpace(track.Title) &&
+            !parts.Contains(track.Title, StringComparer.OrdinalIgnoreCase))
+        {
+            parts.Add(track.Title);
+        }
+
+        if (!string.IsNullOrWhiteSpace(track.Codec))
+            parts.Add(track.Codec.ToUpperInvariant());
+
+        if (string.Equals(track.Type, "audio", StringComparison.Ordinal))
+        {
+            if (!string.IsNullOrWhiteSpace(track.Channels))
+                parts.Add(track.Channels);
+            else if (track.ChannelCount is > 0)
+                parts.Add($"{track.ChannelCount}ch");
+        }
+
+        if (track.External)
+            parts.Add("外挂");
+
+        if (track.Forced)
+            parts.Add("强制");
+
+        if (track.Default)
+            parts.Add("默认");
+
+        if (parts.Count == 0)
+            parts.Add($"Track {track.Id}");
+
+        return string.Join(" · ", parts);
     }
 
     private void Fullscreen_Click(object sender, RoutedEventArgs e)
@@ -581,6 +779,11 @@ public partial class PlayerWindow : Window
         _stopHandled = true;
         _timer.Stop();
         _controlsTimer.Stop();
+
+        if (_activeTrackMenu?.IsOpen == true)
+            _activeTrackMenu.IsOpen = false;
+        _activeTrackMenu = null;
+        _trackMenuOpen = false;
 
         var finalTicks = _lastPositionTicks;
         var finalVolume = _mpv?.Volume ?? 100;
