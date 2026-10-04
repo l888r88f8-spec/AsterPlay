@@ -59,6 +59,11 @@ jobs:
           Start-Sleep -Seconds 5
 
           if ($process.HasExited) {
+            $startupLog = Join-Path $PWD "dist\AsterPlay.WinUI\winui-startup.log"
+            if (Test-Path $startupLog) {
+              Write-Host "=== AsterPlay WinUI startup log ==="
+              Get-Content -Raw $startupLog | Write-Host
+            }
             throw "AsterPlay.WinUI exited during startup smoke test with code $($process.ExitCode)."
           }
 
