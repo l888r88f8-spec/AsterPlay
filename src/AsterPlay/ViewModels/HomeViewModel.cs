@@ -113,6 +113,8 @@ public sealed class HomeViewModel : INotifyPropertyChanged, IDisposable
     private int _heroIndex;
     private bool _resumeRefreshRunning;
     private bool _resumeRefreshPending;
+    private string? _resumePreferredItemId;
+    private long _resumePreferredPositionTicks;
 
     public HomeViewModel(EmbyClient client)
     {
@@ -171,7 +173,7 @@ public sealed class HomeViewModel : INotifyPropertyChanged, IDisposable
                 Libraries.Add(section);
         }
 
-        foreach (var item in await _client.GetResumeAsync(14))
+        foreach (var item in await BuildResumeItemsAsync(null, 0))
             ResumeItems.Add(new MediaCardViewModel(_client, item));
 
         foreach (var item in await _client.GetLatestAsync(18))
@@ -191,8 +193,14 @@ public sealed class HomeViewModel : INotifyPropertyChanged, IDisposable
         _heroTimer.Start();
     }
 
-    public async Task RefreshResumeAsync()
+    public async Task RefreshResumeAsync(string? preferredItemId = null, long preferredPositionTicks = 0)
     {
+        if (!string.IsNullOrWhiteSpace(preferredItemId) && preferredPositionTicks > 0)
+        {
+            _resumePreferredItemId = preferredItemId;
+            _resumePreferredPositionTicks = preferredPositionTicks;
+        }
+
         if (_resumeRefreshRunning)
         {
             _resumeRefreshPending = true;
@@ -207,15 +215,16 @@ public sealed class HomeViewModel : INotifyPropertyChanged, IDisposable
             {
                 _resumeRefreshPending = false;
 
-                var latestResume = await _client.GetResumeAsync(14);
-                var cards = latestResume
-                    .Where(item => !string.IsNullOrWhiteSpace(item.Id))
-                    .Select(item => new MediaCardViewModel(_client, item))
-                    .ToArray();
+                var currentPreferredItemId = _resumePreferredItemId;
+                var currentPreferredPositionTicks = _resumePreferredPositionTicks;
+
+                var items = await BuildResumeItemsAsync(
+                    currentPreferredItemId,
+                    currentPreferredPositionTicks);
 
                 ResumeItems.Clear();
-                foreach (var card in cards)
-                    ResumeItems.Add(card);
+                foreach (var item in items)
+                    ResumeItems.Add(new MediaCardViewModel(_client, item));
             }
             while (_resumeRefreshPending);
         }
@@ -223,6 +232,56 @@ public sealed class HomeViewModel : INotifyPropertyChanged, IDisposable
         {
             _resumeRefreshRunning = false;
         }
+    }
+
+    private async Task<IReadOnlyList<EmbyItem>> BuildResumeItemsAsync(
+        string? preferredItemId,
+        long preferredPositionTicks)
+    {
+        // Fetch extra rows because multiple resumable episodes from one series
+        // are collapsed to the most recently watched episode below.
+        var candidates = (await _client.GetResumeAsync(28))
+            .Where(item => !string.IsNullOrWhiteSpace(item.Id))
+            .ToList();
+
+        if (!string.IsNullOrWhiteSpace(preferredItemId) && preferredPositionTicks > 0)
+        {
+            try
+            {
+                var preferred = await _client.GetItemAsync(preferredItemId);
+
+                if (preferred.UserData is not null && preferred.UserData.Played != true)
+                {
+                    preferred.UserData.PlaybackPositionTicks =
+                        Math.Max(preferred.UserData.PlaybackPositionTicks, preferredPositionTicks);
+                    preferred.UserData.LastPlayedDate = DateTimeOffset.UtcNow;
+
+                    candidates.RemoveAll(item =>
+                        string.Equals(item.Id, preferred.Id, StringComparison.OrdinalIgnoreCase));
+                    candidates.Insert(0, preferred);
+                }
+            }
+            catch (Exception ex)
+            {
+                PlaybackLog.Error("HomeResumePreferredItem", ex);
+            }
+        }
+
+        static string GroupKey(EmbyItem item) =>
+            string.Equals(item.Type, "Episode", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(item.SeriesId)
+                ? "series:" + item.SeriesId
+                : "item:" + item.Id;
+
+        return candidates
+            .GroupBy(GroupKey, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group
+                .OrderByDescending(item => item.UserData?.LastPlayedDate ?? DateTimeOffset.MinValue)
+                .ThenByDescending(item => item.UserData?.PlaybackPositionTicks ?? 0)
+                .First())
+            .OrderByDescending(item => item.UserData?.LastPlayedDate ?? DateTimeOffset.MinValue)
+            .Take(14)
+            .ToArray();
     }
 
     public void SelectLibrary(LibrarySectionViewModel section)
