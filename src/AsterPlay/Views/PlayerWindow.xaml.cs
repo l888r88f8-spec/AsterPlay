@@ -986,7 +986,11 @@ public partial class PlayerWindow : Window
                     durationSeconds,
                     _launch.SeriesName,
                     _launch.SeasonNumber,
-                    _launch.EpisodeNumber),
+                    _launch.EpisodeNumber,
+                    _launch.OriginalTitle,
+                    _launch.ItemType,
+                    _launch.SourcePath,
+                    _launch.SourceFileName),
                 _danmakuSourceSettings,
                 _danmakuLoadCts.Token);
 
@@ -1035,28 +1039,16 @@ public partial class PlayerWindow : Window
         _danmakuSourceSettings = dialog.Result;
         DanmakuSourceSettingsStore.Save(_danmakuSourceSettings);
 
-        StatusBlock.Text =
-            $"弹幕源：{FormatDanmakuSourceName(_danmakuSourceSettings.SourceKind)}，正在重新加载…";
+        StatusBlock.Text = "LogVar：正在重新匹配弹幕…";
 
         DanmakuOverlay.SetDocument(
             new DanmakuDocument(
-                FormatDanmakuSourceName(_danmakuSourceSettings.SourceKind),
+                "LogVar",
                 Array.Empty<DanmakuComment>()));
 
         _ = LoadDanmakuAsync();
         ShowControls();
     }
-
-    private static string FormatDanmakuSourceName(
-        DanmakuSourceKind kind) =>
-        kind switch
-        {
-            DanmakuSourceKind.DandanPlay =>
-                "弹弹play开放弹幕网络",
-            DanmakuSourceKind.LogVar =>
-                "LogVar",
-            _ => "内置测试源"
-        };
 
     private void OpenDanmakuSettingsMenu()
     {
