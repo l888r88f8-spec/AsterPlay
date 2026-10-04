@@ -199,7 +199,7 @@ public partial class MainWindow : Window
 
         var player = new PlayerWindow(client, launch);
         player.BackRequested += (_, _) => RestoreSectionAfterPlayer();
-        player.PlaybackReplacementRequested += (_, replacement) =>
+        player.PlaybackReplacementRequested += replacement =>
             ShowPlayer(client, replacement);
 
         RootContent.Content = player;
