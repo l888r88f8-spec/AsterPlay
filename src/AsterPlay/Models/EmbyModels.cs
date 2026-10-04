@@ -327,6 +327,10 @@ public sealed class PlaybackLaunch
 {
     public string Url { get; set; } = "";
     public string Title { get; set; } = "";
+    public string OriginalTitle { get; set; } = "";
+    public string SeriesName { get; set; } = "";
+    public int? SeasonNumber { get; set; }
+    public int? EpisodeNumber { get; set; }
     public string ItemId { get; set; } = "";
     public string MediaSourceId { get; set; } = "";
     public string PlaySessionId { get; set; } = "";
