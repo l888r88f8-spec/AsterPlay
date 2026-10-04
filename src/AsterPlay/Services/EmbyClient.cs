@@ -212,6 +212,12 @@ public sealed class EmbyClient
             ? Guid.NewGuid().ToString("N")
             : info.PlaySessionId;
 
+        // qEmby's Emby branch deliberately uses a client-generated UUID for
+        // /Sessions/Playing* reporting instead of PlaybackInfo's session id.
+        var reportPlaySessionId = Guid.NewGuid().ToString("N");
+        PlaybackLog.Write("Emby",
+            $"Playback sessions: streamSessionId={playSessionId}, reportSessionId={reportPlaySessionId}");
+
         string url;
         bool usesServerStartOffset;
         string playMethod;
@@ -272,6 +278,7 @@ public sealed class EmbyClient
             ItemId = playable.Id,
             MediaSourceId = media.Id,
             PlaySessionId = playSessionId,
+            ReportPlaySessionId = reportPlaySessionId,
             ResumePositionTicks = resumeTicks,
             RunTimeTicks = playable.RunTimeTicks ?? media.RunTimeTicks,
             UsesServerStartOffset = usesServerStartOffset,
@@ -307,23 +314,24 @@ public sealed class EmbyClient
             ["ItemId"] = launch.ItemId,
             ["MediaSourceId"] = launch.MediaSourceId,
             ["PositionTicks"] = Math.Max(0, positionTicks),
-            ["PlayMethod"] = launch.PlayMethod,
+            ["PlayMethod"] = "DirectPlay",
             ["IsPaused"] = isPaused,
             ["IsMuted"] = volume <= 0.01,
             ["CanSeek"] = true,
-            ["PlaySessionId"] = launch.PlaySessionId,
+            ["PlaySessionId"] = launch.ReportPlaySessionId,
             ["QueueableMediaTypes"] = new[] { "Video" }
         };
 
         if (!string.IsNullOrWhiteSpace(eventName))
-            payload["EventName"] = eventName;
+            payload["EventName"] = eventName.ToLowerInvariant();
 
         using var req = CreateRequest(HttpMethod.Post, path);
         req.Content = JsonContent.Create(payload);
 
         using var response = await _http.SendAsync(req);
         PlaybackLog.Write("EmbyReport",
-            $"{eventName ?? Path.GetFileName(path)}: status={(int)response.StatusCode}, itemId={launch.ItemId}, positionTicks={positionTicks}, paused={isPaused}, volume={volume:0.##}");
+            $"{eventName ?? Path.GetFileName(path)}: status={(int)response.StatusCode}, itemId={launch.ItemId}, " +
+            $"positionTicks={positionTicks}, paused={isPaused}, volume={volume:0.##}, reportSessionId={launch.ReportPlaySessionId}");
         await EnsureSuccess(response, "Playback session update failed");
     }
 
