@@ -33,6 +33,25 @@ public partial class DetailsWindow : Window
         try
         {
             _item = await _client.GetItemAsync(_item.Id);
+
+            if (string.Equals(_item.Type, "Movie", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(_item.Type, "Episode", StringComparison.OrdinalIgnoreCase))
+            {
+                var mediaInfo = await _client.GetMediaInfoAsync(_item.Id);
+                if (mediaInfo.MediaSources.Count > 0)
+                {
+                    _item.MediaSources = mediaInfo.MediaSources;
+                    _item.MediaStreams = mediaInfo.MediaSources
+                        .SelectMany(source => source.MediaStreams)
+                        .ToList();
+                }
+            }
+
+            PlaybackLog.Write(
+                "Details",
+                $"Loaded item={_item.Id}, type={_item.Type}, " +
+                $"mediaSources={_item.MediaSources.Count}, mediaStreams={_item.MediaStreams.Count}");
+
             ApplyViewModel();
             LoadingOverlay.Visibility = Visibility.Collapsed;
         }
