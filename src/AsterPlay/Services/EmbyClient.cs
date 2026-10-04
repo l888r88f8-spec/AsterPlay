@@ -138,6 +138,51 @@ public sealed class EmbyClient
             .ToList();
     }
 
+    public async Task<EmbyItemsResponse> GetLibraryItemsAsync(
+        string? parentId,
+        string? searchTerm,
+        string includeItemTypes,
+        int? year,
+        string sortBy,
+        string sortOrder,
+        bool favoriteOnly,
+        int startIndex,
+        int limit)
+    {
+        var query = new List<string>
+        {
+            "Recursive=true",
+            $"StartIndex={Math.Max(0, startIndex)}",
+            $"Limit={Math.Clamp(limit, 1, 100)}",
+            $"IncludeItemTypes={Esc(string.IsNullOrWhiteSpace(includeItemTypes) ? "Movie,Series" : includeItemTypes)}",
+            $"SortBy={Esc(string.IsNullOrWhiteSpace(sortBy) ? "SortName" : sortBy)}",
+            $"SortOrder={Esc(string.Equals(sortOrder, "Ascending", StringComparison.OrdinalIgnoreCase) ? "Ascending" : "Descending")}",
+            "Fields=Overview,Genres,ProductionYear,CommunityRating,RunTimeTicks,UserData",
+            "EnableImages=true",
+            "EnableUserData=true",
+            "ImageTypeLimit=1",
+            "EnableImageTypes=Primary,Backdrop"
+        };
+
+        if (!string.IsNullOrWhiteSpace(parentId))
+            query.Add($"ParentId={Esc(parentId)}");
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+            query.Add($"SearchTerm={Esc(searchTerm.Trim())}");
+
+        if (year is > 0)
+            query.Add($"Years={year.Value}");
+
+        if (favoriteOnly)
+            query.Add("IsFavorite=true");
+
+        var path =
+            $"/Users/{Esc(UserId)}/Items?" +
+            string.Join("&", query);
+
+        return await GetAsync<EmbyItemsResponse>(path);
+    }
+
     public Task<EmbyItem> GetItemAsync(string itemId) =>
         GetAsync<EmbyItem>(
             $"/Users/{Esc(UserId)}/Items/{Esc(itemId)}");
