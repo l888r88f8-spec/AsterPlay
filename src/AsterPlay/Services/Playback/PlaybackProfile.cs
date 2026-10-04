@@ -234,6 +234,25 @@ public static class PlaybackDecisionSelector
 
         if (!requiresServerStartOffset)
         {
+            // Large/poorly interleaved MP4-family files can be technically
+            // DirectPlay-compatible while still performing very badly over a
+            // remote HTTP connection: the demuxer may bounce between distant
+            // byte ranges for audio/video chunks. Prefer a server-side remux
+            // when Emby says DirectStream is available. This keeps codecs
+            // untouched while turning the input into a sequential stream.
+            var remuxFriendlyMp4 = sources.FirstOrDefault(source =>
+                source.SupportsDirectStream &&
+                IsMp4Family(source.Container) &&
+                string.Equals(source.Protocol, "File", StringComparison.OrdinalIgnoreCase));
+
+            if (remuxFriendlyMp4 is not null)
+            {
+                return new PlaybackDecision(
+                    remuxFriendlyMp4,
+                    PlaybackDecisionKind.DirectStream,
+                    "MP4 file source prefers server remux to avoid remote HTTP range-seek thrashing");
+            }
+
             var directPlay = sources.FirstOrDefault(source => source.SupportsDirectPlay);
             if (directPlay is not null)
             {
@@ -298,5 +317,16 @@ public static class PlaybackDecisionSelector
 
         throw new InvalidOperationException(
             "Emby did not return a playable DirectPlay, DirectStream, or Transcode source.");
+    }
+
+    private static bool IsMp4Family(string? container)
+    {
+        if (string.IsNullOrWhiteSpace(container))
+            return false;
+
+        var normalized = container.Trim().TrimStart('.');
+        return string.Equals(normalized, "mp4", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(normalized, "m4v", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(normalized, "mov", StringComparison.OrdinalIgnoreCase);
     }
 }
