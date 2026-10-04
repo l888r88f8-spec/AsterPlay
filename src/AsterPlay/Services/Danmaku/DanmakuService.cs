@@ -22,23 +22,39 @@ public sealed class DanmakuService
 
         var source = CreateSource(sourceSettings);
 
-        if (DanmakuMatchOverrideStore.TryGet(
+        if (DanmakuSeriesMatchStore.TryGet(
                 sourceSettings.LogVarBaseUrl,
-                context.ItemId,
-                out var manualCandidate) &&
-            manualCandidate is not null)
+                context,
+                out var seriesBinding) &&
+            seriesBinding is not null)
         {
-            var manualComments = await source.LoadCandidateAsync(
-                manualCandidate,
-                cancellationToken);
+            var manualCandidate =
+                await source.ResolveSeriesBindingAsync(
+                    context,
+                    seriesBinding,
+                    cancellationToken);
+
+            if (manualCandidate is not null)
+            {
+                var manualComments = await source.LoadCandidateAsync(
+                    manualCandidate,
+                    cancellationToken);
+
+                PlaybackLog.Write(
+                    "Danmaku",
+                    $"Loaded manual series match: itemId={context.ItemId}, seriesId={context.SeriesId}, " +
+                    $"anime={seriesBinding.AnimeTitle}, episodeId={manualCandidate.EpisodeId}, " +
+                    $"episodeOffset={seriesBinding.EpisodeOffset}, comments={manualComments.Count}");
+
+                return new DanmakuDocument(
+                    "LogVar · 手动剧集匹配",
+                    manualComments);
+            }
 
             PlaybackLog.Write(
                 "Danmaku",
-                $"Loaded manual match: itemId={context.ItemId}, episodeId={manualCandidate.EpisodeId}, comments={manualComments.Count}");
-
-            return new DanmakuDocument(
-                "LogVar · 手动匹配",
-                manualComments);
+                $"Saved series match could not resolve current episode; falling back to auto: " +
+                $"itemId={context.ItemId}, seriesId={context.SeriesId}, anime={seriesBinding.AnimeTitle}");
         }
 
         var comments = await source.LoadAsync(
@@ -54,7 +70,7 @@ public sealed class DanmakuService
             comments);
     }
 
-    public Task<IReadOnlyList<DanmakuMatchCandidate>> SearchCandidatesAsync(
+    public Task<IReadOnlyList<DanmakuSeriesMatchCandidate>> SearchSeriesCandidatesAsync(
         DanmakuContext context,
         DanmakuSourceSettings sourceSettings,
         string? keyword,
@@ -62,54 +78,74 @@ public sealed class DanmakuService
     {
         if (string.IsNullOrWhiteSpace(sourceSettings.LogVarBaseUrl))
         {
-            return Task.FromResult<IReadOnlyList<DanmakuMatchCandidate>>(
-                Array.Empty<DanmakuMatchCandidate>());
+            return Task.FromResult<IReadOnlyList<DanmakuSeriesMatchCandidate>>(
+                Array.Empty<DanmakuSeriesMatchCandidate>());
         }
 
-        return CreateSource(sourceSettings).SearchCandidatesAsync(
+        return CreateSource(sourceSettings).SearchSeriesCandidatesAsync(
             context,
             keyword,
             cancellationToken);
     }
 
-    public DanmakuMatchCandidate? GetManualMatch(
-        string itemId,
+    public DanmakuSeriesMatchBinding? GetManualSeriesMatch(
+        DanmakuContext context,
         DanmakuSourceSettings sourceSettings)
     {
-        return DanmakuMatchOverrideStore.TryGet(
+        return DanmakuSeriesMatchStore.TryGet(
             sourceSettings.LogVarBaseUrl,
-            itemId,
-            out var candidate)
-            ? candidate
+            context,
+            out var binding)
+            ? binding
             : null;
     }
 
-    public void SetManualMatch(
-        string itemId,
+    public DanmakuSeriesMatchBinding SetManualSeriesMatch(
+        DanmakuContext context,
         DanmakuSourceSettings sourceSettings,
-        DanmakuMatchCandidate candidate)
+        DanmakuSeriesMatchCandidate series,
+        DanmakuMatchCandidate episode)
     {
-        DanmakuMatchOverrideStore.Save(
+        var episodeOffset =
+            context.EpisodeNumber is > 0 &&
+            episode.EpisodeNumber > 0
+                ? episode.EpisodeNumber -
+                  context.EpisodeNumber.Value
+                : 0;
+
+        var binding = new DanmakuSeriesMatchBinding(
+            series.AnimeId,
+            series.AnimeTitle,
+            series.SeasonNumber,
+            episodeOffset);
+
+        DanmakuSeriesMatchStore.Save(
             sourceSettings.LogVarBaseUrl,
-            itemId,
-            candidate);
+            context,
+            binding);
 
         PlaybackLog.Write(
             "Danmaku",
-            $"Manual match saved: itemId={itemId}, episodeId={candidate.EpisodeId}, anime={candidate.AnimeTitle}, episode={candidate.EpisodeTitle}");
+            $"Manual series match saved: itemId={context.ItemId}, seriesId={context.SeriesId}, " +
+            $"embySeason={context.SeasonNumber}, embyEpisode={context.EpisodeNumber}, " +
+            $"animeId={series.AnimeId}, anime={series.AnimeTitle}, logVarSeason={series.SeasonNumber}, " +
+            $"selectedEpisode={episode.EpisodeNumber}, offset={episodeOffset}, episodeId={episode.EpisodeId}");
+
+        return binding;
     }
 
-    public bool ClearManualMatch(
-        string itemId,
+    public bool ClearManualSeriesMatch(
+        DanmakuContext context,
         DanmakuSourceSettings sourceSettings)
     {
-        var removed = DanmakuMatchOverrideStore.Remove(
+        var removed = DanmakuSeriesMatchStore.Remove(
             sourceSettings.LogVarBaseUrl,
-            itemId);
+            context);
 
         PlaybackLog.Write(
             "Danmaku",
-            $"Manual match cleared: itemId={itemId}, removed={removed}");
+            $"Manual series match cleared: itemId={context.ItemId}, seriesId={context.SeriesId}, " +
+            $"season={context.SeasonNumber}, removed={removed}");
 
         return removed;
     }
