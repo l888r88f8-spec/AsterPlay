@@ -41,15 +41,9 @@ public static class DanmakuSourceSettingsStore
 
             return Normalize(new DanmakuSourceSettings
             {
-                SourceKind = stored.SourceKind,
-                DandanPlayBaseUrl = string.IsNullOrWhiteSpace(stored.DandanPlayBaseUrl)
-                    ? "https://api.dandanplay.net"
-                    : stored.DandanPlayBaseUrl,
-                DandanPlayAppId = stored.DandanPlayAppId ?? "",
-                DandanPlayAppSecret = Unprotect(stored.DandanPlayAppSecretProtected),
-                DandanPlayWithRelated = stored.DandanPlayWithRelated,
                 LogVarBaseUrl = stored.LogVarBaseUrl ?? "",
-                LogVarAccessToken = Unprotect(stored.LogVarAccessTokenProtected)
+                LogVarAccessToken = Unprotect(
+                    stored.LogVarAccessTokenProtected)
             });
         }
         catch (Exception ex)
@@ -68,12 +62,6 @@ public static class DanmakuSourceSettingsStore
 
             var stored = new StoredDanmakuSourceSettings
             {
-                SourceKind = settings.SourceKind,
-                DandanPlayBaseUrl = settings.DandanPlayBaseUrl,
-                DandanPlayAppId = settings.DandanPlayAppId,
-                DandanPlayAppSecretProtected = Protect(
-                    settings.DandanPlayAppSecret),
-                DandanPlayWithRelated = settings.DandanPlayWithRelated,
                 LogVarBaseUrl = settings.LogVarBaseUrl,
                 LogVarAccessTokenProtected = Protect(
                     settings.LogVarAccessToken)
@@ -120,8 +108,6 @@ public static class DanmakuSourceSettingsStore
         }
         catch
         {
-            // v1 stored only the DandanPlay secret with different entropy.
-            // Keep startup resilient and let the user re-enter credentials.
             return "";
         }
     }
@@ -130,25 +116,14 @@ public static class DanmakuSourceSettingsStore
         DanmakuSourceSettings settings) =>
         settings with
         {
-            DandanPlayBaseUrl = NormalizeBaseUrl(
-                string.IsNullOrWhiteSpace(settings.DandanPlayBaseUrl)
-                    ? "https://api.dandanplay.net"
-                    : settings.DandanPlayBaseUrl),
-            DandanPlayAppId = settings.DandanPlayAppId.Trim(),
-            LogVarBaseUrl = NormalizeBaseUrl(settings.LogVarBaseUrl),
+            LogVarBaseUrl = settings.LogVarBaseUrl
+                .Trim()
+                .TrimEnd('/'),
             LogVarAccessToken = settings.LogVarAccessToken.Trim()
         };
 
-    private static string NormalizeBaseUrl(string value) =>
-        value.Trim().TrimEnd('/');
-
     private sealed class StoredDanmakuSourceSettings
     {
-        public DanmakuSourceKind SourceKind { get; set; }
-        public string? DandanPlayBaseUrl { get; set; }
-        public string? DandanPlayAppId { get; set; }
-        public string? DandanPlayAppSecretProtected { get; set; }
-        public bool DandanPlayWithRelated { get; set; } = true;
         public string? LogVarBaseUrl { get; set; }
         public string? LogVarAccessTokenProtected { get; set; }
     }
