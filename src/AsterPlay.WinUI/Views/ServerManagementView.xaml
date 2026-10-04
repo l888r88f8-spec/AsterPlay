@@ -104,6 +104,9 @@
                             Click="Save_Click"/>
                     <Button Content="删除选中服务器"
                             Click="Remove_Click"/>
+                    <Button Content="返回"
+                            Margin="0,10,0,0"
+                            Click="Done_Click"/>
                 </StackPanel>
             </Border>
         </Grid>
