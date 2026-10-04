@@ -62,6 +62,15 @@ public sealed class MpvClient : IDisposable
         PlaybackLog.Write("mpv", $"Load dispatched. pause={GetStringProperty("pause")}, time-pos={GetStringProperty("time-pos")}, duration={GetStringProperty("duration")}");
     }
 
+    public void Stop()
+    {
+        if (_handle == IntPtr.Zero)
+            return;
+
+        PlaybackLog.Write("mpv", "stop requested");
+        Command("stop");
+    }
+
     public void TogglePause() => Command("cycle", "pause");
 
     public void Seek(double seconds) =>
