@@ -1,37 +1,39 @@
 using System.ComponentModel;
-using System.Runtime.InteropServices;
 using System.Windows.Input;
 using System.Windows.Threading;
 using AsterPlay.Models;
 using AsterPlay.Services;
+using AsterPlay.Services.Mpv;
+using OpenTK.Wpf;
 
 namespace AsterPlay.Views;
 
 public partial class PlayerWindow : Window
 {
+    private static readonly double[] Speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+
     private readonly EmbyClient _client;
     private readonly PlaybackLaunch _launch;
     private readonly DispatcherTimer _timer;
     private readonly DispatcherTimer _controlsTimer;
-    private readonly DispatcherTimer _mousePollTimer;
     private readonly double _timelineOffsetSeconds;
 
-    private PlayerControlsWindow? _controlsWindow;
+    private MpvClient? _mpv;
+    private MpvRenderContext? _renderContext;
     private DateTime _lastControlsActivityUtc;
+    private int _renderInvalidationQueued;
     private int _reportSeconds;
+    private bool _videoSurfaceStarted;
+    private bool _playbackLoaded;
+    private bool _updatingUi;
     private bool _fullscreen;
     private bool _startReportSent;
     private bool _stopHandled;
+    private bool _renderFailureShown;
     private long _lastPositionTicks;
     private double _lastAudibleVolume = 100;
     private WindowState _windowedState = WindowState.Normal;
     private WindowStyle _windowedStyle = WindowStyle.SingleBorderWindow;
-    private int _lastMouseX = int.MinValue;
-    private int _lastMouseY = int.MinValue;
-    private bool _leftButtonWasDown;
-    private long _lastVideoClickTick;
-    private int _lastVideoClickX;
-    private int _lastVideoClickY;
 
     public PlayerWindow(EmbyClient client, PlaybackLaunch launch)
     {
@@ -44,6 +46,10 @@ public partial class PlayerWindow : Window
         InitializeComponent();
 
         Title = $"AsterPlay · {launch.Title}";
+        TitleBlock.Text = launch.Title;
+
+        SpeedComboBox.ItemsSource = Speeds.Select(x => $"{x:0.##}×").ToArray();
+        SpeedComboBox.SelectedIndex = 2;
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += PlayerTimer_Tick;
@@ -51,17 +57,8 @@ public partial class PlayerWindow : Window
         _controlsTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _controlsTimer.Tick += ControlsTimer_Tick;
 
-        // Poll cursor/button state instead of depending on HwndHost mouse events.
-        // mpv/gpu-next may create or consume input in native child windows below
-        // the WPF HwndHost, so polling is independent of the HWND hierarchy.
-        _mousePollTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(20) };
-        _mousePollTimer.Tick += MousePollTimer_Tick;
-
         Loaded += PlayerWindow_Loaded;
         Closing += PlayerWindow_Closing;
-        LocationChanged += (_, _) => SyncControlsWindow();
-        SizeChanged += (_, _) => SyncControlsWindow();
-        StateChanged += (_, _) => Dispatcher.BeginInvoke(SyncControlsWindow, DispatcherPriority.Loaded);
     }
 
     private void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
@@ -72,19 +69,29 @@ public partial class PlayerWindow : Window
                 $"Window loaded: title={_launch.Title}, itemId={_launch.ItemId}, mediaSourceId={_launch.MediaSourceId}, " +
                 $"resumeTicks={_launch.ResumePositionTicks}, serverOffset={_launch.UsesServerStartOffset}, " +
                 $"timelineOffset={_timelineOffsetSeconds:0.###}, log={PlaybackLog.LogPath}");
-            PlaybackLog.Write("Player", "mpv loads the server stream from local position 0; no initial mpv seek.");
+            PlaybackLog.Write("Player",
+                "Render API mode: mpv renders into the WPF OpenGL framebuffer; no wid/HwndHost is used.");
 
-            PlayerHost.Load(_launch.Url);
-            PlayerHost.SetVolume(100);
+            _mpv = new MpvClient();
             _lastAudibleVolume = 100;
             _lastPositionTicks = _launch.ResumePositionTicks;
 
-            EnsureControlsWindow();
-            ShowControls();
+            var settings = new GLWpfControlSettings
+            {
+                MajorVersion = 3,
+                MinorVersion = 3,
+                RenderContinuously = false,
+                UseDeviceDpi = true,
+                Samples = 0
+            };
 
+            VideoSurface.Start(settings);
+            _videoSurfaceStarted = true;
+            VideoSurface.InvalidateVisual();
+
+            ShowControls();
             _timer.Start();
             _controlsTimer.Start();
-            _mousePollTimer.Start();
         }
         catch (DllNotFoundException)
         {
@@ -98,46 +105,106 @@ public partial class PlayerWindow : Window
         catch (Exception ex)
         {
             PlaybackLog.Error("Player", ex);
-            MessageBox.Show($"{ex.Message}\n\n日志：{PlaybackLog.LogPath}", "mpv", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(
+                $"{ex.Message}\n\n日志：{PlaybackLog.LogPath}",
+                "player",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
             Close();
         }
     }
 
-    private void EnsureControlsWindow()
+    private void VideoSurface_OnRender(TimeSpan delta)
     {
-        if (_controlsWindow is not null)
+        Interlocked.Exchange(ref _renderInvalidationQueued, 0);
+
+        if (_stopHandled || _mpv is null)
             return;
 
-        var controls = new PlayerControlsWindow(_launch.Title)
+        try
         {
-            Owner = this
-        };
+            if (_renderContext is null)
+            {
+                _renderContext = new MpvRenderContext(_mpv, RequestVideoRender);
+                _renderContext.Initialize();
 
-        controls.UserActivity += ShowControls;
-        controls.TogglePauseRequested += TogglePauseAndReport;
-        controls.BackRequested += () => SeekRelative(-10);
-        controls.ForwardRequested += () => SeekRelative(10);
-        controls.MuteRequested += ToggleMute;
-        controls.AudioRequested += CycleAudio;
-        controls.SubtitleRequested += CycleSubtitle;
-        controls.FullscreenRequested += ToggleFullscreen;
-        controls.SeekRequested += SeekAbsoluteFromTimeline;
-        controls.VolumeChanged += SetVolume;
-        controls.SpeedChanged += SetSpeed;
+                PlaybackLog.Write(
+                    "mpv-render",
+                    $"WPF framebuffer ready: fbo={VideoSurface.Framebuffer}, " +
+                    $"size={VideoSurface.FrameBufferWidth}x{VideoSurface.FrameBufferHeight}");
 
-        _controlsWindow = controls;
-        controls.Show();
-        Dispatcher.BeginInvoke(SyncControlsWindow, DispatcherPriority.Loaded);
+                _mpv.SetVolume(100);
+                _mpv.Load(_launch.Url);
+                _playbackLoaded = true;
+            }
+
+            _renderContext.Render(
+                VideoSurface.Framebuffer,
+                VideoSurface.FrameBufferWidth,
+                VideoSurface.FrameBufferHeight);
+        }
+        catch (Exception ex)
+        {
+            PlaybackLog.Error("mpv-render", ex);
+
+            if (_renderFailureShown)
+                return;
+
+            _renderFailureShown = true;
+            Dispatcher.BeginInvoke(
+                DispatcherPriority.Normal,
+                new Action(() =>
+                {
+                    if (_stopHandled)
+                        return;
+
+                    MessageBox.Show(
+                        $"视频渲染初始化失败：{ex.Message}\n\n日志：{PlaybackLog.LogPath}",
+                        "libmpv Render API",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    Close();
+                }));
+        }
+    }
+
+    private void RequestVideoRender()
+    {
+        if (_stopHandled)
+            return;
+
+        if (Interlocked.Exchange(ref _renderInvalidationQueued, 1) != 0)
+            return;
+
+        try
+        {
+            Dispatcher.BeginInvoke(
+                DispatcherPriority.Render,
+                new Action(() =>
+                {
+                    Interlocked.Exchange(ref _renderInvalidationQueued, 0);
+
+                    if (!_stopHandled && _videoSurfaceStarted)
+                        VideoSurface.InvalidateVisual();
+                }));
+        }
+        catch (InvalidOperationException)
+        {
+            Interlocked.Exchange(ref _renderInvalidationQueued, 0);
+        }
     }
 
     private void PlayerTimer_Tick(object? sender, EventArgs e)
     {
-        var mpvPosition = Math.Max(0, PlayerHost.PositionSeconds);
+        if (_mpv is null || !_playbackLoaded)
+            return;
+
+        var mpvPosition = Math.Max(0, _mpv.PositionSeconds);
         var position = _timelineOffsetSeconds + mpvPosition;
 
         var duration = _launch.RunTimeTicks is > 0
             ? _launch.RunTimeTicks.Value / 10_000_000d
-            : _timelineOffsetSeconds + Math.Max(0, PlayerHost.DurationSeconds);
+            : _timelineOffsetSeconds + Math.Max(0, _mpv.DurationSeconds);
 
         _lastPositionTicks = (long)(position * 10_000_000d);
 
@@ -150,22 +217,22 @@ public partial class PlayerWindow : Window
                 _client.ReportPlaybackStartAsync(
                     _launch,
                     _lastPositionTicks,
-                    PlayerHost.IsPaused,
-                    PlayerHost.Volume));
+                    _mpv.IsPaused,
+                    _mpv.Volume));
         }
 
         PlaybackLog.Write("PlayerState",
             $"mpvPos={mpvPosition:0.###}, absolutePos={position:0.###}, offset={_timelineOffsetSeconds:0.###}, " +
-            $"duration={duration:0.###}, paused={PlayerHost.IsPaused}, buffering={PlayerHost.IsBuffering}, " +
-            $"volume={PlayerHost.Volume:0.##}, speed={PlayerHost.Speed:0.##} | {PlayerHost.DiagnosticState}");
+            $"duration={duration:0.###}, paused={_mpv.IsPaused}, buffering={_mpv.IsBuffering}, " +
+            $"volume={_mpv.Volume:0.##}, speed={_mpv.Speed:0.##} | {_mpv.DiagnosticState}");
 
-        _controlsWindow?.UpdateState(
+        UpdateControls(
             position,
             duration,
-            PlayerHost.IsPaused,
-            PlayerHost.IsBuffering,
-            PlayerHost.Volume,
-            PlayerHost.Speed);
+            _mpv.IsPaused,
+            _mpv.IsBuffering,
+            _mpv.Volume,
+            _mpv.Speed);
 
         if (_startReportSent)
         {
@@ -178,101 +245,65 @@ public partial class PlayerWindow : Window
         }
     }
 
+    private void UpdateControls(
+        double position,
+        double duration,
+        bool paused,
+        bool buffering,
+        double volume,
+        double speed)
+    {
+        _updatingUi = true;
+        try
+        {
+            if (duration > 0)
+            {
+                PositionSlider.Maximum = duration;
+                PositionSlider.Value = Math.Clamp(position, 0, duration);
+            }
+
+            CurrentTimeBlock.Text = FormatTime(position);
+            DurationBlock.Text = duration > 0 ? FormatTime(duration) : "--:--";
+            PauseButton.Content = paused ? "播放" : "暂停";
+            MuteButton.Content = volume <= 0.01 ? "取消静音" : "静音";
+            StatusBlock.Text = buffering ? "缓冲中…" : paused ? "已暂停" : "";
+
+            VolumeSlider.Value = Math.Clamp(volume, 0, 100);
+
+            var speedIndex = Array.FindIndex(Speeds, x => Math.Abs(x - speed) < 0.01);
+            if (speedIndex >= 0 && SpeedComboBox.SelectedIndex != speedIndex)
+                SpeedComboBox.SelectedIndex = speedIndex;
+        }
+        finally
+        {
+            _updatingUi = false;
+        }
+    }
+
     private void ControlsTimer_Tick(object? sender, EventArgs e)
     {
-        if (_controlsWindow is null ||
-            !_controlsWindow.IsVisible ||
-            _controlsWindow.IsMouseOver)
+        if (ControlsPanel.Visibility != Visibility.Visible ||
+            ControlsPanel.IsMouseOver)
+        {
             return;
+        }
 
         if (DateTime.UtcNow - _lastControlsActivityUtc >= TimeSpan.FromSeconds(3))
             HideControls();
     }
 
-    private void MousePollTimer_Tick(object? sender, EventArgs e)
+    private void PlayerRoot_MouseMove(object sender, MouseEventArgs e) => ShowControls();
+
+    private void PlayerRoot_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (_stopHandled || !IsActive || !GetCursorPos(out var point))
-            return;
+        ShowControls();
 
-        var overVideo = IsPointOverVideo(point.X, point.Y);
-        var moved = point.X != _lastMouseX || point.Y != _lastMouseY;
-
-        if (moved)
+        if (e.ClickCount == 2 && !ControlsPanel.IsMouseOver)
         {
-            _lastMouseX = point.X;
-            _lastMouseY = point.Y;
-
-            if (overVideo)
-                ShowControls();
-        }
-
-        var leftDown = (GetAsyncKeyState(0x01) & 0x8000) != 0;
-        if (leftDown &&
-            !_leftButtonWasDown &&
-            overVideo &&
-            !IsPointOverControls(point.X, point.Y))
-        {
-            RegisterVideoClick(point.X, point.Y);
-        }
-
-        _leftButtonWasDown = leftDown;
-    }
-
-    private void RegisterVideoClick(int x, int y)
-    {
-        var now = Environment.TickCount64;
-        var maxDx = Math.Max(1, GetSystemMetrics(36));
-        var maxDy = Math.Max(1, GetSystemMetrics(37));
-
-        if (_lastVideoClickTick > 0 &&
-            now - _lastVideoClickTick <= GetDoubleClickTime() &&
-            Math.Abs(x - _lastVideoClickX) <= maxDx &&
-            Math.Abs(y - _lastVideoClickY) <= maxDy)
-        {
-            _lastVideoClickTick = 0;
-            PlaybackLog.Write("PlayerInput", "Polled video double-click -> toggle fullscreen");
+            PlaybackLog.Write("PlayerInput", "WPF video double-click -> toggle fullscreen");
             ToggleFullscreen();
-            return;
+            e.Handled = true;
         }
-
-        _lastVideoClickTick = now;
-        _lastVideoClickX = x;
-        _lastVideoClickY = y;
-    }
-
-    private bool IsPointOverVideo(int screenX, int screenY)
-    {
-        try
-        {
-            var topLeft = PlayerHost.PointToScreen(new Point(0, 0));
-            var bottomRight = PlayerHost.PointToScreen(
-                new Point(PlayerHost.ActualWidth, PlayerHost.ActualHeight));
-
-            return screenX >= topLeft.X &&
-                   screenX < bottomRight.X &&
-                   screenY >= topLeft.Y &&
-                   screenY < bottomRight.Y;
-        }
-        catch (InvalidOperationException)
-        {
-            return false;
-        }
-    }
-
-    private bool IsPointOverControls(int screenX, int screenY)
-    {
-        if (_controlsWindow is null || !_controlsWindow.IsVisible)
-            return false;
-
-        var point = new Point(screenX, screenY);
-        var source = PresentationSource.FromVisual(this);
-        if (source?.CompositionTarget is not null)
-            point = source.CompositionTarget.TransformFromDevice.Transform(point);
-
-        return point.X >= _controlsWindow.Left &&
-               point.X < _controlsWindow.Left + _controlsWindow.ActualWidth &&
-               point.Y >= _controlsWindow.Top &&
-               point.Y < _controlsWindow.Top + _controlsWindow.ActualHeight;
     }
 
     private void ShowControls()
@@ -281,72 +312,34 @@ public partial class PlayerWindow : Window
             return;
 
         _lastControlsActivityUtc = DateTime.UtcNow;
-        PlayerHost.SetCursorHidden(false);
-
-        if (_controlsWindow is null)
-        {
-            EnsureControlsWindow();
-            return;
-        }
-
-        if (!_controlsWindow.IsVisible)
-            _controlsWindow.Show();
-
-        SyncControlsWindow();
+        ControlsPanel.Visibility = Visibility.Visible;
+        PlayerRoot.Cursor = Cursors.Arrow;
     }
 
     private void HideControls()
     {
-        if (_controlsWindow is null || _controlsWindow.IsMouseOver)
+        if (ControlsPanel.IsMouseOver)
             return;
 
-        _controlsWindow.Hide();
-        PlayerHost.SetCursorHidden(true);
-    }
-
-    private void SyncControlsWindow()
-    {
-        if (_controlsWindow is null ||
-            !IsLoaded ||
-            PlayerHost.ActualWidth <= 1 ||
-            PlayerHost.ActualHeight <= 1)
-            return;
-
-        try
-        {
-            var topLeftPx = PlayerHost.PointToScreen(new Point(0, 0));
-            var bottomRightPx = PlayerHost.PointToScreen(
-                new Point(PlayerHost.ActualWidth, PlayerHost.ActualHeight));
-
-            var source = PresentationSource.FromVisual(this);
-            if (source?.CompositionTarget is not null)
-            {
-                topLeftPx = source.CompositionTarget.TransformFromDevice.Transform(topLeftPx);
-                bottomRightPx = source.CompositionTarget.TransformFromDevice.Transform(bottomRightPx);
-            }
-
-            var width = Math.Max(1, bottomRightPx.X - topLeftPx.X);
-            var height = Math.Min(150, Math.Max(100, bottomRightPx.Y - topLeftPx.Y));
-
-            _controlsWindow.Width = width;
-            _controlsWindow.Height = height;
-            _controlsWindow.Left = topLeftPx.X;
-            _controlsWindow.Top = bottomRightPx.Y - height;
-        }
-        catch (InvalidOperationException)
-        {
-            // Window is changing state; StateChanged/SizeChanged will retry.
-        }
+        ControlsPanel.Visibility = Visibility.Collapsed;
+        PlayerRoot.Cursor = Cursors.None;
     }
 
     private async Task ReportProgressAsync(string eventName = "TimeUpdate")
     {
+        var mpv = _mpv;
+        if (mpv is null)
+            return;
+
+        var paused = mpv.IsPaused;
+        var volume = mpv.Volume;
+
         await SafeReportAsync(() =>
             _client.ReportPlaybackProgressAsync(
                 _launch,
                 _lastPositionTicks,
-                PlayerHost.IsPaused,
-                PlayerHost.Volume,
+                paused,
+                volume,
                 eventName));
     }
 
@@ -362,76 +355,137 @@ public partial class PlayerWindow : Window
         }
     }
 
+    private void Pause_Click(object sender, RoutedEventArgs e) => TogglePauseAndReport();
+
     private void TogglePauseAndReport()
     {
+        if (_mpv is null)
+            return;
+
         PlaybackLog.Write("Player", "Pause toggled");
-        var wasPaused = PlayerHost.IsPaused;
-        PlayerHost.TogglePause();
+        var wasPaused = _mpv.IsPaused;
+        _mpv.TogglePause();
         _ = ReportProgressAsync(wasPaused ? "Unpause" : "Pause");
         ShowControls();
     }
 
+    private void Back_Click(object sender, RoutedEventArgs e) => SeekRelative(-10);
+
+    private void Forward_Click(object sender, RoutedEventArgs e) => SeekRelative(10);
+
     private void SeekRelative(double seconds)
     {
+        if (_mpv is null)
+            return;
+
         PlaybackLog.Write("Player", $"Seek {(seconds >= 0 ? "+" : "")}{seconds:0.###}");
-        PlayerHost.Seek(seconds);
+        _mpv.Seek(seconds);
         ShowControls();
+    }
+
+    private void PositionSlider_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_updatingUi)
+            return;
+
+        SeekAbsoluteFromTimeline(PositionSlider.Value);
     }
 
     private void SeekAbsoluteFromTimeline(double requestedAbsolute)
     {
+        if (_mpv is null)
+            return;
+
         var localTarget = Math.Max(0, requestedAbsolute - _timelineOffsetSeconds);
         PlaybackLog.Write("Player",
             $"Timeline seek: absolute={requestedAbsolute:0.###}, local={localTarget:0.###}, offset={_timelineOffsetSeconds:0.###}");
-        PlayerHost.SeekAbsolute(localTarget);
+        _mpv.SeekAbsolute(localTarget);
         ShowControls();
+    }
+
+    private void VolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!_updatingUi)
+            SetVolume(e.NewValue);
     }
 
     private void SetVolume(double volume)
     {
+        if (_mpv is null)
+            return;
+
         if (volume > 0.01)
             _lastAudibleVolume = volume;
 
-        PlayerHost.SetVolume(volume);
+        _mpv.SetVolume(volume);
         ShowControls();
     }
 
+    private void Mute_Click(object sender, RoutedEventArgs e) => ToggleMute();
+
     private void ToggleMute()
     {
-        var volume = PlayerHost.Volume;
+        if (_mpv is null)
+            return;
+
+        var volume = _mpv.Volume;
         if (volume > 0.01)
         {
             _lastAudibleVolume = volume;
-            PlayerHost.SetVolume(0);
+            _mpv.SetVolume(0);
         }
         else
         {
-            PlayerHost.SetVolume(_lastAudibleVolume > 0.01 ? _lastAudibleVolume : 100);
+            _mpv.SetVolume(_lastAudibleVolume > 0.01 ? _lastAudibleVolume : 100);
         }
 
         ShowControls();
+    }
+
+    private void SpeedComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_updatingUi ||
+            _mpv is null ||
+            SpeedComboBox.SelectedIndex < 0 ||
+            SpeedComboBox.SelectedIndex >= Speeds.Length)
+        {
+            return;
+        }
+
+        SetSpeed(Speeds[SpeedComboBox.SelectedIndex]);
     }
 
     private void SetSpeed(double speed)
     {
+        if (_mpv is null)
+            return;
+
         PlaybackLog.Write("Player", $"Playback speed={speed:0.##}");
-        PlayerHost.SetSpeed(speed);
+        _mpv.SetSpeed(speed);
         ShowControls();
     }
 
-    private void CycleAudio()
+    private void Audio_Click(object sender, RoutedEventArgs e)
     {
-        PlayerHost.CycleAudio();
-        _controlsWindow?.SetStatus("已切换音轨");
+        if (_mpv is null)
+            return;
+
+        _mpv.CycleAudio();
+        StatusBlock.Text = "已切换音轨";
         ShowControls();
     }
 
-    private void CycleSubtitle()
+    private void Subtitle_Click(object sender, RoutedEventArgs e)
     {
-        PlayerHost.CycleSubtitle();
-        _controlsWindow?.SetStatus("已切换字幕");
+        if (_mpv is null)
+            return;
+
+        _mpv.CycleSubtitle();
+        StatusBlock.Text = "已切换字幕";
         ShowControls();
     }
+
+    private void Fullscreen_Click(object sender, RoutedEventArgs e) => ToggleFullscreen();
 
     private void ToggleFullscreen()
     {
@@ -457,7 +511,7 @@ public partial class PlayerWindow : Window
         }
 
         ShowControls();
-        Dispatcher.BeginInvoke(SyncControlsWindow, DispatcherPriority.Loaded);
+        VideoSurface.InvalidateVisual();
     }
 
     private void PlayerWindow_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -481,13 +535,13 @@ public partial class PlayerWindow : Window
                 e.Handled = true;
                 break;
 
-            case Key.Up:
-                SetVolume(Math.Min(100, PlayerHost.Volume + 5));
+            case Key.Up when _mpv is not null:
+                SetVolume(Math.Min(100, _mpv.Volume + 5));
                 e.Handled = true;
                 break;
 
-            case Key.Down:
-                SetVolume(Math.Max(0, PlayerHost.Volume - 5));
+            case Key.Down when _mpv is not null:
+                SetVolume(Math.Max(0, _mpv.Volume - 5));
                 e.Handled = true;
                 break;
 
@@ -516,32 +570,74 @@ public partial class PlayerWindow : Window
         _stopHandled = true;
         _timer.Stop();
         _controlsTimer.Stop();
-        _mousePollTimer.Stop();
 
         var finalTicks = _lastPositionTicks;
-        var finalVolume = PlayerHost.Volume;
+        var finalVolume = _mpv?.Volume ?? 100;
         PlaybackLog.Write("Player", $"Closing playback window: finalTicks={finalTicks}");
 
         _ = FinalizePlaybackAsync(finalTicks, finalVolume);
 
-        PlayerHost.SetCursorHidden(false);
+        PlayerRoot.Cursor = Cursors.Arrow;
+        ShutdownPlayback();
 
-        if (_controlsWindow is not null)
+        PlaybackLog.Write("Player", "mpv Render API playback stopped and disposed on window close");
+    }
+
+    private void ShutdownPlayback()
+    {
+        var mpv = _mpv;
+        _mpv = null;
+
+        if (mpv is null)
+            return;
+
+        try
+        {
+            mpv.Stop();
+        }
+        catch (Exception ex)
+        {
+            PlaybackLog.Error("mpv-stop", ex);
+        }
+
+        try
+        {
+            if (_videoSurfaceStarted)
+                VideoSurface.Context?.MakeCurrent();
+
+            _renderContext?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            PlaybackLog.Error("mpv-render-dispose", ex);
+        }
+        finally
+        {
+            _renderContext = null;
+        }
+
+        try
+        {
+            mpv.Dispose();
+        }
+        catch (Exception ex)
+        {
+            PlaybackLog.Error("mpv-dispose", ex);
+        }
+
+        if (_videoSurfaceStarted)
         {
             try
             {
-                _controlsWindow.Close();
+                VideoSurface.Dispose();
             }
-            catch (InvalidOperationException)
+            catch (Exception ex)
             {
-                // Owned window may already be closing with its owner.
+                PlaybackLog.Error("video-surface-dispose", ex);
             }
 
-            _controlsWindow = null;
+            _videoSurfaceStarted = false;
         }
-
-        PlayerHost.ShutdownPlayback();
-        PlaybackLog.Write("Player", "mpv stopped and disposed on window close");
     }
 
     private async Task FinalizePlaybackAsync(long finalTicks, double finalVolume)
@@ -562,23 +658,14 @@ public partial class PlayerWindow : Window
                 finalVolume));
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativePoint
+    private static string FormatTime(double seconds)
     {
-        public int X;
-        public int Y;
+        if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds < 0)
+            seconds = 0;
+
+        var time = TimeSpan.FromSeconds(seconds);
+        return time.TotalHours >= 1
+            ? $"{(int)time.TotalHours:00}:{time.Minutes:00}:{time.Seconds:00}"
+            : $"{time.Minutes:00}:{time.Seconds:00}";
     }
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool GetCursorPos(out NativePoint point);
-
-    [DllImport("user32.dll")]
-    private static extern short GetAsyncKeyState(int virtualKey);
-
-    [DllImport("user32.dll")]
-    private static extern uint GetDoubleClickTime();
-
-    [DllImport("user32.dll")]
-    private static extern int GetSystemMetrics(int index);
 }
