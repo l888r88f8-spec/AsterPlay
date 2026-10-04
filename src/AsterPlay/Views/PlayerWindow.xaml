@@ -23,6 +23,91 @@
             </gl:GLWpfControl.RenderTransform>
         </gl:GLWpfControl>
 
+        <Border x:Name="DiagnosticsPanel"
+                Width="390"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="0,24,24,0"
+                Padding="16"
+                CornerRadius="12"
+                Background="#D914141B"
+                BorderBrush="#38FFFFFF"
+                BorderThickness="1"
+                Visibility="Collapsed"
+                IsHitTestVisible="False"
+                Panel.ZIndex="20">
+            <StackPanel>
+                <TextBlock Text="播放信息"
+                           Foreground="White"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,12"/>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="92"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="播放方式" Foreground="#8F96A3" Margin="0,0,8,7"/>
+                    <TextBlock x:Name="DiagnosticsMethodBlock" Grid.Row="0" Grid.Column="1" Foreground="#F1F3F6" TextWrapping="Wrap" Margin="0,0,0,7"/>
+
+                    <TextBlock Grid.Row="1" Text="服务器决策" Foreground="#8F96A3" Margin="0,0,8,7"/>
+                    <TextBlock x:Name="DiagnosticsDecisionBlock" Grid.Row="1" Grid.Column="1" Foreground="#C9CDD5" TextWrapping="Wrap" Margin="0,0,0,7"/>
+
+                    <TextBlock Grid.Row="2" Text="源媒体" Foreground="#8F96A3" Margin="0,0,8,7"/>
+                    <TextBlock x:Name="DiagnosticsSourceBlock" Grid.Row="2" Grid.Column="1" Foreground="#C9CDD5" TextWrapping="Wrap" Margin="0,0,0,7"/>
+
+                    <TextBlock Grid.Row="3" Text="实际视频" Foreground="#8F96A3" Margin="0,0,8,7"/>
+                    <TextBlock x:Name="DiagnosticsVideoBlock" Grid.Row="3" Grid.Column="1" Foreground="#F1F3F6" TextWrapping="Wrap" Margin="0,0,0,7"/>
+
+                    <TextBlock Grid.Row="4" Text="实际音频" Foreground="#8F96A3" Margin="0,0,8,7"/>
+                    <TextBlock x:Name="DiagnosticsAudioBlock" Grid.Row="4" Grid.Column="1" Foreground="#F1F3F6" TextWrapping="Wrap" Margin="0,0,0,7"/>
+
+                    <TextBlock Grid.Row="5" Text="硬件解码" Foreground="#8F96A3" Margin="0,0,8,7"/>
+                    <TextBlock x:Name="DiagnosticsHwdecBlock" Grid.Row="5" Grid.Column="1" Foreground="#F1F3F6" TextWrapping="Wrap" Margin="0,0,0,7"/>
+
+                    <TextBlock Grid.Row="6" Text="视频输出" Foreground="#8F96A3" Margin="0,0,8,7"/>
+                    <TextBlock x:Name="DiagnosticsVoBlock" Grid.Row="6" Grid.Column="1" Foreground="#C9CDD5" TextWrapping="Wrap" Margin="0,0,0,7"/>
+
+                    <TextBlock Grid.Row="7" Text="码率" Foreground="#8F96A3" Margin="0,0,8,7"/>
+                    <TextBlock x:Name="DiagnosticsBitrateBlock" Grid.Row="7" Grid.Column="1" Foreground="#C9CDD5" TextWrapping="Wrap" Margin="0,0,0,7"/>
+
+                    <TextBlock Grid.Row="8" Text="音轨 / 字幕" Foreground="#8F96A3" Margin="0,0,8,7"/>
+                    <TextBlock x:Name="DiagnosticsTracksBlock" Grid.Row="8" Grid.Column="1" Foreground="#C9CDD5" TextWrapping="Wrap" Margin="0,0,0,7"/>
+
+                    <TextBlock Grid.Row="9" Text="缓存" Foreground="#8F96A3" Margin="0,0,8,7"/>
+                    <TextBlock x:Name="DiagnosticsCacheBlock" Grid.Row="9" Grid.Column="1" Foreground="#C9CDD5" TextWrapping="Wrap" Margin="0,0,0,7"/>
+
+                    <TextBlock Grid.Row="10" Text="续播偏移" Foreground="#8F96A3" Margin="0,0,8,7"/>
+                    <TextBlock x:Name="DiagnosticsOffsetBlock" Grid.Row="10" Grid.Column="1" Foreground="#C9CDD5" TextWrapping="Wrap" Margin="0,0,0,7"/>
+
+                    <TextBlock Grid.Row="11" Text="MediaSource" Foreground="#8F96A3"/>
+                    <TextBlock x:Name="DiagnosticsMediaSourceBlock" Grid.Row="11" Grid.Column="1" Foreground="#8F96A3" TextWrapping="Wrap"/>
+                </Grid>
+
+                <TextBlock Text="按 I 隐藏"
+                           Foreground="#737A86"
+                           FontSize="11"
+                           HorizontalAlignment="Right"
+                           Margin="0,12,0,0"/>
+            </StackPanel>
+        </Border>
+
         <Border x:Name="ControlsPanel"
                 Height="150"
                 VerticalAlignment="Bottom"
@@ -139,6 +224,12 @@
                                       Margin="0,0,7,0"
                                       VerticalContentAlignment="Center"
                                       SelectionChanged="SpeedComboBox_SelectionChanged"/>
+                            <Button x:Name="DiagnosticsButton"
+                                    Content="信息"
+                                    Style="{StaticResource GlassButton}"
+                                    Padding="11,7"
+                                    Margin="0,0,7,0"
+                                    Click="Diagnostics_Click"/>
                             <Button Content="全屏"
                                     Style="{StaticResource GlassButton}"
                                     Padding="11,7"
