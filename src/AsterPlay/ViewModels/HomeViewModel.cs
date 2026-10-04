@@ -111,6 +111,8 @@ public sealed class HomeViewModel : INotifyPropertyChanged, IDisposable
     private LibrarySectionViewModel? _currentLibrary;
     private MediaCardViewModel? _currentHero;
     private int _heroIndex;
+    private bool _resumeRefreshRunning;
+    private bool _resumeRefreshPending;
 
     public HomeViewModel(EmbyClient client)
     {
@@ -187,6 +189,40 @@ public sealed class HomeViewModel : INotifyPropertyChanged, IDisposable
             SelectLibrary(Libraries[0]);
 
         _heroTimer.Start();
+    }
+
+    public async Task RefreshResumeAsync()
+    {
+        if (_resumeRefreshRunning)
+        {
+            _resumeRefreshPending = true;
+            return;
+        }
+
+        _resumeRefreshRunning = true;
+
+        try
+        {
+            do
+            {
+                _resumeRefreshPending = false;
+
+                var latestResume = await _client.GetResumeAsync(14);
+                var cards = latestResume
+                    .Where(item => !string.IsNullOrWhiteSpace(item.Id))
+                    .Select(item => new MediaCardViewModel(_client, item))
+                    .ToArray();
+
+                ResumeItems.Clear();
+                foreach (var card in cards)
+                    ResumeItems.Add(card);
+            }
+            while (_resumeRefreshPending);
+        }
+        finally
+        {
+            _resumeRefreshRunning = false;
+        }
     }
 
     public void SelectLibrary(LibrarySectionViewModel section)
