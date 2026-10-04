@@ -9,8 +9,7 @@
             <StackPanel Padding="48,28,48,132"
                         Spacing="30">
                 <Grid Height="330">
-                    <Border CornerRadius="32"
-                            Clip="None">
+                    <Border CornerRadius="32">
                         <Border.Background>
                             <lg:LiquidGlassBrush BlurAmount="1.5"
                                                  BloomAmount="0.12"
