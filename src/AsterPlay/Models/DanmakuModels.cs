@@ -24,7 +24,11 @@ public sealed record DanmakuContext(
     double DurationSeconds,
     string SeriesName = "",
     int? SeasonNumber = null,
-    int? EpisodeNumber = null);
+    int? EpisodeNumber = null,
+    string OriginalTitle = "",
+    string ItemType = "",
+    string MediaPath = "",
+    string FileName = "");
 
 public sealed record DanmakuSettings
 {
