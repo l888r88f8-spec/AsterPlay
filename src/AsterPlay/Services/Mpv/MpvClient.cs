@@ -22,8 +22,13 @@ public sealed class MpvClient : IDisposable
         SetOption("osc", "no");
         SetOption("vo", "libmpv");
         SetOption("hwdec", "auto-copy");
-        // Keep mpv's native network cache policy. Jellyfin MPV Shim leaves
-        // the default alone unless a larger user-selected buffer is requested.
+
+        // Keep mpv's normal one-second network readahead, but do not delay the
+        // first frame waiting for cache-pause's initial threshold. Once playback
+        // has started, normal cache-pause behavior still protects against real
+        // network underruns.
+        SetOption("cache-pause-initial", "no");
+
         SetOption("keep-open", "yes");
 
         var result = Native.mpv_initialize(_handle);
