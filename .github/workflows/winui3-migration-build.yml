@@ -39,7 +39,8 @@ jobs:
           $publish = Join-Path $PWD "dist\AsterPlay.WinUI"
           $required = @(
             "AsterPlay.WinUI.exe",
-            "AsterPlay.Core.dll"
+            "AsterPlay.Core.dll",
+            "CustomEffectRuntimeNative.dll"
           )
 
           foreach ($name in $required) {
