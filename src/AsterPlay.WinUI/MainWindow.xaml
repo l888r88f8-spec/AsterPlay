@@ -5,7 +5,11 @@
     xmlns:lg="using:LiquidGlassWinUI"
     Title="AsterPlay">
 
-    <Window.Resources>
+
+    <Grid x:Name="RootGrid"
+          Background="#080A0F"
+          Loaded="RootGrid_Loaded">
+        <Grid.Resources>
         <Style x:Key="DockButtonStyle" TargetType="Button">
             <Setter Property="MinWidth" Value="104"/>
             <Setter Property="Height" Value="54"/>
@@ -16,11 +20,7 @@
             <Setter Property="Foreground" Value="#C7CED8"/>
             <Setter Property="BorderThickness" Value="0"/>
         </Style>
-    </Window.Resources>
-
-    <Grid x:Name="RootGrid"
-          Background="#080A0F"
-          Loaded="RootGrid_Loaded">
+        </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="48"/>
             <RowDefinition Height="*"/>
