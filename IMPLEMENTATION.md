@@ -1183,7 +1183,7 @@ DanmakuFilter
 - LogVar 配置保存于：
   `%LOCALAPPDATA%\AsterPlay\danmaku-source.json`
 - Emby 会把标题、原始标题、剧集名、季 / 集、ItemType、媒体 Path 与真实文件名传入弹幕匹配上下文。
-- 自动匹配流程参考 qEmy：
+- 自动匹配流程参考 qEmby：
   1. 优先使用真实媒体文件名调用 `POST /api/v2/match`。
   2. 如果文件名匹配失败或置信度不足，则使用剧名 / 季 / 集调用 `GET /api/v2/search/episodes`。
   3. 对候选进行标题、季、集评分，剧集阈值 72，电影阈值 62。
