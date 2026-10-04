@@ -20,9 +20,26 @@ public sealed class DanmakuService
                 Array.Empty<DanmakuComment>());
         }
 
-        var source = new LogVarDanmakuSource(
-            sourceSettings.LogVarBaseUrl,
-            sourceSettings.LogVarAccessToken);
+        var source = CreateSource(sourceSettings);
+
+        if (DanmakuMatchOverrideStore.TryGet(
+                sourceSettings.LogVarBaseUrl,
+                context.ItemId,
+                out var manualCandidate) &&
+            manualCandidate is not null)
+        {
+            var manualComments = await source.LoadCandidateAsync(
+                manualCandidate,
+                cancellationToken);
+
+            PlaybackLog.Write(
+                "Danmaku",
+                $"Loaded manual match: itemId={context.ItemId}, episodeId={manualCandidate.EpisodeId}, comments={manualComments.Count}");
+
+            return new DanmakuDocument(
+                "LogVar · 手动匹配",
+                manualComments);
+        }
 
         var comments = await source.LoadAsync(
             context,
@@ -36,4 +53,70 @@ public sealed class DanmakuService
             source.Name,
             comments);
     }
+
+    public Task<IReadOnlyList<DanmakuMatchCandidate>> SearchCandidatesAsync(
+        DanmakuContext context,
+        DanmakuSourceSettings sourceSettings,
+        string? keyword,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(sourceSettings.LogVarBaseUrl))
+        {
+            return Task.FromResult<IReadOnlyList<DanmakuMatchCandidate>>(
+                Array.Empty<DanmakuMatchCandidate>());
+        }
+
+        return CreateSource(sourceSettings).SearchCandidatesAsync(
+            context,
+            keyword,
+            cancellationToken);
+    }
+
+    public DanmakuMatchCandidate? GetManualMatch(
+        string itemId,
+        DanmakuSourceSettings sourceSettings)
+    {
+        return DanmakuMatchOverrideStore.TryGet(
+            sourceSettings.LogVarBaseUrl,
+            itemId,
+            out var candidate)
+            ? candidate
+            : null;
+    }
+
+    public void SetManualMatch(
+        string itemId,
+        DanmakuSourceSettings sourceSettings,
+        DanmakuMatchCandidate candidate)
+    {
+        DanmakuMatchOverrideStore.Save(
+            sourceSettings.LogVarBaseUrl,
+            itemId,
+            candidate);
+
+        PlaybackLog.Write(
+            "Danmaku",
+            $"Manual match saved: itemId={itemId}, episodeId={candidate.EpisodeId}, anime={candidate.AnimeTitle}, episode={candidate.EpisodeTitle}");
+    }
+
+    public bool ClearManualMatch(
+        string itemId,
+        DanmakuSourceSettings sourceSettings)
+    {
+        var removed = DanmakuMatchOverrideStore.Remove(
+            sourceSettings.LogVarBaseUrl,
+            itemId);
+
+        PlaybackLog.Write(
+            "Danmaku",
+            $"Manual match cleared: itemId={itemId}, removed={removed}");
+
+        return removed;
+    }
+
+    private static LogVarDanmakuSource CreateSource(
+        DanmakuSourceSettings sourceSettings) =>
+        new(
+            sourceSettings.LogVarBaseUrl,
+            sourceSettings.LogVarAccessToken);
 }
