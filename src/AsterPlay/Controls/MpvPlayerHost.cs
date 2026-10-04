@@ -85,6 +85,8 @@ public sealed class MpvPlayerHost : HwndHost
     private IntPtr ChildWindowProc(
         IntPtr hwnd,
         uint msg,
+        UIntPtr wParam,
+        IntPtr lParam,
         UIntPtr subclassId,
         UIntPtr refData)
     {
@@ -110,6 +112,7 @@ public sealed class MpvPlayerHost : HwndHost
                     Math.Abs(screenY - _lastClickY) <= maxDy)
                 {
                     _lastClickTick = 0;
+                    PlaybackLog.Write("PlayerHost", "Native double-click detected");
                     NativeDoubleClick?.Invoke();
                 }
                 else
@@ -127,7 +130,7 @@ public sealed class MpvPlayerHost : HwndHost
                 return IntPtr.Zero;
         }
 
-        return DefSubclassProc(hwnd, msg, UIntPtr.Zero, IntPtr.Zero);
+        return DefSubclassProc(hwnd, msg, wParam, lParam);
     }
 
     protected override HandleRef BuildWindowCore(HandleRef hwndParent)
@@ -196,6 +199,8 @@ public sealed class MpvPlayerHost : HwndHost
     private delegate IntPtr SubclassProc(
         IntPtr hwnd,
         uint msg,
+        UIntPtr wParam,
+        IntPtr lParam,
         UIntPtr subclassId,
         UIntPtr refData);
 
