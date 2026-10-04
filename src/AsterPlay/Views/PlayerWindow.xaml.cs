@@ -6,6 +6,8 @@ using System.Windows.Threading;
 using AsterPlay.Models;
 using AsterPlay.Services;
 using AsterPlay.Services.Mpv;
+using AsterPlay.Services.Danmaku;
+using AsterPlay.Models.Danmaku;
 using OpenTK.Wpf;
 
 namespace AsterPlay.Views;
@@ -18,6 +20,8 @@ public partial class PlayerWindow : Window
     private PlaybackLaunch _launch;
     private readonly DispatcherTimer _timer;
     private readonly DispatcherTimer _controlsTimer;
+    private readonly DanmakuService _danmakuService = new();
+    private readonly CancellationTokenSource _danmakuLoadCts = new();
     private double _timelineOffsetSeconds;
 
     private MpvClient? _mpv;
@@ -43,7 +47,7 @@ public partial class PlayerWindow : Window
     private bool _renderFailureShown;
     private bool _trackMenuOpen;
     private bool _diagnosticsVisible;
-    private bool _danmakuPocVisible;
+    private bool _danmakuVisible;
     private bool _positionSliderPointerDown;
     private bool _positionSliderDragging;
     private ContextMenu? _activeTrackMenu;
@@ -111,6 +115,7 @@ public partial class PlayerWindow : Window
             ShowControls();
             _timer.Start();
             _controlsTimer.Start();
+            _ = LoadDanmakuAsync();
         }
         catch (DllNotFoundException)
         {
@@ -276,15 +281,15 @@ public partial class PlayerWindow : Window
         if (_diagnosticsVisible)
             RefreshDiagnosticsPanel();
 
-        if (_danmakuPocVisible)
+        if (_danmakuVisible)
         {
             _danmakuLogSeconds++;
             if (_danmakuLogSeconds >= 5)
             {
                 _danmakuLogSeconds = 0;
-                var metrics = DanmakuPocOverlay.GetMetrics();
+                var metrics = DanmakuOverlay.GetMetrics();
                 PlaybackLog.Write(
-                    "DanmakuPoC",
+                    "Danmaku",
                     $"timeline={metrics.TimelineSeconds:0.###}, active={metrics.ActiveCount}, " +
                     $"frame={metrics.LastFrameMilliseconds:0.###}ms, peak={metrics.PeakFrameMilliseconds:0.###}ms, " +
                     $"surface={metrics.Width:0}x{metrics.Height:0}, dpi={metrics.DpiX:0}x{metrics.DpiY:0}");
@@ -353,7 +358,7 @@ public partial class PlayerWindow : Window
 
     private void ControlsTimer_Tick(object? sender, EventArgs e)
     {
-        SyncDanmakuPoc();
+        SyncDanmaku();
 
         if (ControlsPanel.Visibility != Visibility.Visible ||
             ControlsPanel.IsMouseOver ||
@@ -443,7 +448,7 @@ public partial class PlayerWindow : Window
         PlaybackLog.Write("Player", "Pause toggled");
         var wasPaused = _mpv.IsPaused;
         _mpv.TogglePause();
-        SyncDanmakuPoc();
+        SyncDanmaku();
         _ = ReportProgressAsync(wasPaused ? "Unpause" : "Pause");
         ShowControls();
     }
@@ -476,7 +481,7 @@ public partial class PlayerWindow : Window
 
         BeginDanmakuSeekSuppression(targetAbsolute);
         _mpv.Seek(seconds);
-        SyncDanmakuPoc();
+        SyncDanmaku();
         ShowControls();
     }
 
@@ -579,7 +584,7 @@ public partial class PlayerWindow : Window
 
         mpv.SeekAbsolute(localTarget);
         CurrentTimeBlock.Text = FormatTime(requestedAbsolute);
-        SyncDanmakuPoc();
+        SyncDanmaku();
         ShowControls();
     }
 
@@ -658,7 +663,7 @@ public partial class PlayerWindow : Window
             _serverSeekUiTargetSeconds = null;
             CurrentTimeBlock.Text = FormatTime(requestedAbsolute);
             PositionSlider.Value = requestedAbsolute;
-            SyncDanmakuPoc();
+            SyncDanmaku();
             ShowControls();
         }
         catch (Exception ex)
@@ -742,7 +747,7 @@ public partial class PlayerWindow : Window
 
         PlaybackLog.Write("Player", $"Playback speed={speed:0.##}");
         _mpv.SetSpeed(speed);
-        SyncDanmakuPoc();
+        SyncDanmaku();
         ShowControls();
     }
 
@@ -958,25 +963,58 @@ public partial class PlayerWindow : Window
         return string.Join(" · ", parts);
     }
 
-    private void DanmakuPoc_Click(object sender, RoutedEventArgs e) =>
-        ToggleDanmakuPoc();
-
-    private void ToggleDanmakuPoc()
+    private async Task LoadDanmakuAsync()
     {
-        _danmakuPocVisible = !_danmakuPocVisible;
-        DanmakuPocOverlay.SetActive(_danmakuPocVisible);
-        DanmakuPocButton.Content = _danmakuPocVisible ? "弹幕 PoC ✓" : "弹幕 PoC";
+        try
+        {
+            var durationSeconds = _launch.RunTimeTicks is > 0
+                ? _launch.RunTimeTicks.Value / 10_000_000d
+                : 0;
+
+            var document = await _danmakuService.LoadAsync(
+                new DanmakuContext(
+                    _launch.ItemId,
+                    _launch.Title,
+                    durationSeconds),
+                _danmakuLoadCts.Token);
+
+            if (_stopHandled || _danmakuLoadCts.IsCancellationRequested)
+                return;
+
+            DanmakuOverlay.SetDocument(document);
+
+            PlaybackLog.Write(
+                "Danmaku",
+                $"Document ready: source={document.SourceName}, comments={document.Comments.Count}");
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            PlaybackLog.Error("DanmakuLoad", ex);
+        }
+    }
+
+    private void Danmaku_Click(object sender, RoutedEventArgs e) =>
+        ToggleDanmaku();
+
+    private void ToggleDanmaku()
+    {
+        _danmakuVisible = !_danmakuVisible;
+        DanmakuOverlay.SetActive(_danmakuVisible);
+        DanmakuButton.Content = _danmakuVisible ? "弹幕 ✓" : "弹幕";
         _danmakuLogSeconds = 0;
 
-        if (_danmakuPocVisible)
-            SyncDanmakuPoc();
+        if (_danmakuVisible)
+            SyncDanmaku();
 
-        var metrics = DanmakuPocOverlay.GetMetrics();
+        var metrics = DanmakuOverlay.GetMetrics();
         PlaybackLog.Write(
-            "DanmakuPoC",
-            _danmakuPocVisible
-                ? $"Enabled: mouseThrough={!DanmakuPocOverlay.IsHitTestVisible}, surface={metrics.Width:0}x{metrics.Height:0}, dpi={metrics.DpiX:0}x{metrics.DpiY:0}"
-                : $"Disabled: peakFrame={metrics.PeakFrameMilliseconds:0.###}ms");
+            "Danmaku",
+            _danmakuVisible
+                ? $"Enabled: source={metrics.SourceName}, loaded={metrics.LoadedCount}, mouseThrough={!DanmakuOverlay.IsHitTestVisible}, surface={metrics.Width:0}x{metrics.Height:0}, dpi={metrics.DpiX:0}x{metrics.DpiY:0}"
+                : $"Disabled: source={metrics.SourceName}, loaded={metrics.LoadedCount}, peakFrame={metrics.PeakFrameMilliseconds:0.###}ms");
 
         if (_diagnosticsVisible)
             RefreshDiagnosticsPanel();
@@ -990,12 +1028,12 @@ public partial class PlayerWindow : Window
         _danmakuSeekLastTimelineSeconds = null;
         _danmakuSeekResumeSamples = 0;
 
-        if (!_danmakuPocVisible)
+        if (!_danmakuVisible)
             return;
 
-        DanmakuPocOverlay.SetSuppressed(true);
+        DanmakuOverlay.SetSuppressed(true);
         PlaybackLog.Write(
-            "DanmakuPoC",
+            "Danmaku",
             $"Hidden for seek: target={targetSeconds:0.###}");
     }
 
@@ -1005,25 +1043,25 @@ public partial class PlayerWindow : Window
         _danmakuSeekLastTimelineSeconds = null;
         _danmakuSeekResumeSamples = 0;
 
-        if (!_danmakuPocVisible || _mpv is null || !_playbackLoaded)
+        if (!_danmakuVisible || _mpv is null || !_playbackLoaded)
         {
-            DanmakuPocOverlay.SetSuppressed(false);
+            DanmakuOverlay.SetSuppressed(false);
             return;
         }
 
         var timelineSeconds =
             _timelineOffsetSeconds + Math.Max(0, _mpv.PositionSeconds);
 
-        DanmakuPocOverlay.Synchronize(
+        DanmakuOverlay.Synchronize(
             timelineSeconds,
             _mpv.IsPaused || _mpv.IsBuffering,
             _mpv.Speed);
-        DanmakuPocOverlay.SetSuppressed(false);
+        DanmakuOverlay.SetSuppressed(false);
     }
 
-    private void SyncDanmakuPoc()
+    private void SyncDanmaku()
     {
-        if (!_danmakuPocVisible || _mpv is null || !_playbackLoaded)
+        if (!_danmakuVisible || _mpv is null || !_playbackLoaded)
             return;
 
         var mpvPosition = Math.Max(0, _mpv.PositionSeconds);
@@ -1031,7 +1069,7 @@ public partial class PlayerWindow : Window
 
         if (_danmakuSeekTargetSeconds is double seekTarget)
         {
-            DanmakuPocOverlay.SetSuppressed(true);
+            DanmakuOverlay.SetSuppressed(true);
 
             if (_mpv.IsPaused || _mpv.IsBuffering)
             {
@@ -1060,7 +1098,7 @@ public partial class PlayerWindow : Window
                 return;
 
             PlaybackLog.Write(
-                "DanmakuPoC",
+                "Danmaku",
                 $"Shown after seek playback resumed: target={seekTarget:0.###}, timeline={timelineSeconds:0.###}, " +
                 $"offset={_timelineOffsetSeconds:0.###}, mpvPos={mpvPosition:0.###}");
 
@@ -1068,16 +1106,16 @@ public partial class PlayerWindow : Window
             _danmakuSeekLastTimelineSeconds = null;
             _danmakuSeekResumeSamples = 0;
 
-            DanmakuPocOverlay.Synchronize(
+            DanmakuOverlay.Synchronize(
                 timelineSeconds,
                 paused: false,
                 _mpv.Speed);
-            DanmakuPocOverlay.SetSuppressed(false);
+            DanmakuOverlay.SetSuppressed(false);
             return;
         }
 
-        DanmakuPocOverlay.SetSuppressed(false);
-        DanmakuPocOverlay.Synchronize(
+        DanmakuOverlay.SetSuppressed(false);
+        DanmakuOverlay.Synchronize(
             timelineSeconds,
             _mpv.IsPaused || _mpv.IsBuffering,
             _mpv.Speed);
@@ -1209,11 +1247,12 @@ public partial class PlayerWindow : Window
             ? "—"
             : _launch.MediaSourceId;
 
-        if (_danmakuPocVisible)
+        if (_danmakuVisible)
         {
-            var danmaku = DanmakuPocOverlay.GetMetrics();
+            var danmaku = DanmakuOverlay.GetMetrics();
             DiagnosticsDanmakuBlock.Text =
-                $"{danmaku.ActiveCount} 条 · {danmaku.LastFrameMilliseconds:0.00} ms / 峰值 {danmaku.PeakFrameMilliseconds:0.00} ms · " +
+                $"{danmaku.SourceName} · {danmaku.LoadedCount} 已载入 / {danmaku.ActiveCount} 活动 · " +
+                $"{danmaku.LastFrameMilliseconds:0.00} ms / 峰值 {danmaku.PeakFrameMilliseconds:0.00} ms · " +
                 $"{danmaku.Width:0}×{danmaku.Height:0} · DPI {danmaku.DpiX:0}×{danmaku.DpiY:0}";
         }
         else
@@ -1303,7 +1342,7 @@ public partial class PlayerWindow : Window
                 break;
 
             case Key.D:
-                ToggleDanmakuPoc();
+                ToggleDanmaku();
                 e.Handled = true;
                 break;
 
@@ -1332,7 +1371,8 @@ public partial class PlayerWindow : Window
         _stopHandled = true;
         _timer.Stop();
         _controlsTimer.Stop();
-        DanmakuPocOverlay.SetActive(false);
+        _danmakuLoadCts.Cancel();
+        DanmakuOverlay.SetActive(false);
 
         if (_activeTrackMenu?.IsOpen == true)
             _activeTrackMenu.IsOpen = false;
