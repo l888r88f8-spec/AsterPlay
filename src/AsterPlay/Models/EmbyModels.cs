@@ -365,6 +365,15 @@ public sealed class MediaSource
     [JsonPropertyName("DirectStreamUrl")]
     public string DirectStreamUrl { get; set; } = "";
 
+    [JsonPropertyName("AddApiKeyToDirectStreamUrl")]
+    public bool AddApiKeyToDirectStreamUrl { get; set; }
+
+    [JsonPropertyName("TranscodingContainer")]
+    public string TranscodingContainer { get; set; } = "";
+
+    [JsonPropertyName("TranscodingSubProtocol")]
+    public string TranscodingSubProtocol { get; set; } = "";
+
     [JsonPropertyName("SupportsDirectPlay")]
     public bool SupportsDirectPlay { get; set; }
 
