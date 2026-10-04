@@ -114,7 +114,7 @@ public partial class PlayerWindow : Window
         }
 
         _reportSeconds++;
-        if (_reportSeconds >= 5)
+        if (_reportSeconds >= 10)
         {
             _reportSeconds = 0;
             _ = ReportProgressAsync();
@@ -153,8 +153,7 @@ public partial class PlayerWindow : Window
         _stopHandled = true;
         _timer.Stop();
 
-        // Snapshot state BEFORE stopping mpv. qEmby follows the same order:
-        // final progress -> stopped report, while the player itself is stopped immediately.
+        // Snapshot state before stopping mpv, then send final progress and stop reports.
         var finalTicks = _lastPositionTicks;
         var finalVolume = PlayerHost.Volume;
         PlaybackLog.Write("Player", $"Closing playback window: finalTicks={finalTicks}");
