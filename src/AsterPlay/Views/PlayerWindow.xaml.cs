@@ -36,6 +36,7 @@ public partial class PlayerWindow : Window
     private bool _stopHandled;
     private bool _renderFailureShown;
     private bool _trackMenuOpen;
+    private bool _diagnosticsVisible;
     private ContextMenu? _activeTrackMenu;
     private long _lastPositionTicks;
     private double _lastAudibleVolume = 100;
@@ -262,6 +263,9 @@ public partial class PlayerWindow : Window
             _mpv.Speed);
 
         RefreshTrackButtons();
+
+        if (_diagnosticsVisible)
+            RefreshDiagnosticsPanel();
 
         if (_startReportSent)
         {
@@ -711,6 +715,144 @@ public partial class PlayerWindow : Window
         return string.Join(" · ", parts);
     }
 
+    private void Diagnostics_Click(object sender, RoutedEventArgs e) =>
+        ToggleDiagnostics();
+
+    private void ToggleDiagnostics()
+    {
+        _diagnosticsVisible = !_diagnosticsVisible;
+        DiagnosticsPanel.Visibility = _diagnosticsVisible
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        DiagnosticsButton.Content = _diagnosticsVisible ? "信息 ✓" : "信息";
+
+        if (_diagnosticsVisible)
+        {
+            RefreshDiagnosticsPanel();
+            PlaybackLog.Write(
+                "PlayerDiagnostics",
+                $"Opened: playMethod={_launch.PlayMethod}, source={_launch.SourceContainer}, " +
+                $"negotiated={_launch.NegotiatedContainer}/{_launch.NegotiatedProtocol}, " +
+                $"mediaSourceId={_launch.MediaSourceId}, reason={_launch.DecisionReason}");
+        }
+
+        ShowControls();
+    }
+
+    private void RefreshDiagnosticsPanel()
+    {
+        if (_mpv is null || !_playbackLoaded)
+            return;
+
+        var snapshot = _mpv.GetDiagnosticSnapshot();
+        var tracks = _mpv.GetTracks();
+
+        var selectedAudio = tracks.FirstOrDefault(track =>
+            string.Equals(track.Type, "audio", StringComparison.Ordinal) &&
+            track.Selected);
+        var selectedSubtitle = tracks.FirstOrDefault(track =>
+            string.Equals(track.Type, "sub", StringComparison.Ordinal) &&
+            track.Selected);
+
+        var routeParts = new List<string> { _launch.PlayMethod };
+        if (!string.IsNullOrWhiteSpace(_launch.NegotiatedContainer))
+            routeParts.Add(_launch.NegotiatedContainer.ToUpperInvariant());
+        if (!string.IsNullOrWhiteSpace(_launch.NegotiatedProtocol))
+            routeParts.Add(_launch.NegotiatedProtocol.ToUpperInvariant());
+
+        DiagnosticsMethodBlock.Text = string.Join(" · ", routeParts);
+        DiagnosticsDecisionBlock.Text = string.IsNullOrWhiteSpace(_launch.DecisionReason)
+            ? "—"
+            : _launch.DecisionReason;
+
+        var sourceParts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(_launch.SourceContainer))
+            sourceParts.Add(_launch.SourceContainer.ToUpperInvariant());
+        if (!string.IsNullOrWhiteSpace(_launch.SourceVideoCodec))
+            sourceParts.Add(_launch.SourceVideoCodec.ToUpperInvariant());
+        if (!string.IsNullOrWhiteSpace(_launch.SourceAudioCodec))
+            sourceParts.Add(_launch.SourceAudioCodec.ToUpperInvariant());
+        if (_launch.SourceWidth is > 0 && _launch.SourceHeight is > 0)
+            sourceParts.Add($"{_launch.SourceWidth}×{_launch.SourceHeight}");
+        DiagnosticsSourceBlock.Text = sourceParts.Count == 0
+            ? "—"
+            : string.Join(" · ", sourceParts);
+
+        var actualVideo = new List<string>();
+        if (!string.IsNullOrWhiteSpace(snapshot.VideoCodec))
+            actualVideo.Add(snapshot.VideoCodec.ToUpperInvariant());
+        if (snapshot.Width is > 0 && snapshot.Height is > 0)
+            actualVideo.Add($"{snapshot.Width}×{snapshot.Height}");
+        if (snapshot.Fps is > 0)
+            actualVideo.Add($"{snapshot.Fps:0.##} fps");
+        DiagnosticsVideoBlock.Text = actualVideo.Count == 0
+            ? "等待视频…"
+            : string.Join(" · ", actualVideo);
+
+        var actualAudio = new List<string>();
+        if (!string.IsNullOrWhiteSpace(snapshot.AudioCodec))
+            actualAudio.Add(snapshot.AudioCodec.ToUpperInvariant());
+        if (selectedAudio is not null)
+            actualAudio.Add(FormatTrackMenuLabel(selectedAudio));
+        DiagnosticsAudioBlock.Text = actualAudio.Count == 0
+            ? "等待音频…"
+            : string.Join(" · ", actualAudio.Distinct(StringComparer.OrdinalIgnoreCase));
+
+        DiagnosticsHwdecBlock.Text =
+            string.IsNullOrWhiteSpace(snapshot.HwdecCurrent) ||
+            string.Equals(snapshot.HwdecCurrent, "no", StringComparison.OrdinalIgnoreCase)
+                ? "软件解码"
+                : $"{snapshot.HwdecCurrent}（硬件解码）";
+
+        DiagnosticsVoBlock.Text = string.IsNullOrWhiteSpace(snapshot.VideoOutput)
+            ? "—"
+            : snapshot.VideoOutput;
+
+        var bitrateParts = new List<string>();
+        if (snapshot.VideoBitrate is > 0)
+            bitrateParts.Add($"视频 {FormatBitrate(snapshot.VideoBitrate.Value)}");
+        if (snapshot.AudioBitrate is > 0)
+            bitrateParts.Add($"音频 {FormatBitrate(snapshot.AudioBitrate.Value)}");
+        DiagnosticsBitrateBlock.Text = bitrateParts.Count == 0
+            ? "—"
+            : string.Join(" · ", bitrateParts);
+
+        var audioLabel = selectedAudio is null
+            ? $"aid {snapshot.AudioTrackId}"
+            : FormatTrackMenuLabel(selectedAudio);
+        var subtitleLabel = selectedSubtitle is null
+            ? "字幕关闭"
+            : FormatTrackMenuLabel(selectedSubtitle);
+        DiagnosticsTracksBlock.Text = $"{audioLabel} / {subtitleLabel}";
+
+        var cacheParts = new List<string>();
+        if (snapshot.CacheSeconds is >= 0)
+            cacheParts.Add($"{snapshot.CacheSeconds:0.0}s");
+        if (snapshot.CacheBufferingState is >= 0)
+            cacheParts.Add($"{snapshot.CacheBufferingState:0}%");
+        cacheParts.Add(snapshot.Buffering ? "缓冲中" : "正常");
+        DiagnosticsCacheBlock.Text = string.Join(" · ", cacheParts);
+
+        DiagnosticsOffsetBlock.Text = _launch.UsesServerStartOffset
+            ? $"{_timelineOffsetSeconds:0.###}s（服务器续播偏移）"
+            : "0s";
+        DiagnosticsMediaSourceBlock.Text = string.IsNullOrWhiteSpace(_launch.MediaSourceId)
+            ? "—"
+            : _launch.MediaSourceId;
+    }
+
+    private static string FormatBitrate(double bitsPerSecond)
+    {
+        if (bitsPerSecond >= 1_000_000)
+            return $"{bitsPerSecond / 1_000_000d:0.##} Mbps";
+
+        if (bitsPerSecond >= 1_000)
+            return $"{bitsPerSecond / 1_000d:0.#} Kbps";
+
+        return $"{bitsPerSecond:0} bps";
+    }
+
     private void Fullscreen_Click(object sender, RoutedEventArgs e)
     {
         PlaybackLog.Write("PlayerInput", "Fullscreen button clicked");
@@ -777,6 +919,11 @@ public partial class PlayerWindow : Window
 
             case Key.M:
                 ToggleMute();
+                e.Handled = true;
+                break;
+
+            case Key.I:
+                ToggleDiagnostics();
                 e.Handled = true;
                 break;
 
