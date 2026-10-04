@@ -4,6 +4,21 @@ namespace AsterPlay.Services.Danmaku;
 
 public sealed class DanmakuService
 {
+    public Task TestConnectionAsync(
+        DanmakuSourceSettings sourceSettings,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(
+                sourceSettings.LogVarBaseUrl))
+        {
+            throw new InvalidOperationException(
+                "请先填写 LogVar 服务器地址。");
+        }
+
+        return CreateSource(sourceSettings)
+            .TestConnectionAsync(cancellationToken);
+    }
+
     public async Task<DanmakuDocument> LoadAsync(
         DanmakuContext context,
         DanmakuSourceSettings sourceSettings,
