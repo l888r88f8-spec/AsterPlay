@@ -1221,17 +1221,33 @@ DanmakuFilter
   `%LOCALAPPDATA%\AsterPlay\danmaku-settings.json`
 - 设置在播放器启动时自动读取，修改后立即应用并保存。
 - 播放信息面板会同时显示当前字号、速度和透明度。
+- 新增播放器“匹配”按钮和 LogVar 手动匹配窗口：
+  - 默认使用当前剧名 / 标题作为搜索关键词。
+  - 调用 `GET /api/v2/search/episodes` 获取候选。
+  - 候选按评分从高到低展示。
+  - 显示剧名、集标题、季 / 集、episodeId 与评分。
+  - 支持双击或“使用选中项”立即绑定当前 Emby Item。
+  - 支持“恢复自动匹配”清除手动绑定。
+- 手动匹配按“LogVar 服务器 + Emby ItemId”持久化，避免切换服务器后误用旧 episodeId。
+- 手动绑定保存于：
+  `%LOCALAPPDATA%\AsterPlay\danmaku-match-overrides.json`
+- 已保存的手动匹配优先于自动匹配；恢复自动匹配后重新走文件名 / 元数据自动匹配链路。
 - Windows x64 self-contained publish 已通过。
 
 真实运行验收：
 
 - 已使用实际 LogVar 服务器地址成功加载并显示真实弹幕。
 - 已确认 LogVar 配置、自动匹配、episodeId 获取、comment 下载、解析、渲染这一基础链路可工作。
-- Access Token 部署、错误匹配回退、多候选场景仍需后续专项验收。
+- 手动搜索 / 候选选择 / 持久化代码已实现并通过 Windows publish，待真实 LogVar 候选场景验收。
+- Access Token 部署仍需专项验收。
 
 下一阶段：
 
-- 自动匹配存在多个候选或匹配错误时，增加手动选择 / 重新匹配 UI。
+- 验收手动匹配：
+  - 搜索候选是否完整。
+  - 选择错误候选后能否正常改选。
+  - 重启播放器后手动绑定是否继续生效。
+  - “恢复自动匹配”是否正确清除绑定。
 - 增加屏蔽词、用户屏蔽、密度控制、防重叠与性能限制。
 - 对真实大弹幕量继续做长时间运行验收。
 
