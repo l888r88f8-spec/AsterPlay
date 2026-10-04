@@ -6,7 +6,7 @@
         Width="1180" Height="820"
         MinWidth="920" MinHeight="680"
         WindowStartupLocation="CenterOwner"
-        Background="#08080C">
+        Background="#07090D">
 
     <Grid>
         <controls:CachedImage SourceUrl="{Binding BackdropUrl}"
@@ -18,7 +18,7 @@
                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                     <GradientStop Color="#2A08080C" Offset="0"/>
                     <GradientStop Color="#B008080C" Offset="0.52"/>
-                    <GradientStop Color="#FF08080C" Offset="0.82"/>
+                    <GradientStop Color="#F207090D" Offset="0.82"/>
                 </LinearGradientBrush>
             </Rectangle.Fill>
         </Rectangle>
@@ -46,8 +46,8 @@
                             CornerRadius="16"
                             ClipToBounds="True"
                             VerticalAlignment="Top"
-                            Background="#17171E"
-                            BorderBrush="#30FFFFFF"
+                            Background="#171B24"
+                            BorderBrush="{StaticResource LiquidGlassEdgeBrush}"
                             BorderThickness="1">
                         <controls:CachedImage SourceUrl="{Binding PosterUrl}"
                                Stretch="UniformToFill"/>
@@ -167,8 +167,8 @@
                     <ItemsControl x:Name="EpisodeItemsControl">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#1AFFFFFF"
-                                        BorderBrush="#28FFFFFF"
+                                <Border Background="{StaticResource LiquidGlassTintBrush}"
+                                        BorderBrush="{StaticResource LiquidGlassSoftEdgeBrush}"
                                         BorderThickness="1"
                                         CornerRadius="14"
                                         Padding="12"
@@ -184,7 +184,7 @@
                                                 Height="118"
                                                 CornerRadius="10"
                                                 ClipToBounds="True"
-                                                Background="#17171E"
+                                                Background="#171B24"
                                                 VerticalAlignment="Top">
                                             <controls:CachedImage SourceUrl="{Binding ImageUrl}"
                                                    Stretch="UniformToFill"/>
@@ -206,7 +206,7 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
 
-                                                <Border Background="#26FFFFFF"
+                                                <Border Background="#3AFFFFFF"
                                                         CornerRadius="7"
                                                         Padding="8,4"
                                                         VerticalAlignment="Center">
@@ -300,7 +300,7 @@
                                                 Height="150"
                                                 CornerRadius="12"
                                                 ClipToBounds="True"
-                                                Background="#17171E">
+                                                Background="#171B24">
                                             <controls:CachedImage SourceUrl="{Binding ImageUrl}"
                                                    Stretch="UniformToFill"/>
                                         </Border>
@@ -344,8 +344,8 @@
                         <ItemsControl ItemsSource="{Binding MediaSummary}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#1CFFFFFF"
-                                            BorderBrush="#28FFFFFF"
+                                    <Border Background="{StaticResource LiquidGlassTintBrush}"
+                                            BorderBrush="{StaticResource LiquidGlassSoftEdgeBrush}"
                                             BorderThickness="1"
                                             CornerRadius="10"
                                             Padding="12,9"
@@ -376,8 +376,8 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#1CFFFFFF"
-                                            BorderBrush="#28FFFFFF"
+                                    <Border Background="{StaticResource LiquidGlassTintBrush}"
+                                            BorderBrush="{StaticResource LiquidGlassSoftEdgeBrush}"
                                             BorderThickness="1"
                                             CornerRadius="9"
                                             Padding="10,6"
@@ -399,7 +399,7 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#12FFFFFF"
+                                    <Border Background="#32171E2A"
                                             CornerRadius="8"
                                             Padding="9,5"
                                             Margin="0,0,7,7">
@@ -420,8 +420,8 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#12FFFFFF"
-                                            BorderBrush="#20FFFFFF"
+                                    <Border Background="#34171E2A"
+                                            BorderBrush="{StaticResource LiquidGlassSoftEdgeBrush}"
                                             BorderThickness="1"
                                             CornerRadius="8"
                                             Padding="9,5"
@@ -448,8 +448,8 @@
                     <ItemsControl ItemsSource="{Binding MediaSources}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#14FFFFFF"
-                                        BorderBrush="#24FFFFFF"
+                                <Border Background="#5C171E2A"
+                                        BorderBrush="{StaticResource LiquidGlassSoftEdgeBrush}"
                                         BorderThickness="1"
                                         CornerRadius="12"
                                         Padding="14,12"
@@ -475,7 +475,7 @@
         </ScrollViewer>
 
         <Border x:Name="LoadingOverlay"
-                Background="#D908080C">
+                Background="#D907090D">
             <StackPanel HorizontalAlignment="Center"
                         VerticalAlignment="Center">
                 <TextBlock Text="正在加载详情…"
