@@ -82,12 +82,16 @@ public sealed class MpvClient : IDisposable
     public void SetVolume(double volume) =>
         SetProperty("volume", Math.Clamp(volume, 0, 100).ToString("0.###", CultureInfo.InvariantCulture));
 
+    public void SetSpeed(double speed) =>
+        SetProperty("speed", Math.Clamp(speed, 0.25, 4.0).ToString("0.###", CultureInfo.InvariantCulture));
+
     public void CycleAudio() => Command("cycle", "audio");
     public void CycleSubtitle() => Command("cycle", "sub");
 
     public double PositionSeconds => GetDoubleProperty("time-pos");
     public double DurationSeconds => GetDoubleProperty("duration");
     public double Volume => GetDoubleProperty("volume", 100);
+    public double Speed => GetDoubleProperty("speed", 1);
     public bool IsPaused => GetBoolProperty("pause");
     public bool IsBuffering => GetBoolProperty("paused-for-cache");
 
