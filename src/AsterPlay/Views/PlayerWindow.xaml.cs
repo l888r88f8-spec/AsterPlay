@@ -44,14 +44,18 @@ public partial class PlayerWindow : Window
         _controlsTimer.Tick += ControlsTimer_Tick;
 
         PlayerHost.NativeMouseActivity += () =>
-            Dispatcher.BeginInvoke(ShowControls, DispatcherPriority.Input);
+            Dispatcher.BeginInvoke(
+                DispatcherPriority.Input,
+                new Action(ShowControls));
 
         PlayerHost.NativeDoubleClick += () =>
-            Dispatcher.BeginInvoke(() =>
-            {
-                PlaybackLog.Write("Player", "Video double-click -> toggle fullscreen");
-                ToggleFullscreen();
-            }, DispatcherPriority.Input);
+            Dispatcher.BeginInvoke(
+                DispatcherPriority.Input,
+                new Action(() =>
+                {
+                    PlaybackLog.Write("Player", "Video double-click -> toggle fullscreen");
+                    ToggleFullscreen();
+                }));
 
         Loaded += PlayerWindow_Loaded;
         Closing += PlayerWindow_Closing;
