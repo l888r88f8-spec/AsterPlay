@@ -248,8 +248,10 @@ public sealed class EpisodeViewModel
     public int? SeasonNumber => Item.ParentIndexNumber;
     public int? EpisodeNumber => Item.IndexNumber;
     public long ResumePositionTicks => Item.UserData?.PlaybackPositionTicks ?? 0;
-    public double PlayedPercentage => Math.Clamp(Item.UserData?.PlayedPercentage ?? 0, 0, 100);
     public bool IsPlayed => Item.UserData?.Played == true;
+    public double PlayedPercentage => IsPlayed
+        ? 100
+        : Math.Clamp(Item.UserData?.PlayedPercentage ?? 0, 0, 100);
     public bool HasResumePosition => ResumePositionTicks > 0 && !IsPlayed;
     public string PlayLabel => HasResumePosition ? "继续播放" : "播放";
 
