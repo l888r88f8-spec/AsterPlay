@@ -197,6 +197,7 @@ public sealed class MpvClient : IDisposable
             GetStringProperty("sid") ?? "",
             GetNullableDoubleProperty("demuxer-cache-duration"),
             GetNullableDoubleProperty("cache-buffering-state"),
+            GetNullableDoubleProperty("cache-speed"),
             IsBuffering,
             GetNullableDoubleProperty("avsync"));
     }
