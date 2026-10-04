@@ -125,6 +125,7 @@ public partial class MainWindow : Window
         PageTitleBlock.Text = "首页";
 
         var home = new HomeView(_client);
+        home.LibraryRequested += (_, _) => ShowLibrary();
         home.LogoutRequested += (_, _) =>
         {
             AppStateStore.Clear();
