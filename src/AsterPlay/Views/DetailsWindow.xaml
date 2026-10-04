@@ -132,8 +132,150 @@
                     </StackPanel>
                 </Grid>
 
-                <StackPanel x:Name="CastSection"
+                <StackPanel x:Name="SeriesSection"
                             Grid.Row="1"
+                            Margin="0,42,0,0"
+                            Visibility="Collapsed">
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel>
+                            <TextBlock Text="剧集"
+                                       Foreground="White"
+                                       FontSize="24"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock x:Name="SeriesStatusBlock"
+                                       Text="选择一个季度查看剧集"
+                                       Foreground="#9FA5B2"
+                                       FontSize="13"
+                                       Margin="0,5,0,0"/>
+                        </StackPanel>
+
+                        <ComboBox x:Name="SeasonComboBox"
+                                  Grid.Column="1"
+                                  MinWidth="180"
+                                  Height="36"
+                                  VerticalAlignment="Center"
+                                  DisplayMemberPath="Title"
+                                  SelectionChanged="SeasonComboBox_SelectionChanged"/>
+                    </Grid>
+
+                    <ItemsControl x:Name="EpisodeItemsControl">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#1AFFFFFF"
+                                        BorderBrush="#28FFFFFF"
+                                        BorderThickness="1"
+                                        CornerRadius="14"
+                                        Padding="12"
+                                        Margin="0,0,0,12">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="210"/>
+                                            <ColumnDefinition Width="18"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Width="210"
+                                                Height="118"
+                                                CornerRadius="10"
+                                                ClipToBounds="True"
+                                                Background="#17171E"
+                                                VerticalAlignment="Top">
+                                            <Image Source="{Binding ImageUrl}"
+                                                   Stretch="UniformToFill"/>
+                                        </Border>
+
+                                        <Grid Grid.Column="2">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <Border Background="#26FFFFFF"
+                                                        CornerRadius="7"
+                                                        Padding="8,4"
+                                                        VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding EpisodeLabel}"
+                                                               Foreground="#F0F2F6"
+                                                               FontSize="12"
+                                                               FontWeight="SemiBold"/>
+                                                </Border>
+
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Title}"
+                                                           Foreground="White"
+                                                           FontSize="18"
+                                                           FontWeight="SemiBold"
+                                                           TextWrapping="Wrap"
+                                                           Margin="10,0,10,0"
+                                                           VerticalAlignment="Center"/>
+
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding RuntimeLabel}"
+                                                           Foreground="#A8AEB9"
+                                                           FontSize="12"
+                                                           VerticalAlignment="Center"/>
+                                            </Grid>
+
+                                            <TextBlock Grid.Row="1"
+                                                       Text="{Binding Overview}"
+                                                       Foreground="#C7CBD4"
+                                                       FontSize="13"
+                                                       LineHeight="20"
+                                                       TextWrapping="Wrap"
+                                                       MaxHeight="44"
+                                                       Margin="0,9,0,0"/>
+
+                                            <ProgressBar Grid.Row="2"
+                                                         Minimum="0"
+                                                         Maximum="100"
+                                                         Value="{Binding PlayedPercentage}"
+                                                         Height="4"
+                                                         Margin="0,10,0,0"/>
+
+                                            <Grid Grid.Row="3"
+                                                  Margin="0,8,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Text="{Binding WatchStateLabel}"
+                                                           Foreground="#9FA5B2"
+                                                           FontSize="12"
+                                                           VerticalAlignment="Center"/>
+
+                                                <Button Grid.Column="1"
+                                                        Content="{Binding PlayLabel}"
+                                                        Tag="{Binding}"
+                                                        Style="{StaticResource GlassButton}"
+                                                        Padding="14,7"
+                                                        Click="EpisodePlay_Click"/>
+                                            </Grid>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <StackPanel x:Name="CastSection"
+                            Grid.Row="2"
                             Margin="0,42,0,0">
                     <TextBlock Text="演员"
                                Foreground="White"
@@ -183,7 +325,7 @@
                     </ScrollViewer>
                 </StackPanel>
 
-                <Grid Grid.Row="2"
+                <Grid Grid.Row="3"
                       Margin="0,40,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -294,7 +436,7 @@
                 </Grid>
 
                 <StackPanel x:Name="SourcesSection"
-                            Grid.Row="3"
+                            Grid.Row="4"
                             Margin="0,40,0,0">
                     <TextBlock Text="媒体源"
                                Foreground="White"
@@ -328,14 +470,6 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
-
-                <TextBlock x:Name="SeriesNotice"
-                           Grid.Row="4"
-                           Text="剧集的季 / 集浏览将在 Step 6 接入。"
-                           Foreground="#9FA5B2"
-                           FontSize="13"
-                           Margin="0,30,0,0"
-                           Visibility="Collapsed"/>
             </Grid>
         </ScrollViewer>
 
@@ -348,7 +482,7 @@
                            FontSize="18"
                            FontWeight="SemiBold"
                            HorizontalAlignment="Center"/>
-                <TextBlock Text="读取 Emby Item 详情和媒体信息"
+                <TextBlock Text="读取 Emby 详情数据"
                            Foreground="#9FA5B2"
                            FontSize="13"
                            Margin="0,8,0,0"
