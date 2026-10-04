@@ -16,6 +16,7 @@ public partial class PlayerWindow : Window
     private bool _fullscreen;
     private long _lastPositionTicks;
     private readonly double _timelineOffsetSeconds;
+    private bool _startReportSent;
     private bool _stopHandled;
 
     public PlayerWindow(EmbyClient client, PlaybackLaunch launch)
@@ -38,7 +39,7 @@ public partial class PlayerWindow : Window
         Closing += PlayerWindow_Closing;
     }
 
-    private async void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
+    private void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
     {
         try
         {
@@ -51,13 +52,6 @@ public partial class PlayerWindow : Window
             VolumeSlider.Value = 100;
             _lastPositionTicks = _launch.ResumePositionTicks;
             _timer.Start();
-
-            await SafeReportAsync(() =>
-                _client.ReportPlaybackStartAsync(
-                    _launch,
-                    _launch.ResumePositionTicks,
-                    false,
-                    VolumeSlider.Value));
         }
         catch (DllNotFoundException)
         {
@@ -87,6 +81,19 @@ public partial class PlayerWindow : Window
 
         _lastPositionTicks = (long)(position * 10_000_000d);
 
+        if (!_startReportSent && mpvPosition > 0.05)
+        {
+            _startReportSent = true;
+            PlaybackLog.Write("Player",
+                $"mpv playback started; reporting Playing at absoluteTicks={_lastPositionTicks}");
+            _ = SafeReportAsync(() =>
+                _client.ReportPlaybackStartAsync(
+                    _launch,
+                    _lastPositionTicks,
+                    PlayerHost.IsPaused,
+                    PlayerHost.Volume));
+        }
+
         PlaybackLog.Write("PlayerState",
             $"mpvPos={mpvPosition:0.###}, absolutePos={position:0.###}, offset={_timelineOffsetSeconds:0.###}, " +
             $"duration={duration:0.###}, paused={PlayerHost.IsPaused}, buffering={PlayerHost.IsBuffering}, " +
@@ -113,11 +120,14 @@ public partial class PlayerWindow : Window
             _updatingUi = false;
         }
 
-        _reportSeconds++;
-        if (_reportSeconds >= 10)
+        if (_startReportSent)
         {
-            _reportSeconds = 0;
-            _ = ReportProgressAsync();
+            _reportSeconds++;
+            if (_reportSeconds >= 10)
+            {
+                _reportSeconds = 0;
+                _ = ReportProgressAsync();
+            }
         }
     }
 
