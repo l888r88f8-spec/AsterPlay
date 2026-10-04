@@ -478,6 +478,7 @@
     
                     </Grid>
                 </controls:LiquidGlassPanel>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>
