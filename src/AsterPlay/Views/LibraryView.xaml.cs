@@ -30,7 +30,7 @@ public partial class LibraryView : UserControl
         catch (Exception ex)
         {
             MessageBox.Show(
-                ex.Message,
+                UserError.GetMessage(ex, "加载媒体库"),
                 "媒体库",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -58,7 +58,7 @@ public partial class LibraryView : UserControl
         catch (Exception ex)
         {
             MessageBox.Show(
-                ex.Message,
+                UserError.GetMessage(ex, "加载媒体库"),
                 "媒体库筛选",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
@@ -73,7 +73,7 @@ public partial class LibraryView : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "媒体库", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(UserError.GetMessage(ex, "加载媒体库"), "媒体库", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -85,7 +85,7 @@ public partial class LibraryView : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "媒体库", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(UserError.GetMessage(ex, "加载媒体库"), "媒体库", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
