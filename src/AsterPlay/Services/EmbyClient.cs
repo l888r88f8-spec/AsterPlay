@@ -192,10 +192,10 @@ public sealed class EmbyClient
             ? ""
             : WithToken($"/Items/{Esc(person.Id)}/Images/Primary?maxWidth={maxWidth}&quality=90");
 
-    public async Task<PlaybackLaunch> GetPlayableStreamAsync(EmbyItem source)
+    public async Task<PlaybackLaunch> GetPlayableStreamAsync(EmbyItem source, bool restart = false)
     {
         PlaybackLog.Write("Emby",
-            $"Resolve playback: sourceId={source.Id}, type={source.Type}, name={source.Name}");
+            $"Resolve playback: sourceId={source.Id}, type={source.Type}, name={source.Name}, restart={restart}");
 
         var playable = source;
         if (string.Equals(source.Type, "Series", StringComparison.OrdinalIgnoreCase))
@@ -212,7 +212,9 @@ public sealed class EmbyClient
         // Do not trust the home-card UserData. Resume position can change on another
         // device, so always resolve the latest item immediately before playback.
         playable = await GetItemAsync(playable.Id);
-        var resumeTicks = Math.Max(0, playable.UserData?.PlaybackPositionTicks ?? 0);
+        var resumeTicks = restart
+            ? 0
+            : Math.Max(0, playable.UserData?.PlaybackPositionTicks ?? 0);
         PlaybackLog.Write("Emby",
             $"Fresh UserData: itemId={playable.Id}, resumeTicks={resumeTicks}, runtimeTicks={playable.RunTimeTicks ?? 0}");
 
