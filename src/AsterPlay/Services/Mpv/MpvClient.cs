@@ -15,9 +15,12 @@ public sealed class MpvClient : IDisposable
             throw new InvalidOperationException("mpv_create failed.");
 
         SetOption("wid", windowHandle.ToInt64().ToString(CultureInfo.InvariantCulture));
+        SetOption("config", "no");
+        SetOption("load-scripts", "no");
+        SetOption("osc", "no");
         SetOption("vo", "gpu-next");
         SetOption("gpu-api", "d3d11");
-        SetOption("hwdec", "auto-safe");
+        SetOption("hwdec", "auto-copy");
         SetOption("cache", "yes");
         SetOption("keep-open", "yes");
 
@@ -44,6 +47,8 @@ public sealed class MpvClient : IDisposable
         {
             Command("loadfile", url, "replace");
         }
+
+        SetProperty("pause", "no");
     }
 
     public void TogglePause() => Command("cycle", "pause");
