@@ -8,19 +8,18 @@ public sealed class LogVarDanmakuSource : IDanmakuSource
 {
     private static readonly HttpClient Http = new()
     {
-        Timeout = TimeSpan.FromSeconds(15)
-    };
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
+        Timeout = TimeSpan.FromSeconds(20)
     };
 
     private readonly string _baseUrl;
+    private readonly string _accessToken;
 
-    public LogVarDanmakuSource(string baseUrl)
+    public LogVarDanmakuSource(
+        string baseUrl,
+        string accessToken)
     {
         _baseUrl = baseUrl.Trim().TrimEnd('/');
+        _accessToken = accessToken.Trim();
     }
 
     public string Name => "LogVar";
@@ -29,68 +28,252 @@ public sealed class LogVarDanmakuSource : IDanmakuSource
         DanmakuContext context,
         CancellationToken cancellationToken)
     {
-        if (!Uri.TryCreate(_baseUrl, UriKind.Absolute, out var baseUri) ||
-            (baseUri.Scheme != Uri.UriSchemeHttp &&
-             baseUri.Scheme != Uri.UriSchemeHttps))
+        ValidateBaseUrl();
+
+        var candidates = new List<ApiMatchCandidate>();
+        var fileName = DanmakuApiSupport.BuildMatchFileName(context);
+
+        if (!string.IsNullOrWhiteSpace(fileName))
         {
-            throw new InvalidOperationException(
-                "LogVar 服务器地址无效。请填写 http:// 或 https:// 开头的基础地址。");
+            try
+            {
+                var root = await PostJsonAsync(
+                    "/api/v2/match",
+                    new { fileName },
+                    cancellationToken);
+
+                DanmakuApiSupport.EnsureSuccessfulResponse(
+                    root,
+                    "LogVar match");
+
+                var filenameCandidates =
+                    DanmakuApiSupport.ParseMatchCandidates(
+                        root,
+                        context,
+                        fileName);
+
+                candidates.AddRange(filenameCandidates);
+
+                var matched =
+                    root.TryGetProperty("isMatched", out var matchedValue) &&
+                    matchedValue.ValueKind == JsonValueKind.True;
+
+                PlaybackLog.Write(
+                    "DanmakuSource",
+                    $"LogVar filename match: itemId={context.ItemId}, fileName={fileName}, " +
+                    $"matched={matched}, candidates={filenameCandidates.Count}, " +
+                    $"topScore={filenameCandidates.FirstOrDefault()?.Score:0.##}");
+
+                if (matched)
+                {
+                    var direct =
+                        DanmakuApiSupport.SelectBestCandidate(
+                            filenameCandidates,
+                            context);
+
+                    if (direct is not null)
+                    {
+                        return await FetchCommentsAsync(
+                            direct,
+                            cancellationToken);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                PlaybackLog.Write(
+                    "DanmakuSource",
+                    $"LogVar filename match failed; fallback to metadata search: " +
+                    $"itemId={context.ItemId}, error={ex.Message}");
+            }
         }
 
-        var fileName = DanmakuApiSupport.BuildMatchFileName(context);
-        var matchUrl = DanmakuApiSupport.CombineBaseAndPath(
-            _baseUrl,
-            "/api/v2/match");
+        var subject = DanmakuApiSupport.BuildSearchSubject(context);
+        var episode = DanmakuApiSupport.IsEpisode(context)
+            ? context.EpisodeNumber?.ToString(
+                System.Globalization.CultureInfo.InvariantCulture) ?? ""
+            : "movie";
 
-        using var matchRequest = new HttpRequestMessage(
-            HttpMethod.Post,
-            matchUrl)
+        if (!string.IsNullOrWhiteSpace(subject))
         {
-            Content = JsonContent.Create(new { fileName })
-        };
+            try
+            {
+                var root = await GetJsonAsync(
+                    "/api/v2/search/episodes",
+                    new Dictionary<string, string?>
+                    {
+                        ["anime"] = subject,
+                        ["episode"] = episode
+                    },
+                    cancellationToken);
 
-        using var matchResponse = await Http.SendAsync(
-            matchRequest,
-            cancellationToken);
-        matchResponse.EnsureSuccessStatusCode();
+                DanmakuApiSupport.EnsureSuccessfulResponse(
+                    root,
+                    "LogVar episode search");
 
-        var matched = await matchResponse.Content.ReadFromJsonAsync<ApiMatchResponse>(
-            JsonOptions,
-            cancellationToken);
+                var metadataCandidates =
+                    DanmakuApiSupport.ParseEpisodeSearchCandidates(
+                        root,
+                        context,
+                        subject);
 
-        var selected = matched?.Matches
-            .FirstOrDefault(item => item.EpisodeId > 0);
+                candidates.AddRange(metadataCandidates);
+
+                PlaybackLog.Write(
+                    "DanmakuSource",
+                    $"LogVar metadata search: itemId={context.ItemId}, anime={subject}, " +
+                    $"episode={episode}, candidates={metadataCandidates.Count}, " +
+                    $"topScore={metadataCandidates.FirstOrDefault()?.Score:0.##}");
+            }
+            catch (Exception ex)
+            {
+                if (candidates.Count == 0)
+                    throw;
+
+                PlaybackLog.Write(
+                    "DanmakuSource",
+                    $"LogVar metadata search failed; keeping filename candidates: " +
+                    $"itemId={context.ItemId}, error={ex.Message}");
+            }
+        }
+
+        var selected = DanmakuApiSupport.SelectBestCandidate(
+            candidates,
+            context);
 
         if (selected is null)
         {
+            var top = candidates
+                .OrderByDescending(candidate => candidate.Score)
+                .FirstOrDefault();
+
             PlaybackLog.Write(
                 "DanmakuSource",
-                $"LogVar match empty: itemId={context.ItemId}, matchName={fileName}, message={matched?.ErrorMessage}");
+                $"LogVar no confident match: itemId={context.ItemId}, fileName={fileName}, " +
+                $"subject={subject}, candidates={candidates.Count}, " +
+                $"top={top?.AnimeTitle} / {top?.EpisodeTitle}, topScore={top?.Score:0.##}");
+
             return Array.Empty<DanmakuComment>();
         }
 
-        var commentUrl = DanmakuApiSupport.CombineBaseAndPath(
-            _baseUrl,
-            $"/api/v2/comment/{selected.EpisodeId}?format=json&duration=true");
-
-        using var commentResponse = await Http.GetAsync(
-            commentUrl,
+        return await FetchCommentsAsync(
+            selected,
             cancellationToken);
-        commentResponse.EnsureSuccessStatusCode();
+    }
 
-        var payload = await commentResponse.Content.ReadFromJsonAsync<ApiCommentResponse>(
-            JsonOptions,
+    private async Task<IReadOnlyList<DanmakuComment>> FetchCommentsAsync(
+        ApiMatchCandidate selected,
+        CancellationToken cancellationToken)
+    {
+        var root = await GetJsonAsync(
+            $"/api/v2/comment/{selected.EpisodeId}",
+            new Dictionary<string, string?>
+            {
+                ["format"] = "json",
+                ["duration"] = "true"
+            },
             cancellationToken);
+
+        DanmakuApiSupport.EnsureSuccessfulResponse(
+            root,
+            "LogVar comments");
 
         var comments = DanmakuApiSupport.ParseComments(
-            payload?.Comments,
-            "logvar",
-            selected.Shift);
+            root,
+            "logvar");
 
         PlaybackLog.Write(
             "DanmakuSource",
-            $"LogVar matched: itemId={context.ItemId}, anime={selected.AnimeTitle}, episode={selected.EpisodeTitle}, episodeId={selected.EpisodeId}, comments={comments.Count}");
+            $"LogVar selected: episodeId={selected.EpisodeId}, anime={selected.AnimeTitle}, " +
+            $"episode={selected.EpisodeTitle}, score={selected.Score:0.##}, " +
+            $"reason={selected.MatchReason}, comments={comments.Count}");
 
         return comments;
+    }
+
+    private async Task<JsonElement> PostJsonAsync(
+        string path,
+        object payload,
+        CancellationToken cancellationToken)
+    {
+        var url = DanmakuApiSupport.BuildUrl(
+            _baseUrl,
+            _accessToken,
+            path);
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            url)
+        {
+            Content = JsonContent.Create(payload)
+        };
+        request.Headers.TryAddWithoutValidation(
+            "Accept",
+            "application/json");
+        request.Headers.TryAddWithoutValidation(
+            "User-Agent",
+            "AsterPlay/1.0 (Danmaku)");
+
+        using var response = await Http.SendAsync(
+            request,
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync(
+            cancellationToken);
+        using var document = await JsonDocument.ParseAsync(
+            stream,
+            cancellationToken: cancellationToken);
+
+        return document.RootElement.Clone();
+    }
+
+    private async Task<JsonElement> GetJsonAsync(
+        string path,
+        IReadOnlyDictionary<string, string?> query,
+        CancellationToken cancellationToken)
+    {
+        var url = DanmakuApiSupport.BuildUrl(
+            _baseUrl,
+            _accessToken,
+            path,
+            query);
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            url);
+        request.Headers.TryAddWithoutValidation(
+            "Accept",
+            "application/json");
+        request.Headers.TryAddWithoutValidation(
+            "User-Agent",
+            "AsterPlay/1.0 (Danmaku)");
+
+        using var response = await Http.SendAsync(
+            request,
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync(
+            cancellationToken);
+        using var document = await JsonDocument.ParseAsync(
+            stream,
+            cancellationToken: cancellationToken);
+
+        return document.RootElement.Clone();
+    }
+
+    private void ValidateBaseUrl()
+    {
+        if (!Uri.TryCreate(
+                _baseUrl,
+                UriKind.Absolute,
+                out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp &&
+             uri.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new InvalidOperationException(
+                "LogVar 服务器地址无效。请填写 http:// 或 https:// 开头的服务器地址。");
+        }
     }
 }
