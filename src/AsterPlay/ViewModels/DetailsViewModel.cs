@@ -219,9 +219,13 @@ public sealed class SeasonViewModel
     public SeasonViewModel(EmbyClient client, EmbyItem item)
     {
         Item = item;
-        Title = string.IsNullOrWhiteSpace(item.Name)
-            ? item.IndexNumber is >= 0 ? $"Season {item.IndexNumber}" : "Season"
-            : item.Name;
+        Title = item.IndexNumber switch
+        {
+            0 => "特别篇",
+            > 0 => $"第 {item.IndexNumber.Value} 季",
+            _ when !string.IsNullOrWhiteSpace(item.Name) => item.Name,
+            _ => "季度"
+        };
         PosterUrl = client.BuildPrimaryUrl(item, 400);
     }
 
