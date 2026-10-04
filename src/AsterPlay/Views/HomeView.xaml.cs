@@ -102,9 +102,27 @@ public partial class HomeView : UserControl
 
     private async void Play_Click(object sender, RoutedEventArgs e)
     {
+        if (_viewModel.CurrentHero is not null)
+            await PlayItemAsync(_viewModel.CurrentHero);
+    }
+
+    private async void ResumeCard_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: MediaCardViewModel item })
+            await PlayItemAsync(item);
+    }
+
+    private void LatestCard_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: MediaCardViewModel item })
+            ShowDetails(item);
+    }
+
+    private async Task PlayItemAsync(MediaCardViewModel item)
+    {
         try
         {
-            var launch = await _viewModel.PlayCurrentAsync();
+            var launch = await _viewModel.PlayItemAsync(item);
             new PlayerWindow(_client, launch).Show();
         }
         catch (Exception ex)
@@ -128,8 +146,11 @@ public partial class HomeView : UserControl
     private void Details_Click(object sender, RoutedEventArgs e)
     {
         if (_viewModel.CurrentHero is not null)
-            new DetailsWindow(_viewModel.CurrentHero).ShowDialog();
+            ShowDetails(_viewModel.CurrentHero);
     }
+
+    private static void ShowDetails(MediaCardViewModel item) =>
+        new DetailsWindow(item).ShowDialog();
 
     private void Logout_Click(object sender, RoutedEventArgs e) =>
         LogoutRequested?.Invoke(this, EventArgs.Empty);
