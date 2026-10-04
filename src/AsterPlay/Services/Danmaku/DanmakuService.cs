@@ -9,6 +9,17 @@ public sealed class DanmakuService
         DanmakuSourceSettings sourceSettings,
         CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(sourceSettings.LogVarBaseUrl))
+        {
+            PlaybackLog.Write(
+                "Danmaku",
+                $"LogVar not configured: itemId={context.ItemId}");
+
+            return new DanmakuDocument(
+                "LogVar（未配置）",
+                Array.Empty<DanmakuComment>());
+        }
+
         var source = new LogVarDanmakuSource(
             sourceSettings.LogVarBaseUrl,
             sourceSettings.LogVarAccessToken);
