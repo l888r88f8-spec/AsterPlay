@@ -108,7 +108,6 @@ public sealed class PlaybackLaunch
     public string ItemId { get; set; } = "";
     public string MediaSourceId { get; set; } = "";
     public string PlaySessionId { get; set; } = "";
-    public string ReportPlaySessionId { get; set; } = "";
     public long ResumePositionTicks { get; set; }
     public long? RunTimeTicks { get; set; }
     public bool UsesServerStartOffset { get; set; }
