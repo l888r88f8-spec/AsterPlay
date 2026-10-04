@@ -21,5 +21,6 @@
     <Compile Include="..\AsterPlay\Services\ServerProfileStore.cs" Link="Services\ServerProfileStore.cs" />
     <Compile Include="..\AsterPlay\Services\AppSettingsStore.cs" Link="Services\AppSettingsStore.cs" />
     <Compile Include="..\AsterPlay\Services\Playback\PlaybackProfile.cs" Link="Services\Playback\PlaybackProfile.cs" />
+    <Compile Include="..\AsterPlay\ViewModels\LibraryViewModel.cs" Link="ViewModels\LibraryViewModel.cs" />
   </ItemGroup>
 </Project>
