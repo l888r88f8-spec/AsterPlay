@@ -122,9 +122,20 @@ public sealed class EmbyClient
     {
         var path =
             $"/Users/{Esc(UserId)}/Items/Resume?Recursive=true&MediaTypes=Video&Limit={limit}" +
+            "&SortBy=DatePlayed&SortOrder=Descending" +
             "&Fields=Overview,Genres,ProductionYear,CommunityRating,RunTimeTicks,UserData" +
             "&EnableImageTypes=Primary,Backdrop,Thumb&ImageTypeLimit=1";
-        return (await GetAsync<EmbyItemsResponse>(path)).Items;
+
+        var items = (await GetAsync<EmbyItemsResponse>(path)).Items;
+
+        // DatePlayed is an official Items sort field. Keep the server order as a
+        // stable fallback when LastPlayedDate is missing or identical.
+        return items
+            .Select((item, index) => new { Item = item, Index = index })
+            .OrderByDescending(x => x.Item.UserData?.LastPlayedDate ?? DateTimeOffset.MinValue)
+            .ThenBy(x => x.Index)
+            .Select(x => x.Item)
+            .ToList();
     }
 
     public Task<EmbyItem> GetItemAsync(string itemId) =>
