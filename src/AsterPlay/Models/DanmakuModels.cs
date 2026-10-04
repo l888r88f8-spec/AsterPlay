@@ -12,7 +12,8 @@ public sealed record DanmakuComment(
     double TimeSeconds,
     string Text,
     DanmakuMode Mode = DanmakuMode.Scroll,
-    uint ColorArgb = 0xFFFFFFFF);
+    uint ColorArgb = 0xFFFFFFFF,
+    string Sender = "");
 
 public sealed record DanmakuDocument(
     string SourceName,
@@ -45,4 +46,9 @@ public sealed record DanmakuSettings
     public double Opacity { get; init; } = 0.95;
     public double Speed { get; init; } = 1;
     public double ScreenHeightRatio { get; init; } = 0.72;
+    public double DensityRatio { get; init; } = 1;
+    public int MaxActiveComments { get; init; } = 80;
+    public bool AvoidOverlap { get; init; } = true;
+    public List<string> BlockedWords { get; init; } = [];
+    public List<string> BlockedUsers { get; init; } = [];
 }
