@@ -24,6 +24,42 @@ public sealed class LogVarDanmakuSource : IDanmakuSource
 
     public string Name => "LogVar";
 
+    public async Task TestConnectionAsync(
+        CancellationToken cancellationToken = default)
+    {
+        ValidateBaseUrl();
+
+        try
+        {
+            var root = await PostJsonAsync(
+                "/api/v2/match",
+                new
+                {
+                    fileName =
+                        "__AsterPlay_LogVar_Connection_Test__.mkv"
+                },
+                cancellationToken);
+
+            DanmakuApiSupport.EnsureSuccessfulResponse(
+                root,
+                "LogVar connection test");
+
+            PlaybackLog.Write(
+                "DanmakuSource",
+                $"LogVar connection test succeeded: baseUrl={_baseUrl}, tokenConfigured={!string.IsNullOrWhiteSpace(_accessToken)}");
+        }
+        catch (HttpRequestException ex)
+        {
+            var status = ex.StatusCode is null
+                ? "网络错误"
+                : $"HTTP {(int)ex.StatusCode.Value}";
+
+            throw new InvalidOperationException(
+                $"LogVar 连接失败（{status}）。请检查服务器地址和 Access Token。",
+                ex);
+        }
+    }
+
     public async Task<IReadOnlyList<DanmakuComment>> LoadAsync(
         DanmakuContext context,
         CancellationToken cancellationToken)
