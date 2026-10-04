@@ -385,11 +385,20 @@ public sealed class EmbyClient
         {
             case PlaybackDecisionKind.DirectPlay:
                 usesServerStartOffset = false;
+
+                var directPlayContainer = media.Container.Trim().TrimStart('.');
+                if (string.IsNullOrWhiteSpace(directPlayContainer))
+                    directPlayContainer = "mp4";
+
                 url = WithToken(
-                    $"/Videos/{Esc(playable.Id)}/stream?static=true" +
+                    $"/Videos/{Esc(playable.Id)}/stream.{Esc(directPlayContainer)}?static=true" +
                     $"&MediaSourceId={Esc(media.Id)}" +
-                    $"&PlaySessionId={Esc(playSessionId)}");
-                PlaybackLog.Write("PlaybackDecision", "URL strategy: static DirectPlay stream");
+                    $"&PlaySessionId={Esc(playSessionId)}" +
+                    $"&DeviceId={Esc(DeviceId)}");
+
+                PlaybackLog.Write(
+                    "PlaybackDecision",
+                    $"URL strategy: static DirectPlay stream with explicit container .{directPlayContainer}");
                 break;
 
             case PlaybackDecisionKind.DirectStream:
