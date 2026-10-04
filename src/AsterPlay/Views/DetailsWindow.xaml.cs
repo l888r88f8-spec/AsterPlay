@@ -65,7 +65,7 @@ public partial class DetailsWindow : Window
         catch (Exception ex)
         {
             MessageBox.Show(
-                ex.Message,
+                UserError.GetMessage(ex, "加载详情"),
                 "Details",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -202,7 +202,7 @@ public partial class DetailsWindow : Window
         {
             SeriesStatusBlock.Text = $"{season.Title} · 加载失败";
             MessageBox.Show(
-                ex.Message,
+                UserError.GetMessage(ex, "加载剧集"),
                 "Episodes",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -236,7 +236,7 @@ public partial class DetailsWindow : Window
         catch (Exception ex)
         {
             MessageBox.Show(
-                ex.Message,
+                UserError.GetMessage(ex, "播放"),
                 "Playback",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -265,7 +265,7 @@ public partial class DetailsWindow : Window
         catch (Exception ex)
         {
             MessageBox.Show(
-                ex.Message,
+                UserError.GetMessage(ex, "播放"),
                 "Playback",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -291,7 +291,7 @@ public partial class DetailsWindow : Window
         catch (Exception ex)
         {
             MessageBox.Show(
-                ex.Message,
+                UserError.GetMessage(ex, "更新收藏"),
                 "Favorite",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
