@@ -17,10 +17,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET 8 SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
+      - name: Bootstrap pinned portable .NET 8 SDK
+        shell: cmd
+        run: bootstrap-dotnet.cmd
 
       - name: Build self-contained Windows x64 package
         shell: pwsh
