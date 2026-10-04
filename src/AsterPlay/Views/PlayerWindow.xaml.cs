@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows.Input;
 using System.Windows.Threading;
 using AsterPlay.Models;
@@ -15,6 +16,7 @@ public partial class PlayerWindow : Window
     private bool _fullscreen;
     private long _lastPositionTicks;
     private readonly double _timelineOffsetSeconds;
+    private bool _stopHandled;
 
     public PlayerWindow(EmbyClient client, PlaybackLaunch launch)
     {
@@ -33,7 +35,7 @@ public partial class PlayerWindow : Window
         _timer.Tick += PlayerTimer_Tick;
 
         Loaded += PlayerWindow_Loaded;
-        Closed += PlayerWindow_Closed;
+        Closing += PlayerWindow_Closing;
     }
 
     private async void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
@@ -143,16 +145,43 @@ public partial class PlayerWindow : Window
         }
     }
 
-    private void PlayerWindow_Closed(object? sender, EventArgs e)
+    private void PlayerWindow_Closing(object? sender, CancelEventArgs e)
     {
-        PlaybackLog.Write("Player", $"Window closed at ticks={_lastPositionTicks}");
+        if (_stopHandled)
+            return;
+
+        _stopHandled = true;
         _timer.Stop();
-        _ = SafeReportAsync(() =>
+
+        // Snapshot state BEFORE stopping mpv. qEmby follows the same order:
+        // final progress -> stopped report, while the player itself is stopped immediately.
+        var finalTicks = _lastPositionTicks;
+        var finalVolume = PlayerHost.Volume;
+        PlaybackLog.Write("Player", $"Closing playback window: finalTicks={finalTicks}");
+
+        _ = FinalizePlaybackAsync(finalTicks, finalVolume);
+
+        // Do not wait for the network before silencing playback.
+        PlayerHost.ShutdownPlayback();
+        PlaybackLog.Write("Player", "mpv stopped and disposed on window close");
+    }
+
+    private async Task FinalizePlaybackAsync(long finalTicks, double finalVolume)
+    {
+        await SafeReportAsync(() =>
+            _client.ReportPlaybackProgressAsync(
+                _launch,
+                finalTicks,
+                true,
+                finalVolume,
+                "Pause"));
+
+        await SafeReportAsync(() =>
             _client.ReportPlaybackStoppedAsync(
                 _launch,
-                _lastPositionTicks,
-                PlayerHost.IsPaused,
-                PlayerHost.Volume));
+                finalTicks,
+                true,
+                finalVolume));
     }
 
     private void Pause_Click(object sender, RoutedEventArgs e)
