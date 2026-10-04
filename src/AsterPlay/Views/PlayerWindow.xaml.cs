@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Windows.Input;
 using System.Windows.Threading;
 using AsterPlay.Models;
@@ -12,6 +13,7 @@ public partial class PlayerWindow : Window
     private readonly PlaybackLaunch _launch;
     private readonly DispatcherTimer _timer;
     private readonly DispatcherTimer _controlsTimer;
+    private readonly DispatcherTimer _mousePollTimer;
     private readonly double _timelineOffsetSeconds;
 
     private PlayerControlsWindow? _controlsWindow;
@@ -24,6 +26,12 @@ public partial class PlayerWindow : Window
     private double _lastAudibleVolume = 100;
     private WindowState _windowedState = WindowState.Normal;
     private WindowStyle _windowedStyle = WindowStyle.SingleBorderWindow;
+    private int _lastMouseX = int.MinValue;
+    private int _lastMouseY = int.MinValue;
+    private bool _leftButtonWasDown;
+    private long _lastVideoClickTick;
+    private int _lastVideoClickX;
+    private int _lastVideoClickY;
 
     public PlayerWindow(EmbyClient client, PlaybackLaunch launch)
     {
@@ -43,19 +51,11 @@ public partial class PlayerWindow : Window
         _controlsTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _controlsTimer.Tick += ControlsTimer_Tick;
 
-        PlayerHost.NativeMouseActivity += () =>
-            Dispatcher.BeginInvoke(
-                DispatcherPriority.Input,
-                new Action(ShowControls));
-
-        PlayerHost.NativeDoubleClick += () =>
-            Dispatcher.BeginInvoke(
-                DispatcherPriority.Input,
-                new Action(() =>
-                {
-                    PlaybackLog.Write("Player", "Video double-click -> toggle fullscreen");
-                    ToggleFullscreen();
-                }));
+        // Poll cursor/button state instead of depending on HwndHost mouse events.
+        // mpv/gpu-next may create or consume input in native child windows below
+        // the WPF HwndHost, so polling is independent of the HWND hierarchy.
+        _mousePollTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(20) };
+        _mousePollTimer.Tick += MousePollTimer_Tick;
 
         Loaded += PlayerWindow_Loaded;
         Closing += PlayerWindow_Closing;
@@ -84,6 +84,7 @@ public partial class PlayerWindow : Window
 
             _timer.Start();
             _controlsTimer.Start();
+            _mousePollTimer.Start();
         }
         catch (DllNotFoundException)
         {
@@ -186,6 +187,92 @@ public partial class PlayerWindow : Window
 
         if (DateTime.UtcNow - _lastControlsActivityUtc >= TimeSpan.FromSeconds(3))
             HideControls();
+    }
+
+    private void MousePollTimer_Tick(object? sender, EventArgs e)
+    {
+        if (_stopHandled || !IsActive || !GetCursorPos(out var point))
+            return;
+
+        var overVideo = IsPointOverVideo(point.X, point.Y);
+        var moved = point.X != _lastMouseX || point.Y != _lastMouseY;
+
+        if (moved)
+        {
+            _lastMouseX = point.X;
+            _lastMouseY = point.Y;
+
+            if (overVideo)
+                ShowControls();
+        }
+
+        var leftDown = (GetAsyncKeyState(0x01) & 0x8000) != 0;
+        if (leftDown &&
+            !_leftButtonWasDown &&
+            overVideo &&
+            !IsPointOverControls(point.X, point.Y))
+        {
+            RegisterVideoClick(point.X, point.Y);
+        }
+
+        _leftButtonWasDown = leftDown;
+    }
+
+    private void RegisterVideoClick(int x, int y)
+    {
+        var now = Environment.TickCount64;
+        var maxDx = Math.Max(1, GetSystemMetrics(36));
+        var maxDy = Math.Max(1, GetSystemMetrics(37));
+
+        if (_lastVideoClickTick > 0 &&
+            now - _lastVideoClickTick <= GetDoubleClickTime() &&
+            Math.Abs(x - _lastVideoClickX) <= maxDx &&
+            Math.Abs(y - _lastVideoClickY) <= maxDy)
+        {
+            _lastVideoClickTick = 0;
+            PlaybackLog.Write("PlayerInput", "Polled video double-click -> toggle fullscreen");
+            ToggleFullscreen();
+            return;
+        }
+
+        _lastVideoClickTick = now;
+        _lastVideoClickX = x;
+        _lastVideoClickY = y;
+    }
+
+    private bool IsPointOverVideo(int screenX, int screenY)
+    {
+        try
+        {
+            var topLeft = PlayerHost.PointToScreen(new Point(0, 0));
+            var bottomRight = PlayerHost.PointToScreen(
+                new Point(PlayerHost.ActualWidth, PlayerHost.ActualHeight));
+
+            return screenX >= topLeft.X &&
+                   screenX < bottomRight.X &&
+                   screenY >= topLeft.Y &&
+                   screenY < bottomRight.Y;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    private bool IsPointOverControls(int screenX, int screenY)
+    {
+        if (_controlsWindow is null || !_controlsWindow.IsVisible)
+            return false;
+
+        var point = new Point(screenX, screenY);
+        var source = PresentationSource.FromVisual(this);
+        if (source?.CompositionTarget is not null)
+            point = source.CompositionTarget.TransformFromDevice.Transform(point);
+
+        return point.X >= _controlsWindow.Left &&
+               point.X < _controlsWindow.Left + _controlsWindow.ActualWidth &&
+               point.Y >= _controlsWindow.Top &&
+               point.Y < _controlsWindow.Top + _controlsWindow.ActualHeight;
     }
 
     private void ShowControls()
@@ -429,6 +516,7 @@ public partial class PlayerWindow : Window
         _stopHandled = true;
         _timer.Stop();
         _controlsTimer.Stop();
+        _mousePollTimer.Stop();
 
         var finalTicks = _lastPositionTicks;
         var finalVolume = PlayerHost.Volume;
@@ -473,4 +561,24 @@ public partial class PlayerWindow : Window
                 true,
                 finalVolume));
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint
+    {
+        public int X;
+        public int Y;
+    }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetCursorPos(out NativePoint point);
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int virtualKey);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDoubleClickTime();
+
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetrics(int index);
 }
