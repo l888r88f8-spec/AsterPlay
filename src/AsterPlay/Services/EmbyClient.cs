@@ -6,9 +6,18 @@ using AsterPlay.Services.Playback;
 
 namespace AsterPlay.Services;
 
+public sealed class PlaybackStateChangedEventArgs : EventArgs
+{
+    public required string ItemId { get; init; }
+    public long PositionTicks { get; init; }
+    public long? RunTimeTicks { get; init; }
+    public string EventName { get; init; } = "";
+    public bool IsPaused { get; init; }
+}
+
 public sealed class EmbyClient
 {
-    public event EventHandler? PlaybackStateChanged;
+    public event EventHandler<PlaybackStateChangedEventArgs>? PlaybackStateChanged;
     private const string DetailListFields =
         "Genres,MediaStreams,Overview,ParentId,Path,People,ProviderIds," +
         "PrimaryImageAspectRatio,Studios,Taglines";
@@ -594,7 +603,16 @@ public sealed class EmbyClient
 
         try
         {
-            PlaybackStateChanged?.Invoke(this, EventArgs.Empty);
+            PlaybackStateChanged?.Invoke(
+                this,
+                new PlaybackStateChangedEventArgs
+                {
+                    ItemId = launch.ItemId,
+                    PositionTicks = Math.Max(0, positionTicks),
+                    RunTimeTicks = launch.RunTimeTicks,
+                    EventName = eventName ?? Path.GetFileName(path),
+                    IsPaused = isPaused
+                });
         }
         catch (Exception ex)
         {
