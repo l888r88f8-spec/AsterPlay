@@ -12,6 +12,7 @@ public sealed class DanmakuOverlay : FrameworkElement
     private const double BottomPadding = 26;
     private const double LaneGap = 6;
     private const double HorizontalGap = 24;
+    private const int MaxDocumentComments = 200_000;
 
     private static readonly Typeface Typeface = new(
         new FontFamily("Segoe UI"),
@@ -39,6 +40,8 @@ public sealed class DanmakuOverlay : FrameworkElement
     private double _layoutWidth = -1;
     private double _layoutHeight = -1;
     private double _layoutPixelsPerDip = -1;
+    private int _inputCount;
+    private int _documentDroppedCount;
     private int _activeCount;
     private int _layoutDroppedCount;
     private long _renderCount;
@@ -62,13 +65,36 @@ public sealed class DanmakuOverlay : FrameworkElement
     public void SetDocument(DanmakuDocument document)
     {
         _sourceName = document.SourceName;
-        _sourceComments = document.Comments
+
+        var validComments = document.Comments
             .Where(comment =>
                 double.IsFinite(comment.TimeSeconds) &&
                 comment.TimeSeconds >= 0 &&
                 !string.IsNullOrWhiteSpace(comment.Text))
             .OrderBy(comment => comment.TimeSeconds)
             .ToArray();
+
+        _inputCount = validComments.Length;
+
+        if (validComments.Length > MaxDocumentComments)
+        {
+            _sourceComments = SampleEvenly(
+                validComments,
+                MaxDocumentComments);
+            _documentDroppedCount =
+                validComments.Length -
+                _sourceComments.Count;
+
+            PlaybackLog.Write(
+                "Danmaku",
+                $"Document guard applied: source={document.SourceName}, input={validComments.Length}, " +
+                $"retained={_sourceComments.Count}, dropped={_documentDroppedCount}");
+        }
+        else
+        {
+            _sourceComments = validComments;
+            _documentDroppedCount = 0;
+        }
 
         RebuildVisibleComments();
     }
@@ -179,7 +205,9 @@ public sealed class DanmakuOverlay : FrameworkElement
         var dpi = VisualTreeHelper.GetDpi(this);
 
         return new DanmakuMetrics(
+            _inputCount,
             _sourceComments.Count,
+            _documentDroppedCount,
             _comments.Count,
             _activeCount,
             _layoutDroppedCount,
@@ -853,6 +881,31 @@ public sealed class DanmakuOverlay : FrameworkElement
             6);
     }
 
+    private static IReadOnlyList<DanmakuComment> SampleEvenly(
+        IReadOnlyList<DanmakuComment> comments,
+        int maxCount)
+    {
+        if (comments.Count <= maxCount)
+            return comments.ToArray();
+
+        var sampled = new DanmakuComment[maxCount];
+
+        for (var index = 0;
+             index < maxCount;
+             index++)
+        {
+            var sourceIndex =
+                (int)(((long)index *
+                       comments.Count) /
+                      maxCount);
+
+            sampled[index] =
+                comments[sourceIndex];
+        }
+
+        return sampled;
+    }
+
     private static bool IsBlockedByWord(
         string text,
         IReadOnlyCollection<string> blockedWords)
@@ -939,7 +992,9 @@ public sealed class DanmakuOverlay : FrameworkElement
 }
 
 public readonly record struct DanmakuMetrics(
+    int InputCount,
     int LoadedCount,
+    int DocumentDroppedCount,
     int VisibleCount,
     int ActiveCount,
     int LayoutDroppedCount,
