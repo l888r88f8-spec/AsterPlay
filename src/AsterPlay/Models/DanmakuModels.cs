@@ -21,7 +21,10 @@ public sealed record DanmakuDocument(
 public sealed record DanmakuContext(
     string ItemId,
     string Title,
-    double DurationSeconds);
+    double DurationSeconds,
+    string SeriesName = "",
+    int? SeasonNumber = null,
+    int? EpisodeNumber = null);
 
 public sealed record DanmakuSettings
 {
