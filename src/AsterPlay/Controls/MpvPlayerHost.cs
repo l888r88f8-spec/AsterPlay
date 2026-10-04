@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
+using AsterPlay.Services;
 using AsterPlay.Services.Mpv;
 
 namespace AsterPlay.Controls;
