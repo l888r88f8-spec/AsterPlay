@@ -78,6 +78,9 @@ public sealed class MpvClient : IDisposable
 
     public void TogglePause() => Command("cycle", "pause");
 
+    public void SetPaused(bool paused) =>
+        SetProperty("pause", paused ? "yes" : "no");
+
     public void Seek(double seconds) =>
         Command("seek", seconds.ToString("0.###", CultureInfo.InvariantCulture), "relative");
 

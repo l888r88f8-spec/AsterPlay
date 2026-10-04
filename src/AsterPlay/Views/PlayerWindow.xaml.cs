@@ -442,6 +442,16 @@ public partial class PlayerWindow : Window
             return;
 
         PlaybackLog.Write("Player", $"Seek {(seconds >= 0 ? "+" : "")}{seconds:0.###}");
+
+        if (_launch.UsesServerStartOffset)
+        {
+            var currentAbsolute =
+                _timelineOffsetSeconds + Math.Max(0, _mpv.PositionSeconds);
+
+            SeekAbsoluteFromTimeline(currentAbsolute + seconds);
+            return;
+        }
+
         _mpv.Seek(seconds);
         SyncDanmakuPoc();
         ShowControls();
@@ -527,8 +537,7 @@ public partial class PlayerWindow : Window
             0,
             PositionSlider.Maximum > 0 ? PositionSlider.Maximum : requestedAbsolute);
 
-        if (_launch.UsesServerStartOffset &&
-            requestedAbsolute + 0.25 < _timelineOffsetSeconds)
+        if (_launch.UsesServerStartOffset)
         {
             ReloadServerOffsetStream(requestedAbsolute);
             return;
@@ -555,6 +564,10 @@ public partial class PlayerWindow : Window
             Math.Round(requestedAbsolute * 10_000_000d));
 
         var oldOffset = _timelineOffsetSeconds;
+        var wasPaused = _mpv.IsPaused;
+        var volume = _mpv.Volume;
+        var speed = _mpv.Speed;
+
         var url = ReplaceQueryParameter(
             _launch.Url,
             "StartTimeTicks",
@@ -562,13 +575,20 @@ public partial class PlayerWindow : Window
 
         PlaybackLog.Write(
             "PlayerSeek",
-            $"Server-offset seek requires stream reload: absolute={requestedAbsolute:0.###}, oldOffset={oldOffset:0.###}, newOffset={requestedAbsolute:0.###}");
+            $"Server-offset seek -> reload stream: absolute={requestedAbsolute:0.###}, oldOffset={oldOffset:0.###}, newOffset={requestedAbsolute:0.###}, paused={wasPaused}");
 
         _timelineOffsetSeconds = requestedAbsolute;
         _lastPositionTicks = targetTicks;
 
-        _mpv.Load(url);
+        StatusBlock.Text = $"跳转至 {FormatTime(requestedAbsolute)}…";
         CurrentTimeBlock.Text = FormatTime(requestedAbsolute);
+        PositionSlider.Value = requestedAbsolute;
+
+        _mpv.Load(url);
+        _mpv.SetVolume(volume);
+        _mpv.SetSpeed(speed);
+        _mpv.SetPaused(wasPaused);
+
         SyncDanmakuPoc();
         ShowControls();
     }
