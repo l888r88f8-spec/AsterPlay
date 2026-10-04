@@ -2,6 +2,7 @@
     x:Class="AsterPlay.WinUI.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:lg="using:LiquidGlassWinUI"
     Title="AsterPlay">
     <Grid Background="#080A0F">
         <Grid.RowDefinitions>
@@ -62,8 +63,21 @@
                     VerticalAlignment="Bottom"
                     Margin="0,0,0,24"
                     Padding="8"
-                    CornerRadius="28"
-                    Background="#D8202733">
+                    CornerRadius="28">
+                <Border.Background>
+                    <lg:LiquidGlassBrush BlurAmount="1.5"
+                                         BloomAmount="0.18"
+                                         RefThickness="28"
+                                         RefFactor="1.8"
+                                         RefDispersion="3.5"
+                                         GlareFactor="58"
+                                         TintA="0.08"
+                                         TintR="190"
+                                         TintG="220"
+                                         TintB="255"
+                                         ShapeRadius="0.92"
+                                         ShapeRoundness="3.8"/>
+                </Border.Background>
                 <StackPanel Orientation="Horizontal" Spacing="4">
                     <Button Content="首页" Click="Home_Click"/>
                     <Button Content="媒体库" Click="Library_Click"/>
