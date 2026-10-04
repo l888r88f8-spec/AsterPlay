@@ -1,0 +1,115 @@
+<Window x:Class="AsterPlay.Views.PlayerControlsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Height="150" MinWidth="760"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        MouseMove="ControlsWindow_MouseMove">
+    <Border Background="#01000000">
+        <Grid>
+            <Border VerticalAlignment="Bottom" Height="150">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#00000000" Offset="0"/>
+                        <GradientStop Color="#B8000000" Offset="0.45"/>
+                        <GradientStop Color="#F20A0A0E" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+
+            <Grid VerticalAlignment="Bottom" Margin="20,18,20,14">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock x:Name="CurrentTimeBlock" Text="00:00"
+                               Foreground="#D9DCE3" FontSize="12"
+                               VerticalAlignment="Center" Margin="0,0,12,0"/>
+
+                    <Slider x:Name="PositionSlider" Grid.Column="1"
+                            Minimum="0" Maximum="1"
+                            VerticalAlignment="Center"
+                            PreviewMouseLeftButtonUp="PositionSlider_PreviewMouseLeftButtonUp"/>
+
+                    <TextBlock x:Name="DurationBlock" Grid.Column="2" Text="00:00"
+                               Foreground="#D9DCE3" FontSize="12"
+                               VerticalAlignment="Center" Margin="12,0,0,0"/>
+                </Grid>
+
+                <Grid Grid.Row="1" Margin="0,9,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                        <TextBlock x:Name="TitleBlock"
+                                   Foreground="White"
+                                   FontWeight="SemiBold"
+                                   FontSize="15"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <TextBlock x:Name="StatusBlock"
+                                   Foreground="#A6ACB7"
+                                   FontSize="12"
+                                   Margin="0,3,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                        <Button Content="−10s" Style="{StaticResource GlassButton}"
+                                Padding="11,7" Margin="0,0,7,0" Click="Back_Click"/>
+                        <Button x:Name="PauseButton" Content="暂停"
+                                Style="{StaticResource GlassButton}"
+                                Padding="13,7" Margin="0,0,7,0" Click="Pause_Click"/>
+                        <Button Content="+10s" Style="{StaticResource GlassButton}"
+                                Padding="11,7" Margin="0,0,7,0" Click="Forward_Click"/>
+                        <Button x:Name="MuteButton" Content="静音"
+                                Style="{StaticResource GlassButton}"
+                                Padding="11,7" Margin="0,0,7,0" Click="Mute_Click"/>
+                        <Button Content="音轨" Style="{StaticResource GlassButton}"
+                                Padding="11,7" Margin="0,0,7,0" Click="Audio_Click"/>
+                        <Button Content="字幕" Style="{StaticResource GlassButton}"
+                                Padding="11,7" Margin="0,0,7,0" Click="Subtitle_Click"/>
+                        <ComboBox x:Name="SpeedComboBox"
+                                  Width="70" Height="32"
+                                  Margin="0,0,7,0"
+                                  VerticalContentAlignment="Center"
+                                  SelectionChanged="SpeedComboBox_SelectionChanged"/>
+                        <Button Content="全屏" Style="{StaticResource GlassButton}"
+                                Padding="11,7" Click="Fullscreen_Click"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Margin="16,0,0,0">
+                        <TextBlock Text="音量"
+                                   Foreground="#C9CDD5"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0"/>
+                        <Slider x:Name="VolumeSlider"
+                                Width="105"
+                                Minimum="0" Maximum="100" Value="100"
+                                ValueChanged="VolumeSlider_ValueChanged"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
