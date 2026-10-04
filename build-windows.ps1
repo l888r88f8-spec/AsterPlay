@@ -49,16 +49,56 @@ New-Item -ItemType Directory -Force -Path $Publish | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed." }
 
 $mpv = Join-Path $MpvDir "libmpv-2.dll"
-if (-not (Test-Path $mpv)) {
+$usingBundledMpv = -not $env:ASTERPLAY_MPV_DIR
+
+if ($usingBundledMpv) {
     $BootstrapMpv = Join-Path $Root "bootstrap-mpv.ps1"
-    Write-Host "libmpv is missing; preparing it automatically..."
+    Write-Host "Verifying pinned libmpv runtime..."
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $BootstrapMpv
     if ($LASTEXITCODE -ne 0) { throw "libmpv bootstrap failed." }
 }
 
-if (-not (Test-Path $mpv)) { throw "libmpv-2.dll is still missing after bootstrap." }
+if (-not (Test-Path $mpv)) {
+    throw "libmpv-2.dll is missing. Provide ASTERPLAY_MPV_DIR or use the bundled bootstrap."
+}
+
 Copy-Item (Join-Path $MpvDir "*.dll") $Publish -Force
 
+$runtimeSource = Join-Path $MpvDir "RUNTIME-SOURCE.txt"
+if (Test-Path $runtimeSource) {
+    Copy-Item $runtimeSource (Join-Path $Publish "RUNTIME-SOURCE.txt") -Force
+}
+
+$requiredFiles = @(
+    "AsterPlay.exe",
+    "libmpv-2.dll",
+    "coreclr.dll",
+    "hostfxr.dll",
+    "hostpolicy.dll"
+)
+
+$missingFiles = @(
+    $requiredFiles |
+        Where-Object { -not (Test-Path (Join-Path $Publish $_)) }
+)
+
+if ($missingFiles.Count -gt 0) {
+    throw "Publish self-check failed. Missing: $($missingFiles -join ', ')"
+}
+
+@(
+    "AsterPlay Windows x64",
+    "Configuration: Release",
+    "RID: win-x64",
+    "SelfContained: true",
+    "PublishSingleFile: false",
+    "SDK: $selectedSdk",
+    "Built: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+) | Set-Content -Encoding UTF8 (Join-Path $Publish "BUILD-INFO.txt")
+
+Write-Host ""
+Write-Host "Publish self-check passed:"
+$requiredFiles | ForEach-Object { Write-Host "  OK: $_" }
 Write-Host ""
 Write-Host "Build complete:"
 Write-Host "  Folder: $Publish"
