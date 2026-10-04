@@ -433,6 +433,7 @@ internal static class DanmakuApiSupport
             var timeSeconds = -1d;
             var mode = DanmakuMode.Scroll;
             var colorArgb = 0xFFFFFFFFu;
+            var sender = "";
 
             var p = StringField(value, "p");
             if (!string.IsNullOrWhiteSpace(p))
@@ -462,6 +463,9 @@ internal static class DanmakuApiSupport
 
                 if (parts.Length > 2)
                     colorArgb = ParseColor(parts[2]);
+
+                if (parts.Length > 3)
+                    sender = parts[3].Trim();
             }
             else
             {
@@ -485,6 +489,13 @@ internal static class DanmakuApiSupport
 
                 colorArgb = ParseColor(
                     StringField(value, "color"));
+
+                sender = StringField(
+                    value,
+                    "sender",
+                    "user",
+                    "userId",
+                    "uid");
             }
 
             if (!double.IsFinite(timeSeconds) ||
@@ -504,7 +515,8 @@ internal static class DanmakuApiSupport
                 timeSeconds,
                 text.Trim(),
                 mode,
-                colorArgb));
+                colorArgb,
+                sender));
 
             index++;
         }
