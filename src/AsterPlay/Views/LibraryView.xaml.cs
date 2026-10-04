@@ -94,4 +94,13 @@ public partial class LibraryView : UserControl
         if (sender is Button { Tag: LibraryItemViewModel item })
             new DetailsWindow(_client, item.Item).ShowDialog();
     }
+
+    private void ItemContextDetails_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Parent: ContextMenu menu } &&
+            menu.PlacementTarget is Button { Tag: LibraryItemViewModel item })
+        {
+            new DetailsWindow(_client, item.Item).ShowDialog();
+        }
+    }
 }
