@@ -2,7 +2,6 @@
     x:Class="AsterPlay.WinUI.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:lg="using:LiquidGlassWinUI"
     Title="AsterPlay">
     <Grid>
         <Grid.Background>
@@ -20,20 +19,7 @@
         <Grid x:Name="AppTitleBar" Grid.Row="0" Background="Transparent">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10" Margin="18,0,0,0">
                 <Border Width="26" Height="26" CornerRadius="9">
-                    <Border.Background>
-                        <lg:LiquidGlassBrush BlurAmount="1.2"
-                                             BloomAmount="0.35"
-                                             TintA="0.18"
-                                             TintR="95"
-                                             TintG="170"
-                                             TintB="255"
-                                             RefThickness="18"
-                                             RefFactor="1.7"
-                                             RefDispersion="4"
-                                             GlareFactor="72"
-                                             ShapeRadius="0.92"
-                                             ShapeRoundness="3.8"/>
-                    </Border.Background>
+                    <Border.Background><SolidColorBrush Color="#6A203044"/></Border.Background>
                     <TextBlock Text="A" HorizontalAlignment="Center" VerticalAlignment="Center"
                                Foreground="White" FontWeight="SemiBold"/>
                 </Border>
@@ -60,27 +46,7 @@
                 </StackPanel>
 
                 <Border Grid.Column="2" Style="{StaticResource GlassCardStyle}">
-                    <Border.Background>
-                        <lg:LiquidGlassBrush BlurAmount="1.7"
-                                             BloomAmount="0.22"
-                                             Brightness="0.02"
-                                             Contrast="1.05"
-                                             Saturation="1.08"
-                                             RefThickness="34"
-                                             RefFactor="2.1"
-                                             RefDispersion="5"
-                                             DispersionRange="0.48"
-                                             RefFresnelFactor="25"
-                                             GlareAngle="-135"
-                                             GlareFactor="68"
-                                             GlareRange="34"
-                                             TintA="0.10"
-                                             TintR="185"
-                                             TintG="215"
-                                             TintB="255"
-                                             ShapeRadius="0.82"
-                                             ShapeRoundness="3.8"/>
-                    </Border.Background>
+                    <Border.Background><SolidColorBrush Color="#6A203044"/></Border.Background>
                     <StackPanel Spacing="14">
                         <TextBlock Text="迁移状态" Foreground="{StaticResource AsterPrimaryTextBrush}"
                                    FontSize="22" FontWeight="SemiBold"/>
@@ -98,28 +64,7 @@
 
             <Border HorizontalAlignment="Center" VerticalAlignment="Bottom"
                     Margin="0,0,0,24" Padding="8" CornerRadius="30">
-                <Border.Background>
-                    <lg:LiquidGlassBrush BlurAmount="1.9"
-                                         BloomAmount="0.16"
-                                         Brightness="0.03"
-                                         Contrast="1.08"
-                                         Saturation="1.12"
-                                         RefThickness="42"
-                                         RefFactor="2.45"
-                                         RefDispersion="5.5"
-                                         DispersionRange="0.42"
-                                         RefFresnelFactor="28"
-                                         GlareAngle="-145"
-                                         GlareFactor="72"
-                                         GlareHardness="14"
-                                         GlareRange="38"
-                                         TintA="0.09"
-                                         TintR="185"
-                                         TintG="215"
-                                         TintB="255"
-                                         ShapeRadius="0.96"
-                                         ShapeRoundness="3.7"/>
-                </Border.Background>
+                <Border.Background><SolidColorBrush Color="#6A203044"/></Border.Background>
                 <StackPanel Orientation="Horizontal" Spacing="2">
                     <Button Style="{StaticResource DockButtonStyle}" Content="⌂  首页" Click="Home_Click"/>
                     <Button Style="{StaticResource DockButtonStyle}" Content="▦  媒体库" Click="Library_Click"/>
