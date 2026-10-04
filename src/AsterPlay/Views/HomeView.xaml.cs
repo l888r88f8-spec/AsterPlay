@@ -149,8 +149,8 @@ public partial class HomeView : UserControl
             ShowDetails(_viewModel.CurrentHero);
     }
 
-    private static void ShowDetails(MediaCardViewModel item) =>
-        new DetailsWindow(item).ShowDialog();
+    private void ShowDetails(MediaCardViewModel item) =>
+        new DetailsWindow(_client, item.Item).ShowDialog();
 
     private void Logout_Click(object sender, RoutedEventArgs e) =>
         LogoutRequested?.Invoke(this, EventArgs.Empty);
