@@ -1,0 +1,124 @@
+# AsterPlay Release Checklist
+
+This checklist is the final manual acceptance pass for Step 14. Automated Windows CI covers SDK/bootstrap reproducibility, the pinned libmpv runtime, self-contained publish contents, and packaged-app startup. The items below require a real Windows desktop and a live Emby server.
+
+## 1. Clean Windows x64 build
+
+Run from a clean clone:
+
+```bat
+git clone https://github.com/l888r88f8-spec/AsterPlay.git
+cd AsterPlay
+bootstrap-dotnet.cmd
+build-windows.cmd
+dist\AsterPlay\AsterPlay.exe
+```
+
+Pass criteria:
+
+- No system-wide .NET installation is required to run `dist\AsterPlay\AsterPlay.exe`.
+- `dist\AsterPlay\AsterPlay.exe` starts and remains running.
+- `dist\AsterPlay\libmpv-2.dll` exists.
+- `BUILD-INFO.txt` exists.
+- `RUNTIME-SOURCE.txt` contains:
+  - release `2026-09-29-b4b5d69a44`
+  - mpv commit `b4b5d69a44e240e4a95c230bb7f018c381f0c5ae`
+  - SHA-256 `8c80c506cf95f403d8a2b9d672d5f88d965885666f25c850f711a06b9510dfc8`
+
+## 2. Login and session
+
+Verify:
+
+- Valid Emby login succeeds.
+- Restart restores the session.
+- A temporary network outage does not delete the saved session.
+- A confirmed 401/403 invalid session returns to login and clears the invalid session.
+- Logout removes the saved session.
+- `%LOCALAPPDATA%\AsterPlay\session.json` contains no plaintext AccessToken.
+
+## 3. Home, library, and details
+
+Verify:
+
+- Hero shows at most six candidates.
+- Hero thumbnail overlay, hover, and keyboard focus are visible.
+- Continue Watching opens playback.
+- Latest Media opens details.
+- Library search, type/year/favorite filters, sorting, and paging work.
+- Library cards support keyboard focus/navigation and right-click Details.
+- Empty search/filter results show the empty state.
+- Library loading shows the skeleton/loading state.
+- Movie and series details load without layout regressions.
+
+## 4. Playback matrix
+
+Test at least one real item in each available route:
+
+- DirectPlay
+- DirectStream
+- Transcode
+
+For each route verify:
+
+- Playback starts.
+- Pause/resume works.
+- Relative seek works.
+- Slider seek works.
+- Resume position is correct.
+- Audio/subtitle selection works.
+- Fullscreen enter/exit works.
+- Playback diagnostics show the expected route.
+- Closing the player updates Emby progress.
+- Continue Watching reflects the new position.
+
+For Transcode also verify that a failed transcode produces a clear error instead of silently stopping.
+
+## 5. Error handling
+
+Exercise where practical:
+
+- Server unreachable.
+- Request timeout.
+- Expired/invalid token.
+- Deleted or inaccessible media.
+- PlaybackInfo failure.
+- Missing/failed transcode.
+- Missing libmpv runtime.
+
+Pass criteria: the user sees an actionable message and the failure is written to `playback.log` or `crash.log` without crashing unrelated UI.
+
+## 6. Danmaku regression
+
+With a real LogVar source:
+
+- Automatic match works.
+- Manual series/episode match works.
+- Seek suppression/resync works.
+- Pause/resume and playback-speed sync work.
+- Density, filter, overlap protection, and active cap still work.
+- Fullscreen/resize/DPI changes do not cause visible drift.
+
+## 7. Performance observation
+
+Use a large library and a long playback session.
+
+Check:
+
+- Home initial load is acceptable.
+- Library scrolling remains responsive.
+- Reopening pages produces image-cache hits.
+- Working set does not grow continuously during normal page switching.
+- Long playback does not show sustained Overlay frame-time spikes.
+- Playback progress reports continue at the expected cadence.
+- Closing PlayerWindow releases mpv/render resources.
+
+`playback.log` includes `[Performance]` entries for home, library page loads, and details loads, including elapsed time and memory figures.
+
+Log growth is bounded:
+
+- active `playback.log`: approximately 8 MB maximum before rotation
+- one backup: `playback.previous.log`
+
+## 8. Release decision
+
+Step 14 can be marked fully accepted only after all applicable sections above pass on a real Windows x64 desktop with the intended Emby server/media set.
