@@ -116,12 +116,14 @@
                                     Padding="11,7"
                                     Margin="0,0,7,0"
                                     Click="Mute_Click"/>
-                            <Button Content="音轨"
+                            <Button x:Name="AudioButton"
+                                    Content="音轨"
                                     Style="{StaticResource GlassButton}"
                                     Padding="11,7"
                                     Margin="0,0,7,0"
                                     Click="Audio_Click"/>
-                            <Button Content="字幕"
+                            <Button x:Name="SubtitleButton"
+                                    Content="字幕"
                                     Style="{StaticResource GlassButton}"
                                     Padding="11,7"
                                     Margin="0,0,7,0"
