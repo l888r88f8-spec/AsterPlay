@@ -213,15 +213,15 @@ public sealed class EmbyClient
 
     public Task ReportPlaybackStartAsync(
         PlaybackLaunch launch, long positionTicks, bool isPaused, double volume) =>
-        SendPlaybackReportAsync("/Sessions/Playing", launch, positionTicks, isPaused, volume, "play");
+        SendPlaybackReportAsync("/Sessions/Playing", launch, positionTicks, isPaused, volume, null);
 
     public Task ReportPlaybackProgressAsync(
-        PlaybackLaunch launch, long positionTicks, bool isPaused, double volume) =>
-        SendPlaybackReportAsync("/Sessions/Playing/Progress", launch, positionTicks, isPaused, volume, "timeupdate");
+        PlaybackLaunch launch, long positionTicks, bool isPaused, double volume, string eventName = "TimeUpdate") =>
+        SendPlaybackReportAsync("/Sessions/Playing/Progress", launch, positionTicks, isPaused, volume, eventName);
 
     public Task ReportPlaybackStoppedAsync(
         PlaybackLaunch launch, long positionTicks, bool isPaused, double volume) =>
-        SendPlaybackReportAsync("/Sessions/Playing/Stopped", launch, positionTicks, isPaused, volume, "stop");
+        SendPlaybackReportAsync("/Sessions/Playing/Stopped", launch, positionTicks, isPaused, volume, null);
 
     private async Task SendPlaybackReportAsync(
         string path,
@@ -229,26 +229,32 @@ public sealed class EmbyClient
         long positionTicks,
         bool isPaused,
         double volume,
-        string eventName)
+        string? eventName)
     {
-        using var req = CreateRequest(HttpMethod.Post, path);
-        req.Content = JsonContent.Create(new
+        var payload = new Dictionary<string, object?>
         {
-            launch.ItemId,
-            launch.MediaSourceId,
-            launch.PlaySessionId,
-            PositionTicks = Math.Max(0, positionTicks),
-            IsPaused = isPaused,
-            IsMuted = volume <= 0.01,
-            VolumeLevel = (int)Math.Clamp(Math.Round(volume), 0, 100),
-            PlayMethod = "DirectPlay",
-            CanSeek = true,
-            EventName = eventName
-        });
+            ["QueueableMediaTypes"] = new[] { "Video" },
+            ["CanSeek"] = true,
+            ["ItemId"] = launch.ItemId,
+            ["MediaSourceId"] = launch.MediaSourceId,
+            ["PlaySessionId"] = launch.PlaySessionId,
+            ["PositionTicks"] = Math.Max(0, positionTicks),
+            ["IsPaused"] = isPaused,
+            ["IsMuted"] = volume <= 0.01,
+            ["VolumeLevel"] = (int)Math.Clamp(Math.Round(volume), 0, 100),
+            ["PlayMethod"] = "DirectPlay",
+            ["PlaybackRate"] = 1.0
+        };
+
+        if (!string.IsNullOrWhiteSpace(eventName))
+            payload["EventName"] = eventName;
+
+        using var req = CreateRequest(HttpMethod.Post, path);
+        req.Content = JsonContent.Create(payload);
 
         using var response = await _http.SendAsync(req);
         PlaybackLog.Write("EmbyReport",
-            $"{eventName}: status={(int)response.StatusCode}, itemId={launch.ItemId}, positionTicks={positionTicks}, paused={isPaused}, volume={volume:0.##}");
+            $"{eventName ?? Path.GetFileName(path)}: status={(int)response.StatusCode}, itemId={launch.ItemId}, positionTicks={positionTicks}, paused={isPaused}, volume={volume:0.##}");
         await EnsureSuccess(response, "Playback session update failed");
     }
 
