@@ -18,7 +18,7 @@ public partial class PlayerWindow : Window
     private readonly PlaybackLaunch _launch;
     private readonly DispatcherTimer _timer;
     private readonly DispatcherTimer _controlsTimer;
-    private readonly double _timelineOffsetSeconds;
+    private double _timelineOffsetSeconds;
 
     private MpvClient? _mpv;
     private MpvRenderContext? _renderContext;
@@ -39,6 +39,8 @@ public partial class PlayerWindow : Window
     private bool _trackMenuOpen;
     private bool _diagnosticsVisible;
     private bool _danmakuPocVisible;
+    private bool _positionSliderPointerDown;
+    private bool _positionSliderDragging;
     private ContextMenu? _activeTrackMenu;
     private long _lastPositionTicks;
     private double _lastAudibleVolume = 100;
@@ -309,10 +311,13 @@ public partial class PlayerWindow : Window
             if (duration > 0)
             {
                 PositionSlider.Maximum = duration;
-                PositionSlider.Value = Math.Clamp(position, 0, duration);
+
+                if (!_positionSliderPointerDown && !_positionSliderDragging)
+                    PositionSlider.Value = Math.Clamp(position, 0, duration);
             }
 
-            CurrentTimeBlock.Text = FormatTime(position);
+            if (!_positionSliderPointerDown && !_positionSliderDragging)
+                CurrentTimeBlock.Text = FormatTime(position);
             DurationBlock.Text = duration > 0 ? FormatTime(duration) : "--:--";
             PauseButton.Content = paused ? "播放" : "暂停";
             MuteButton.Content = volume <= 0.01 ? "取消静音" : "静音";
@@ -442,12 +447,74 @@ public partial class PlayerWindow : Window
         ShowControls();
     }
 
-    private void PositionSlider_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    private void PositionSlider_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (_updatingUi)
             return;
 
-        SeekAbsoluteFromTimeline(PositionSlider.Value);
+        _positionSliderPointerDown = true;
+        ShowControls();
+    }
+
+    private void PositionSlider_DragStarted(object sender, DragStartedEventArgs e)
+    {
+        _positionSliderPointerDown = true;
+        _positionSliderDragging = true;
+
+        PlaybackLog.Write(
+            "PlayerSeek",
+            $"Slider drag started: displayed={PositionSlider.Value:0.###}, offset={_timelineOffsetSeconds:0.###}");
+        ShowControls();
+    }
+
+    private void PositionSlider_ValueChanged(
+        object sender,
+        RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_updatingUi)
+            return;
+
+        if (_positionSliderPointerDown || _positionSliderDragging)
+            CurrentTimeBlock.Text = FormatTime(e.NewValue);
+    }
+
+    private void PositionSlider_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_updatingUi || _positionSliderDragging)
+            return;
+
+        var requestedAbsolute = PositionSlider.Value;
+        _positionSliderPointerDown = false;
+
+        PlaybackLog.Write(
+            "PlayerSeek",
+            $"Slider click committed: target={requestedAbsolute:0.###}");
+
+        SeekAbsoluteFromTimeline(requestedAbsolute);
+    }
+
+    private void PositionSlider_DragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        if (_updatingUi)
+            return;
+
+        var requestedAbsolute = PositionSlider.Value;
+        _positionSliderDragging = false;
+        _positionSliderPointerDown = false;
+
+        PlaybackLog.Write(
+            "PlayerSeek",
+            $"Slider drag committed: target={requestedAbsolute:0.###}");
+
+        SeekAbsoluteFromTimeline(requestedAbsolute);
+    }
+
+    private void PositionSlider_LostMouseCapture(object sender, MouseEventArgs e)
+    {
+        if (_positionSliderDragging)
+            return;
+
+        _positionSliderPointerDown = false;
     }
 
     private void SeekAbsoluteFromTimeline(double requestedAbsolute)
@@ -455,12 +522,102 @@ public partial class PlayerWindow : Window
         if (_mpv is null)
             return;
 
+        requestedAbsolute = Math.Clamp(
+            requestedAbsolute,
+            0,
+            PositionSlider.Maximum > 0 ? PositionSlider.Maximum : requestedAbsolute);
+
+        if (_launch.UsesServerStartOffset &&
+            requestedAbsolute + 0.25 < _timelineOffsetSeconds)
+        {
+            ReloadServerOffsetStream(requestedAbsolute);
+            return;
+        }
+
         var localTarget = Math.Max(0, requestedAbsolute - _timelineOffsetSeconds);
-        PlaybackLog.Write("Player",
+        PlaybackLog.Write(
+            "PlayerSeek",
             $"Timeline seek: absolute={requestedAbsolute:0.###}, local={localTarget:0.###}, offset={_timelineOffsetSeconds:0.###}");
+
         _mpv.SeekAbsolute(localTarget);
+        CurrentTimeBlock.Text = FormatTime(requestedAbsolute);
         SyncDanmakuPoc();
         ShowControls();
+    }
+
+    private void ReloadServerOffsetStream(double requestedAbsolute)
+    {
+        if (_mpv is null)
+            return;
+
+        var targetTicks = (long)Math.Max(
+            0,
+            Math.Round(requestedAbsolute * 10_000_000d));
+
+        var oldOffset = _timelineOffsetSeconds;
+        var url = ReplaceQueryParameter(
+            _launch.Url,
+            "StartTimeTicks",
+            targetTicks.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+        PlaybackLog.Write(
+            "PlayerSeek",
+            $"Server-offset seek requires stream reload: absolute={requestedAbsolute:0.###}, oldOffset={oldOffset:0.###}, newOffset={requestedAbsolute:0.###}");
+
+        _timelineOffsetSeconds = requestedAbsolute;
+        _lastPositionTicks = targetTicks;
+
+        _mpv.Load(url);
+        CurrentTimeBlock.Text = FormatTime(requestedAbsolute);
+        SyncDanmakuPoc();
+        ShowControls();
+    }
+
+    private static string ReplaceQueryParameter(string url, string name, string value)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return url;
+
+        var builder = new UriBuilder(uri);
+        var segments = builder.Query
+            .TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .ToList();
+
+        var replacement = $"{Uri.EscapeDataString(name)}={Uri.EscapeDataString(value)}";
+        var replaced = false;
+
+        for (var index = 0; index < segments.Count; index++)
+        {
+            var segment = segments[index];
+            var separatorIndex = segment.IndexOf('=');
+            var encodedName = separatorIndex >= 0
+                ? segment[..separatorIndex]
+                : segment;
+
+            string decodedName;
+            try
+            {
+                decodedName = Uri.UnescapeDataString(encodedName);
+            }
+            catch (UriFormatException)
+            {
+                decodedName = encodedName;
+            }
+
+            if (!string.Equals(decodedName, name, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            segments[index] = replacement;
+            replaced = true;
+            break;
+        }
+
+        if (!replaced)
+            segments.Add(replacement);
+
+        builder.Query = string.Join("&", segments);
+        return builder.Uri.ToString();
     }
 
     private void VolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

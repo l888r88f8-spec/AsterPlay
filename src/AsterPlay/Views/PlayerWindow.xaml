@@ -159,8 +159,14 @@
                                 Grid.Column="1"
                                 Minimum="0"
                                 Maximum="1"
+                                IsMoveToPointEnabled="True"
                                 VerticalAlignment="Center"
-                                PreviewMouseLeftButtonUp="PositionSlider_PreviewMouseLeftButtonUp"/>
+                                ValueChanged="PositionSlider_ValueChanged"
+                                PreviewMouseLeftButtonDown="PositionSlider_PreviewMouseLeftButtonDown"
+                                PreviewMouseLeftButtonUp="PositionSlider_PreviewMouseLeftButtonUp"
+                                LostMouseCapture="PositionSlider_LostMouseCapture"
+                                Thumb.DragStarted="PositionSlider_DragStarted"
+                                Thumb.DragCompleted="PositionSlider_DragCompleted"/>
 
                         <TextBlock x:Name="DurationBlock"
                                    Grid.Column="2"
