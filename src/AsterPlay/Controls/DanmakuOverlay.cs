@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
 using AsterPlay.Models.Danmaku;
+using AsterPlay.Services;
 
 namespace AsterPlay.Controls;
 
