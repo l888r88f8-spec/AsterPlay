@@ -334,6 +334,17 @@ public sealed class PlaybackLaunch
     public long? RunTimeTicks { get; set; }
     public bool UsesServerStartOffset { get; set; }
     public string PlayMethod { get; set; } = "DirectPlay";
+
+    // Negotiation metadata used by the player diagnostics panel.
+    public string DecisionReason { get; set; } = "";
+    public string SourceContainer { get; set; } = "";
+    public string SourceProtocol { get; set; } = "";
+    public string NegotiatedContainer { get; set; } = "";
+    public string NegotiatedProtocol { get; set; } = "";
+    public string SourceVideoCodec { get; set; } = "";
+    public string SourceAudioCodec { get; set; } = "";
+    public int? SourceWidth { get; set; }
+    public int? SourceHeight { get; set; }
 }
 
 public sealed class MediaSource
