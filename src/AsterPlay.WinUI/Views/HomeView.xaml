@@ -4,6 +4,37 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:lg="using:LiquidGlassWinUI">
 
+    <UserControl.Resources>
+        <Style x:Key="RailArrowButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#38FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="21"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Background">
+                <Setter.Value>
+                    <lg:LiquidGlassBrush BlurAmount="1.25"
+                                         BloomAmount="0.12"
+                                         RefThickness="20"
+                                         RefFactor="1.75"
+                                         RefDispersion="3.2"
+                                         GlareFactor="48"
+                                         TintA="0.07"
+                                         TintR="190"
+                                         TintG="220"
+                                         TintB="255"
+                                         ShapeRadius="0.98"
+                                         ShapeRoundness="3.9"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
     <Grid>
         <ScrollViewer x:Name="HomeScrollViewer"
                       VerticalScrollMode="Enabled"
@@ -74,16 +105,33 @@
 
                 <StackPanel Spacing="14">
                     <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
                         <TextBlock Text="媒体库"
                                    Foreground="White"
                                    FontSize="24"
                                    FontWeight="SemiBold"/>
-                        <Button Content="查看全部"
-                                HorizontalAlignment="Right"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Foreground="#79BCFF"
-                                Click="OpenLibrary_Click"/>
+                        <StackPanel Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="8">
+                            <Button Content="查看全部"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Foreground="#79BCFF"
+                                    Click="OpenLibrary_Click"/>
+                            <Button x:Name="LibrariesPreviousButton"
+                                    Style="{StaticResource RailArrowButtonStyle}"
+                                    Content="‹"
+                                    Tag="libraries:-1"
+                                    Click="RailArrow_Click"/>
+                            <Button x:Name="LibrariesNextButton"
+                                    Style="{StaticResource RailArrowButtonStyle}"
+                                    Content="›"
+                                    Tag="libraries:1"
+                                    Click="RailArrow_Click"/>
+                        </StackPanel>
                     </Grid>
 
                     <ScrollViewer x:Name="LibrariesScroller"
@@ -92,7 +140,8 @@
                                   VerticalScrollMode="Disabled"
                                   VerticalScrollBarVisibility="Disabled"
                                   ZoomMode="Disabled"
-                                  PointerWheelChanged="HorizontalRail_PointerWheelChanged">
+                                  ViewChanged="Rail_ViewChanged"
+                                  SizeChanged="Rail_SizeChanged">
                         <ItemsControl x:Name="LibrariesGrid">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -144,10 +193,26 @@
                 <StackPanel x:Name="ContinueSection"
                             Spacing="14"
                             Visibility="Collapsed">
-                    <TextBlock Text="继续播放"
-                               Foreground="White"
-                               FontSize="24"
-                               FontWeight="SemiBold"/>
+                    <Grid>
+                        <TextBlock Text="继续播放"
+                                   Foreground="White"
+                                   FontSize="24"
+                                   FontWeight="SemiBold"/>
+                        <StackPanel HorizontalAlignment="Right"
+                                    Orientation="Horizontal"
+                                    Spacing="8">
+                            <Button x:Name="ResumePreviousButton"
+                                    Style="{StaticResource RailArrowButtonStyle}"
+                                    Content="‹"
+                                    Tag="resume:-1"
+                                    Click="RailArrow_Click"/>
+                            <Button x:Name="ResumeNextButton"
+                                    Style="{StaticResource RailArrowButtonStyle}"
+                                    Content="›"
+                                    Tag="resume:1"
+                                    Click="RailArrow_Click"/>
+                        </StackPanel>
+                    </Grid>
 
                     <ScrollViewer x:Name="ResumeScroller"
                                   HorizontalScrollMode="Enabled"
@@ -155,7 +220,8 @@
                                   VerticalScrollMode="Disabled"
                                   VerticalScrollBarVisibility="Disabled"
                                   ZoomMode="Disabled"
-                                  PointerWheelChanged="HorizontalRail_PointerWheelChanged">
+                                  ViewChanged="Rail_ViewChanged"
+                                  SizeChanged="Rail_SizeChanged">
                         <ItemsControl x:Name="ResumeGrid">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -225,11 +291,25 @@
                                    Foreground="White"
                                    FontSize="24"
                                    FontWeight="SemiBold"/>
-                        <TextBlock Text="最近加入"
-                                   HorizontalAlignment="Right"
-                                   VerticalAlignment="Center"
-                                   Foreground="#6F7B8D"
-                                   FontSize="12"/>
+                        <StackPanel HorizontalAlignment="Right"
+                                    Orientation="Horizontal"
+                                    Spacing="8">
+                            <TextBlock Text="最近加入"
+                                       VerticalAlignment="Center"
+                                       Foreground="#6F7B8D"
+                                       FontSize="12"
+                                       Margin="0,0,4,0"/>
+                            <Button x:Name="LatestPreviousButton"
+                                    Style="{StaticResource RailArrowButtonStyle}"
+                                    Content="‹"
+                                    Tag="latest:-1"
+                                    Click="RailArrow_Click"/>
+                            <Button x:Name="LatestNextButton"
+                                    Style="{StaticResource RailArrowButtonStyle}"
+                                    Content="›"
+                                    Tag="latest:1"
+                                    Click="RailArrow_Click"/>
+                        </StackPanel>
                     </Grid>
 
                     <ScrollViewer x:Name="LatestScroller"
@@ -238,7 +318,8 @@
                                   VerticalScrollMode="Disabled"
                                   VerticalScrollBarVisibility="Disabled"
                                   ZoomMode="Disabled"
-                                  PointerWheelChanged="HorizontalRail_PointerWheelChanged">
+                                  ViewChanged="Rail_ViewChanged"
+                                  SizeChanged="Rail_SizeChanged">
                         <ItemsControl x:Name="LatestGrid">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
