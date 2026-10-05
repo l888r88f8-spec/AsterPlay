@@ -88,7 +88,7 @@
                     <AcrylicBrush TintColor="{ThemeResource AsterHeroFadeEndColor}"
                                   TintOpacity="0.20"
                                   TintLuminosityOpacity="0.72"
-                                  FallbackColor="{ThemeResource AsterCardBackgroundBrush}"/>
+                                  FallbackColor="{ThemeResource AsterHeroFadeEndColor}"/>
                 </Border.Background>
                 <StackPanel Orientation="Horizontal"
                             Spacing="2">
