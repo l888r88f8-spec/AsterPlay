@@ -284,6 +284,8 @@ public sealed partial class HomeView : UserControl
             HeroMetaBlock.Text = "";
             HeroOverviewBlock.Text = "从下方浏览你的媒体库。";
             HeroImage.SourceUrl = "";
+            PageBackdropImage.SourceUrl = "";
+            PageBackdropLayer.Visibility = Visibility.Collapsed;
             return;
         }
 
@@ -294,8 +296,12 @@ public sealed partial class HomeView : UserControl
             : "♡  收藏";
         HeroOverviewBlock.Text = _heroItem.Overview ?? "";
 
-        HeroImage.SourceUrl =
+        var backdropUrl =
             _client.BuildBackdropUrl(_heroItem, 1800);
+
+        HeroImage.SourceUrl = backdropUrl;
+        PageBackdropImage.SourceUrl = backdropUrl;
+        PageBackdropLayer.Visibility = Visibility.Visible;
     }
 
     private void PopulateResume(IEnumerable<EmbyItem> source)
