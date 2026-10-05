@@ -34,10 +34,14 @@ internal static class HomeSnapshotStore
 
         var path = GetPath(serverUrl, userId);
         if (!File.Exists(path))
+        {
+            StartupDiagnostics.Write("HomeSnapshot: miss");
             return null;
+        }
 
         try
         {
+            using var timing = StartupDiagnostics.Measure("HomeSnapshot.Load");
             var snapshot = JsonSerializer.Deserialize<HomeSnapshot>(
                 File.ReadAllText(path),
                 JsonOptions);
@@ -50,6 +54,9 @@ internal static class HomeSnapshotStore
                 return null;
             }
 
+            StartupDiagnostics.Write(
+                $"HomeSnapshot: hit; age={(DateTimeOffset.UtcNow - snapshot.SavedAtUtc).TotalMinutes:0.0} min, " +
+                $"latest={snapshot.Latest.Count}, resume={snapshot.Resume.Count}, views={snapshot.Views.Count}, sections={snapshot.Sections.Count}");
             return snapshot;
         }
         catch (Exception ex)
