@@ -45,6 +45,7 @@ public sealed partial class PlayerPocView : UserControl
     private bool _isFullscreen;
     private bool _diagnosticsVisible;
     private bool _serverSeekPending;
+    private bool _pointerOverInteractiveOverlay;
     private int _seekVersion;
     private double _timelineOffsetSeconds;
     private double _lastAudibleVolume = 100;
@@ -233,13 +234,8 @@ public sealed partial class PlayerPocView : UserControl
         if (ControlsPanel.Visibility != Visibility.Visible)
             return;
 
-        if (ControlsPanel.IsPointerOver ||
-            TopInfoPanel.IsPointerOver ||
-            MoreSettingsPanel.IsPointerOver ||
-            DiagnosticsPanel.IsPointerOver)
-        {
+        if (_pointerOverInteractiveOverlay)
             return;
-        }
 
         if (DateTime.UtcNow - _lastControlsActivityUtc >=
             TimeSpan.FromSeconds(_appSettings.PlayerControlsAutoHideSeconds))
@@ -250,6 +246,22 @@ public sealed partial class PlayerPocView : UserControl
 
     private void PlayerRoot_PointerMoved(object sender, PointerRoutedEventArgs e) =>
         ShowControls();
+
+    private void InteractiveOverlay_PointerEntered(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        _pointerOverInteractiveOverlay = true;
+        ShowControls();
+    }
+
+    private void InteractiveOverlay_PointerExited(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        _pointerOverInteractiveOverlay = false;
+        _lastControlsActivityUtc = DateTime.UtcNow;
+    }
 
     private void PlayerRoot_DoubleTapped(
         object sender,
@@ -272,13 +284,8 @@ public sealed partial class PlayerPocView : UserControl
 
     private void HideControls()
     {
-        if (ControlsPanel.IsPointerOver ||
-            TopInfoPanel.IsPointerOver ||
-            MoreSettingsPanel.IsPointerOver ||
-            DiagnosticsPanel.IsPointerOver)
-        {
+        if (_pointerOverInteractiveOverlay)
             return;
-        }
 
         TopInfoPanel.Visibility = Visibility.Collapsed;
         ControlsPanel.Visibility = Visibility.Collapsed;
@@ -636,7 +643,7 @@ public sealed partial class PlayerPocView : UserControl
         if (snapshot.Fps is > 0)
             video.Add($"{snapshot.Fps:0.##} fps");
         if (!string.IsNullOrWhiteSpace(snapshot.HwdecCurrent))
-            video.Add(snapshot.Hwdec);
+            video.Add(snapshot.HwdecCurrent);
 
         DiagnosticsVideoBlock.Text =
             video.Count == 0 ? "--" : string.Join(" · ", video);
