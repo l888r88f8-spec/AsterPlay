@@ -80,48 +80,133 @@
                                 Click="OpenLibrary_Click"/>
                     </Grid>
 
-                    <GridView x:Name="LibrariesGrid"
-                              SelectionMode="None"
-                              IsItemClickEnabled="True"
-                              ItemClick="LibrariesGrid_ItemClick"
-                              HorizontalAlignment="Stretch">
-                        <GridView.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <ItemsWrapGrid Orientation="Horizontal"
-                                               MaximumRowsOrColumns="1"/>
-                            </ItemsPanelTemplate>
-                        </GridView.ItemsPanel>
-                        <GridView.ItemTemplate>
-                            <DataTemplate>
-                                <Border Width="220"
-                                        Height="92"
-                                        Padding="18"
-                                        Margin="0,0,12,0"
-                                        CornerRadius="22">
-                                    <Border.Background>
-                                        <lg:LiquidGlassBrush BlurAmount="1.3"
-                                                             BloomAmount="0.13"
-                                                             RefThickness="26"
-                                                             RefFactor="1.8"
-                                                             RefDispersion="3.5"
-                                                             GlareFactor="48"
-                                                             TintA="0.07"
-                                                             ShapeRadius="0.88"
-                                                             ShapeRoundness="3.8"/>
-                                    </Border.Background>
-                                    <StackPanel VerticalAlignment="Center" Spacing="5">
-                                        <TextBlock Text="{Binding Name}"
-                                                   Foreground="White"
-                                                   FontSize="16"
-                                                   FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding Subtitle}"
-                                                   Foreground="#909AA9"
-                                                   FontSize="12"/>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </GridView.ItemTemplate>
-                    </GridView>
+                    <ScrollViewer HorizontalScrollMode="Enabled"
+                                  HorizontalScrollBarVisibility="Hidden"
+                                  VerticalScrollMode="Disabled"
+                                  VerticalScrollBarVisibility="Disabled"
+                                  ZoomMode="Disabled">
+                        <ItemsControl x:Name="LibrariesGrid">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Width="220"
+                                            Height="92"
+                                            Margin="0,0,12,0"
+                                            Padding="0"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Tag="{Binding}"
+                                            Click="LibraryTile_Click">
+                                        <Border Width="220"
+                                                Height="92"
+                                                Padding="18"
+                                                CornerRadius="22">
+                                            <Border.Background>
+                                                <lg:LiquidGlassBrush BlurAmount="1.3"
+                                                                     BloomAmount="0.13"
+                                                                     RefThickness="26"
+                                                                     RefFactor="1.8"
+                                                                     RefDispersion="3.5"
+                                                                     GlareFactor="48"
+                                                                     TintA="0.07"
+                                                                     ShapeRadius="0.88"
+                                                                     ShapeRoundness="3.8"/>
+                                            </Border.Background>
+                                            <StackPanel VerticalAlignment="Center" Spacing="5">
+                                                <TextBlock Text="{Binding Name}"
+                                                           Foreground="White"
+                                                           FontSize="16"
+                                                           FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Subtitle}"
+                                                           Foreground="#909AA9"
+                                                           FontSize="12"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </StackPanel>
+
+                <StackPanel x:Name="ContinueSection"
+                            Spacing="14"
+                            Visibility="Collapsed">
+                    <TextBlock Text="继续播放"
+                               Foreground="White"
+                               FontSize="24"
+                               FontWeight="SemiBold"/>
+
+                    <ScrollViewer HorizontalScrollMode="Enabled"
+                                  HorizontalScrollBarVisibility="Hidden"
+                                  VerticalScrollMode="Disabled"
+                                  VerticalScrollBarVisibility="Disabled"
+                                  ZoomMode="Disabled">
+                        <ItemsControl x:Name="ResumeGrid">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Width="270"
+                                            Margin="0,0,14,0"
+                                            Padding="0"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Tag="{Binding}"
+                                            Click="ResumeTile_Click">
+                                        <StackPanel Width="270"
+                                                    Spacing="8">
+                                            <Border Width="270"
+                                                    Height="152"
+                                                    CornerRadius="18"
+                                                    Background="#171C26"
+                                                    BorderBrush="#32FFFFFF"
+                                                    BorderThickness="1">
+                                                <Grid>
+                                                    <Image Source="{Binding BackdropUrl}"
+                                                           Stretch="UniformToFill"/>
+                                                    <Rectangle>
+                                                        <Rectangle.Fill>
+                                                            <LinearGradientBrush StartPoint="0,0"
+                                                                                 EndPoint="0,1">
+                                                                <GradientStop Color="#00000000" Offset="0.48"/>
+                                                                <GradientStop Color="#B8000000" Offset="1"/>
+                                                            </LinearGradientBrush>
+                                                        </Rectangle.Fill>
+                                                    </Rectangle>
+                                                    <StackPanel VerticalAlignment="Bottom"
+                                                                Margin="12,0,12,10"
+                                                                Spacing="6">
+                                                        <ProgressBar Minimum="0"
+                                                                     Maximum="100"
+                                                                     Value="{Binding PlayedPercentage}"
+                                                                     Height="3"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+
+                                            <TextBlock Text="{Binding ResumeTitle}"
+                                                       Foreground="White"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding ProgressText}"
+                                                       Foreground="#8993A3"
+                                                       FontSize="12"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
                 </StackPanel>
 
                 <StackPanel Spacing="14">
