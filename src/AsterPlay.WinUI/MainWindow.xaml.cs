@@ -355,6 +355,7 @@ public sealed partial class MainWindow : Window
     private void ShowNoServerHome()
     {
         ExitPlayerChrome();
+        EnterHomeChrome();
 
         _authenticated = false;
         _currentSection = "home-empty";
@@ -381,6 +382,7 @@ public sealed partial class MainWindow : Window
         }
 
         _authenticated = true;
+        EnterHomeChrome();
         _currentSection = "home";
         NavigationDock.Visibility = Visibility.Visible;
         PageTitleBlock.Text = "首页";
@@ -388,6 +390,10 @@ public sealed partial class MainWindow : Window
 
         var view = new HomeView(_client);
         view.LibraryRequested += (_, _) => ShowLibrary();
+        view.ServerRequested += (_, _) =>
+            ShowServers(returnToLogin: false);
+        view.SearchRequested += (_, _) =>
+            ShowLibrary(focusSearch: true);
         view.MediaRequested += (_, item) => ShowDetails(item, "home");
         view.PlayRequested += async (_, item) =>
             await StartPlaybackAsync(item, "home");
@@ -415,7 +421,7 @@ public sealed partial class MainWindow : Window
         StartupDiagnostics.Write("ShowHome: home shell assigned to PageHost");
     }
 
-    private void ShowLibrary()
+    private void ShowLibrary(bool focusSearch = false)
     {
         ExitPlayerChrome();
         if (!_client.IsAuthenticated)
@@ -432,6 +438,9 @@ public sealed partial class MainWindow : Window
         var view = new LibraryView(_client);
         view.MediaRequested += (_, item) => ShowDetails(item, "library");
         PageHost.Content = view;
+
+        if (focusSearch)
+            view.FocusSearch();
     }
 
     private void ShowServers(
@@ -603,9 +612,45 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void EnterHomeChrome()
+    {
+        Grid.SetRow(ContentLayer, 0);
+        Grid.SetRowSpan(ContentLayer, 2);
+
+        TitleBarRow.Height = new GridLength(48);
+        AppTitleBar.Visibility = Visibility.Visible;
+        AppTitleBar.Background = new SolidColorBrush(
+            Windows.UI.Color.FromArgb(0, 0, 0, 0));
+        TitleBrandPanel.Visibility = Visibility.Collapsed;
+        PageTitleBlock.Visibility = Visibility.Collapsed;
+
+        // The native caption buttons stay available above the Hero.
+        ConfigureNativeTitleBar(isLight: false);
+    }
+
+    private void RestoreStandardChrome()
+    {
+        Grid.SetRow(ContentLayer, 1);
+        Grid.SetRowSpan(ContentLayer, 1);
+
+        TitleBarRow.Height = new GridLength(48);
+        AppTitleBar.Visibility = Visibility.Visible;
+        TitleBrandPanel.Visibility = Visibility.Visible;
+        PageTitleBlock.Visibility = Visibility.Visible;
+
+        var isLight = RootGrid.RequestedTheme != ElementTheme.Dark;
+        AppTitleBar.Background = new SolidColorBrush(
+            isLight
+                ? Windows.UI.Color.FromArgb(255, 244, 246, 249)
+                : Windows.UI.Color.FromArgb(255, 13, 17, 24));
+        ConfigureNativeTitleBar(isLight);
+    }
+
     private void EnterPlayerChrome()
     {
         NavigationDock.Visibility = Visibility.Collapsed;
+        TitleBrandPanel.Visibility = Visibility.Visible;
+        PageTitleBlock.Visibility = Visibility.Visible;
         AppTitleBar.Visibility = Visibility.Collapsed;
         TitleBarRow.Height = new GridLength(0);
 
@@ -618,11 +663,7 @@ public sealed partial class MainWindow : Window
         if (_appWindow.Presenter.Kind == AppWindowPresenterKind.FullScreen)
             SetPlayerFullscreen(false);
 
-        Grid.SetRow(ContentLayer, 1);
-        Grid.SetRowSpan(ContentLayer, 1);
-
-        TitleBarRow.Height = new GridLength(48);
-        AppTitleBar.Visibility = Visibility.Visible;
+        RestoreStandardChrome();
     }
 
     private void Home_Click(object sender, RoutedEventArgs e)
