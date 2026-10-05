@@ -13,11 +13,11 @@
           Loaded="RootGrid_Loaded">
         <Grid.Resources>
         <Style x:Key="DockButtonStyle" TargetType="Button">
-            <Setter Property="MinWidth" Value="82"/>
-            <Setter Property="Height" Value="62"/>
-            <Setter Property="Margin" Value="3"/>
+            <Setter Property="MinWidth" Value="92"/>
+            <Setter Property="Height" Value="68"/>
+            <Setter Property="Margin" Value="2"/>
             <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="CornerRadius" Value="22"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{ThemeResource AsterSecondaryTextBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -38,7 +38,8 @@
                 <ColumnDefinition Width="220"/>
             </Grid.ColumnDefinitions>
 
-            <StackPanel Orientation="Horizontal"
+            <StackPanel x:Name="TitleBrandPanel"
+                        Orientation="Horizontal"
                         VerticalAlignment="Center"
                         Spacing="10"
                         Margin="18,0,0,0">
@@ -77,22 +78,28 @@
             <Border x:Name="NavigationDock"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Bottom"
-                    Margin="0,0,0,18"
-                    Padding="9"
-                    CornerRadius="32"
-                    Background="{ThemeResource AsterCardBackgroundBrush}"
-                    BorderBrush="{ThemeResource AsterCardBorderBrush}"
+                    Margin="0,0,0,22"
+                    Padding="8"
+                    CornerRadius="38"
+                    BorderBrush="#66FFFFFF"
                     BorderThickness="1"
                     Visibility="Visible">
+                <Border.Background>
+                    <AcrylicBrush TintColor="{ThemeResource AsterHeroFadeEndColor}"
+                                  TintOpacity="0.20"
+                                  TintLuminosityOpacity="0.72"
+                                  FallbackColor="{ThemeResource AsterCardBackgroundBrush}"/>
+                </Border.Background>
                 <StackPanel Orientation="Horizontal"
                             Spacing="2">
                     <Button x:Name="HomeButton"
                             Style="{StaticResource DockButtonStyle}"
                             Click="Home_Click">
                         <StackPanel Spacing="2">
-                            <TextBlock Text="⌂"
-                                       FontSize="20"
-                                       HorizontalAlignment="Center"/>
+                            <FontIcon FontFamily="Segoe MDL2 Assets"
+                                      Glyph="&#xE80F;"
+                                      FontSize="20"
+                                      HorizontalAlignment="Center"/>
                             <TextBlock Text="首页"
                                        FontSize="11"
                                        HorizontalAlignment="Center"/>
@@ -102,9 +109,10 @@
                             Style="{StaticResource DockButtonStyle}"
                             Click="Library_Click">
                         <StackPanel Spacing="2">
-                            <TextBlock Text="▦"
-                                       FontSize="19"
-                                       HorizontalAlignment="Center"/>
+                            <FontIcon FontFamily="Segoe MDL2 Assets"
+                                      Glyph="&#xE8F1;"
+                                      FontSize="20"
+                                      HorizontalAlignment="Center"/>
                             <TextBlock Text="媒体库"
                                        FontSize="11"
                                        HorizontalAlignment="Center"/>
@@ -114,9 +122,10 @@
                             Style="{StaticResource DockButtonStyle}"
                             Click="Servers_Click">
                         <StackPanel Spacing="2">
-                            <TextBlock Text="◫"
-                                       FontSize="19"
-                                       HorizontalAlignment="Center"/>
+                            <FontIcon FontFamily="Segoe MDL2 Assets"
+                                      Glyph="&#xE7F8;"
+                                      FontSize="20"
+                                      HorizontalAlignment="Center"/>
                             <TextBlock Text="服务器"
                                        FontSize="11"
                                        HorizontalAlignment="Center"/>
@@ -126,9 +135,10 @@
                             Style="{StaticResource DockButtonStyle}"
                             Click="Settings_Click">
                         <StackPanel Spacing="2">
-                            <TextBlock Text="⚙"
-                                       FontSize="19"
-                                       HorizontalAlignment="Center"/>
+                            <FontIcon FontFamily="Segoe MDL2 Assets"
+                                      Glyph="&#xE713;"
+                                      FontSize="20"
+                                      HorizontalAlignment="Center"/>
                             <TextBlock Text="设置"
                                        FontSize="11"
                                        HorizontalAlignment="Center"/>
