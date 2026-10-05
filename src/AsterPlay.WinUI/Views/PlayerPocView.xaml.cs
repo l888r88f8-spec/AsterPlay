@@ -191,6 +191,7 @@ public sealed partial class PlayerPocView : UserControl
                 ResolutionButton.Content = FormatResolutionLabel(
                     snapshot.Width,
                     snapshot.Height);
+                RefreshTrackButtons();
             }
             finally
             {
@@ -582,6 +583,7 @@ public sealed partial class PlayerPocView : UserControl
             {
                 _mpv?.SetSubtitleTrack(null);
                 StatusBlock.Text = "字幕已关闭";
+                _ = ReportTrackChangeAsync("SubtitleTrackChange");
             };
             menu.Items.Add(off);
             if (tracks.Count > 0)
@@ -615,12 +617,14 @@ public sealed partial class PlayerPocView : UserControl
                         _mpv.SetSubtitleTrack(track.Id);
                         StatusBlock.Text =
                             $"字幕：{FormatTrackLabel(track)}";
+                        _ = ReportTrackChangeAsync("SubtitleTrackChange");
                     }
                     else
                     {
                         _mpv.SetAudioTrack(track.Id);
                         StatusBlock.Text =
                             $"音轨：{FormatTrackLabel(track)}";
+                        _ = ReportTrackChangeAsync("AudioTrackChange");
                     }
 
                     ShowControls();
@@ -654,7 +658,14 @@ public sealed partial class PlayerPocView : UserControl
             : Visibility.Collapsed;
 
         if (_diagnosticsVisible && _mpv is not null)
+        {
             RefreshDiagnostics(_mpv.GetDiagnosticSnapshot());
+            PlaybackLog.Write(
+                "PlayerDiagnostics",
+                $"Opened: playMethod={_launch.PlayMethod}, source={_launch.SourceContainer}, " +
+                $"negotiated={_launch.NegotiatedContainer}/{_launch.NegotiatedProtocol}, " +
+                $"mediaSourceId={_launch.MediaSourceId}, reason={_launch.DecisionReason}");
+        }
 
         ShowControls();
     }
@@ -697,6 +708,52 @@ public sealed partial class PlayerPocView : UserControl
             _danmakuVisible
                 ? $"{DanmakuOverlay.LoadedCount} 条 · 活跃 {DanmakuOverlay.ActiveCount}"
                 : "关闭";
+    }
+
+    private void RefreshTrackButtons()
+    {
+        if (_mpv is null)
+            return;
+
+        var tracks = _mpv.GetTracks();
+        var audio = tracks.FirstOrDefault(track =>
+            string.Equals(
+                track.Type,
+                "audio",
+                StringComparison.OrdinalIgnoreCase) &&
+            track.Selected);
+        var subtitle = tracks.FirstOrDefault(track =>
+            string.Equals(
+                track.Type,
+                "sub",
+                StringComparison.OrdinalIgnoreCase) &&
+            track.Selected);
+
+        ToolTipService.SetToolTip(
+            AudioButton,
+            audio is null
+                ? "音频轨道"
+                : $"音频 · {FormatTrackLabel(audio)}");
+
+        ToolTipService.SetToolTip(
+            SubtitleButton,
+            subtitle is null
+                ? "字幕 · 关闭"
+                : $"字幕 · {FormatTrackLabel(subtitle)}");
+    }
+
+    private Task ReportTrackChangeAsync(string eventName)
+    {
+        if (_mpv is null)
+            return Task.CompletedTask;
+
+        return SafeReportAsync(() =>
+            _client.ReportPlaybackProgressAsync(
+                _launch,
+                _lastPositionTicks,
+                _mpv.IsPaused,
+                _mpv.Volume,
+                eventName));
     }
 
     private async void EpisodeList_Click(object sender, RoutedEventArgs e)
@@ -1339,10 +1396,18 @@ public sealed partial class PlayerPocView : UserControl
             try
             {
                 await SafeReportAsync(() =>
+                    _client.ReportPlaybackProgressAsync(
+                        _launch,
+                        _lastPositionTicks,
+                        true,
+                        mpv.Volume,
+                        "Pause"));
+
+                await SafeReportAsync(() =>
                     _client.ReportPlaybackStoppedAsync(
                         _launch,
                         _lastPositionTicks,
-                        mpv.IsPaused,
+                        true,
                         mpv.Volume));
             }
             finally
