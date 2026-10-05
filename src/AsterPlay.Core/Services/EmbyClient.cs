@@ -102,6 +102,20 @@ public sealed class EmbyClient
         UserName = UserName
     };
 
+    public async Task<string> GetServerNameAsync()
+    {
+        using var request = CreateRequest(
+            HttpMethod.Get,
+            "/System/Info/Public",
+            includeToken: false);
+
+        using var response = await _http.SendAsync(request);
+        await EnsureSuccess(response, "Server info request failed");
+
+        var info = await response.Content.ReadFromJsonAsync<EmbyPublicSystemInfo>(_json);
+        return info?.ServerName?.Trim() ?? "";
+    }
+
     public async Task<List<EmbyItem>> GetViewsAsync()
     {
         var result = await GetAsync<EmbyItemsResponse>($"/Users/{Esc(UserId)}/Views");
