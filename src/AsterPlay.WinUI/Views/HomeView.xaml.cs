@@ -125,6 +125,7 @@ public sealed partial class HomeView : UserControl
         {
             LoadingRing.IsActive = false;
             LoadingRing.Visibility = Visibility.Collapsed;
+            DispatcherQueue.TryEnqueue(UpdateAllRailButtons);
         }
     }
 
@@ -148,23 +149,29 @@ public sealed partial class HomeView : UserControl
 
     private void HomeScrollViewer_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
     {
-        if (sender is not ScrollViewer scroller || scroller.ScrollableHeight <= 0)
-            return;
+        var delta = e.GetCurrentPoint(HomeScrollViewer).Properties.MouseWheelDelta;
+        ScrollHomeByWheel(delta, e);
+    }
 
-        var point = e.GetCurrentPoint(scroller);
-        var delta = point.Properties.MouseWheelDelta;
+    private void Rail_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
+    {
+        var delta = e.GetCurrentPoint(HomeScrollViewer).Properties.MouseWheelDelta;
+        ScrollHomeByWheel(delta, e);
+    }
 
-        if (delta == 0)
+    private void ScrollHomeByWheel(int delta, PointerRoutedEventArgs e)
+    {
+        if (delta == 0 || HomeScrollViewer.ScrollableHeight <= 0)
             return;
 
         var step = Math.Clamp(Math.Abs(delta) * 1.05, 72, 190);
         var target = delta > 0
-            ? scroller.VerticalOffset - step
-            : scroller.VerticalOffset + step;
+            ? HomeScrollViewer.VerticalOffset - step
+            : HomeScrollViewer.VerticalOffset + step;
 
-        target = Math.Clamp(target, 0, scroller.ScrollableHeight);
+        target = Math.Clamp(target, 0, HomeScrollViewer.ScrollableHeight);
 
-        scroller.ChangeView(
+        HomeScrollViewer.ChangeView(
             horizontalOffset: null,
             verticalOffset: target,
             zoomFactor: null,
@@ -173,34 +180,85 @@ public sealed partial class HomeView : UserControl
         e.Handled = true;
     }
 
-    private void HorizontalRail_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
+    private void RailArrow_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not ScrollViewer scroller || scroller.ScrollableWidth <= 0)
+        if (sender is not Button { Tag: string tag })
             return;
 
-        var point = e.GetCurrentPoint(scroller);
-        var delta = point.Properties.MouseWheelDelta;
-
-        if (delta == 0)
+        var parts = tag.Split(':', 2);
+        if (parts.Length != 2 || !int.TryParse(parts[1], out var direction))
             return;
 
-        // Translate the normal vertical mouse wheel into direct horizontal
-        // movement for media rails. Disable the extra scroll animation so
-        // each wheel notch tracks the user's input immediately.
-        var step = Math.Clamp(Math.Abs(delta) * 1.15, 72, 220);
-        var target = delta > 0
-            ? scroller.HorizontalOffset - step
-            : scroller.HorizontalOffset + step;
+        var scroller = parts[0] switch
+        {
+            "libraries" => LibrariesScroller,
+            "resume" => ResumeScroller,
+            "latest" => LatestScroller,
+            _ => null
+        };
 
-        target = Math.Clamp(target, 0, scroller.ScrollableWidth);
+        if (scroller is null || scroller.ScrollableWidth <= 0)
+            return;
+
+        var distance = Math.Max(240, scroller.ViewportWidth * 0.82);
+        var target = Math.Clamp(
+            scroller.HorizontalOffset + Math.Sign(direction) * distance,
+            0,
+            scroller.ScrollableWidth);
 
         scroller.ChangeView(
             horizontalOffset: target,
             verticalOffset: null,
             zoomFactor: null,
-            disableAnimation: true);
+            disableAnimation: false);
+    }
 
-        e.Handled = true;
+    private void Rail_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e)
+    {
+        if (sender is ScrollViewer scroller)
+            UpdateRailButtons(scroller);
+    }
+
+    private void Rail_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (sender is ScrollViewer scroller)
+            UpdateRailButtons(scroller);
+    }
+
+    private void UpdateRailButtons(ScrollViewer scroller)
+    {
+        Button? previous = null;
+        Button? next = null;
+
+        if (ReferenceEquals(scroller, LibrariesScroller))
+        {
+            previous = LibrariesPreviousButton;
+            next = LibrariesNextButton;
+        }
+        else if (ReferenceEquals(scroller, ResumeScroller))
+        {
+            previous = ResumePreviousButton;
+            next = ResumeNextButton;
+        }
+        else if (ReferenceEquals(scroller, LatestScroller))
+        {
+            previous = LatestPreviousButton;
+            next = LatestNextButton;
+        }
+
+        if (previous is null || next is null)
+            return;
+
+        const double epsilon = 1.0;
+        previous.IsEnabled = scroller.HorizontalOffset > epsilon;
+        next.IsEnabled = scroller.HorizontalOffset < scroller.ScrollableWidth - epsilon;
+    }
+
+    private void UpdateAllRailButtons()
+    {
+        UpdateRailButtons(LibrariesScroller);
+        UpdateRailButtons(ResumeScroller);
+        UpdateRailButtons(LatestScroller);
     }
 
     private static IReadOnlyList<EmbyItem> BuildResumeItems(IEnumerable<EmbyItem> source)
