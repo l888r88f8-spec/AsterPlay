@@ -30,8 +30,13 @@ public sealed partial class HomeView : UserControl
 
     public HomeView(EmbyClient client)
     {
+        StartupDiagnostics.Write("HomeView constructor: entered");
         _client = client;
-        InitializeComponent();
+
+        using (StartupDiagnostics.Measure("HomeView.InitializeComponent"))
+            InitializeComponent();
+
+        StartupDiagnostics.Write("HomeView constructor: after InitializeComponent");
 
         LibrariesGrid.ItemsSource = _libraries;
         ResumeGrid.ItemsSource = _resume;
@@ -41,9 +46,11 @@ public sealed partial class HomeView : UserControl
             ? "欢迎回来"
             : $"欢迎回来，{_client.UserName}";
 
+        StartupDiagnostics.Write("HomeView: loading home snapshot");
         var snapshot = HomeSnapshotStore.Load(
             _client.ServerUrl,
             _client.UserId);
+        StartupDiagnostics.Write($"HomeView: snapshot={(snapshot is null ? "miss" : "hit")}");
 
         if (snapshot is not null)
         {
@@ -59,16 +66,19 @@ public sealed partial class HomeView : UserControl
         }
 
         Loaded += HomeView_Loaded;
+        StartupDiagnostics.Write("HomeView constructor: completed");
     }
 
     private async void HomeView_Loaded(object sender, RoutedEventArgs e)
     {
+        StartupDiagnostics.Write($"HomeView.Loaded; cachedSnapshot={_hasCachedSnapshot}");
         Loaded -= HomeView_Loaded;
         await LoadAsync();
     }
 
     private async Task LoadAsync()
     {
+        StartupDiagnostics.Write($"HomeView.LoadAsync: begin; cachedSnapshot={_hasCachedSnapshot}");
         LoadingRing.IsActive = !_hasCachedSnapshot;
         LoadingRing.Visibility = _hasCachedSnapshot
             ? Visibility.Collapsed
@@ -82,6 +92,8 @@ public sealed partial class HomeView : UserControl
             var latestTask = _client.GetLatestAsync(12);
 
             await Task.WhenAll(viewsTask, resumeTask, latestTask);
+            StartupDiagnostics.Write(
+                $"HomeView network head ready; views={viewsTask.Result.Count}, resume={resumeTask.Result.Count}, latest={latestTask.Result.Count}");
 
             var views = viewsTask.Result
                 .Where(IsVisibleLibrary)
@@ -126,6 +138,7 @@ public sealed partial class HomeView : UserControl
                 snapshot);
 
             _hasCachedSnapshot = true;
+            StartupDiagnostics.Write("HomeView.LoadAsync: refreshed snapshot saved");
         }
         catch (Exception ex)
         {
@@ -152,6 +165,7 @@ public sealed partial class HomeView : UserControl
             DispatcherQueue.TryEnqueue(UpdateResumeButtons);
 
             InitialContentReady?.Invoke(this, EventArgs.Empty);
+            StartupDiagnostics.Write("HomeView.LoadAsync: InitialContentReady raised");
 
             loadTimer.Stop();
             PlaybackLog.Write(
