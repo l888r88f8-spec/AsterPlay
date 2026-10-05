@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using AsterPlay.Models;
 using AsterPlay.Services;
+using AsterPlay.WinUI.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -17,10 +18,15 @@ public sealed partial class HomeView : UserControl
     private readonly ObservableCollection<HomeLibrarySection> _sections = [];
 
     private EmbyItem? _heroItem;
+    private bool _hasCachedSnapshot;
+
+    public bool HasCachedSnapshot => _hasCachedSnapshot;
 
     public event EventHandler? LibraryRequested;
     public event EventHandler<EmbyItem>? MediaRequested;
     public event EventHandler<EmbyItem>? PlayRequested;
+    public event EventHandler? InitialContentReady;
+    public event EventHandler? AuthenticationFailed;
 
     public HomeView(EmbyClient client)
     {
@@ -30,6 +36,27 @@ public sealed partial class HomeView : UserControl
         LibrariesGrid.ItemsSource = _libraries;
         ResumeGrid.ItemsSource = _resume;
         LibrarySectionsList.ItemsSource = _sections;
+
+        WelcomeBlock.Text = string.IsNullOrWhiteSpace(_client.UserName)
+            ? "欢迎回来"
+            : $"欢迎回来，{_client.UserName}";
+
+        var snapshot = HomeSnapshotStore.Load(
+            _client.ServerUrl,
+            _client.UserId);
+
+        if (snapshot is not null)
+        {
+            ApplySnapshot(snapshot);
+            _hasCachedSnapshot = true;
+            LoadingRing.IsActive = false;
+            LoadingRing.Visibility = Visibility.Collapsed;
+
+            PlaybackLog.Write(
+                "WinUIHomeSnapshot",
+                $"Loaded cached home snapshot; age={(DateTimeOffset.UtcNow - snapshot.SavedAtUtc).TotalMinutes:0.0} min, " +
+                $"libraries={snapshot.Views.Count}, resume={snapshot.Resume.Count}, sections={snapshot.Sections.Count}");
+        }
 
         Loaded += HomeView_Loaded;
     }
@@ -42,16 +69,14 @@ public sealed partial class HomeView : UserControl
 
     private async Task LoadAsync()
     {
-        LoadingRing.IsActive = true;
-        LoadingRing.Visibility = Visibility.Visible;
+        LoadingRing.IsActive = !_hasCachedSnapshot;
+        LoadingRing.Visibility = _hasCachedSnapshot
+            ? Visibility.Collapsed
+            : Visibility.Visible;
         var loadTimer = System.Diagnostics.Stopwatch.StartNew();
 
         try
         {
-            WelcomeBlock.Text = string.IsNullOrWhiteSpace(_client.UserName)
-                ? "欢迎回来"
-                : $"欢迎回来，{_client.UserName}";
-
             var viewsTask = _client.GetViewsAsync();
             var resumeTask = _client.GetResumeAsync(24);
             var latestTask = _client.GetLatestAsync(12);
@@ -76,20 +101,57 @@ public sealed partial class HomeView : UserControl
             _sections.Clear();
             foreach (var section in sectionResults.Where(section => section is not null))
                 _sections.Add(section!);
+
+            var snapshot = new HomeSnapshot
+            {
+                Latest = latestTask.Result.ToList(),
+                Resume = resumeTask.Result.ToList(),
+                Views = views.ToList(),
+                Sections = sectionResults
+                    .Where(section => section is not null)
+                    .Select(section => new HomeSectionSnapshot
+                    {
+                        Library = section!.Library,
+                        TotalCount = section.TotalCount,
+                        Items = section.Items
+                            .Select(item => item.Item)
+                            .ToList()
+                    })
+                    .ToList()
+            };
+
+            HomeSnapshotStore.Save(
+                _client.ServerUrl,
+                _client.UserId,
+                snapshot);
+
+            _hasCachedSnapshot = true;
         }
         catch (Exception ex)
         {
-            HeroTitleBlock.Text = "首页加载失败";
-            HeroMetaBlock.Text = UserError.GetMessage(ex, "加载首页");
-            HeroOverviewBlock.Text = "";
-            HeroPlayButton.IsEnabled = false;
             PlaybackLog.Error("WinUIHome", ex);
+
+            if (UserError.IsAuthenticationFailure(ex))
+            {
+                AuthenticationFailed?.Invoke(this, EventArgs.Empty);
+                return;
+            }
+
+            if (!_hasCachedSnapshot)
+            {
+                HeroTitleBlock.Text = "首页加载失败";
+                HeroMetaBlock.Text = UserError.GetMessage(ex, "加载首页");
+                HeroOverviewBlock.Text = "";
+                HeroPlayButton.IsEnabled = false;
+            }
         }
         finally
         {
             LoadingRing.IsActive = false;
             LoadingRing.Visibility = Visibility.Collapsed;
             DispatcherQueue.TryEnqueue(UpdateResumeButtons);
+
+            InitialContentReady?.Invoke(this, EventArgs.Empty);
 
             loadTimer.Stop();
             PlaybackLog.Write(
@@ -99,6 +161,39 @@ public sealed partial class HomeView : UserControl
                 $"workingSet={Environment.WorkingSet / 1024d / 1024d:0.0} MB, " +
                 $"managed={GC.GetTotalMemory(false) / 1024d / 1024d:0.0} MB");
         }
+    }
+
+    private void ApplySnapshot(HomeSnapshot snapshot)
+    {
+        PopulateHero(snapshot.Latest);
+        PopulateResume(snapshot.Resume);
+        PopulateLibraries(snapshot.Views);
+
+        _sections.Clear();
+        foreach (var section in snapshot.Sections)
+        {
+            var items = section.Items
+                .Where(item => !string.IsNullOrWhiteSpace(item.Id))
+                .Take(SectionItemLimit)
+                .Select(item => new SectionMediaTile(
+                    item,
+                    item.Name,
+                    BuildSectionMeta(item),
+                    _client.BuildPrimaryUrl(item, 420)))
+                .ToArray();
+
+            if (items.Length == 0)
+                continue;
+
+            _sections.Add(new HomeLibrarySection(
+                section.Library,
+                section.Library.Name,
+                section.TotalCount,
+                section.TotalCount > 0 ? section.TotalCount.ToString() : "",
+                items));
+        }
+
+        DispatcherQueue.TryEnqueue(UpdateResumeButtons);
     }
 
     private void PopulateHero(IReadOnlyList<EmbyItem> latest)
