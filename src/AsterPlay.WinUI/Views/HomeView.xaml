@@ -453,7 +453,8 @@
                               Width="36"
                               Height="36"
                               IsActive="False"/>
-                <TextBlock Text="正在加载"
+                <TextBlock x:Name="LoadingTextBlock"
+                           Text="正在加载"
                            FontSize="15"
                            Foreground="{ThemeResource AsterSecondaryTextBrush}"
                            HorizontalAlignment="Center"/>
