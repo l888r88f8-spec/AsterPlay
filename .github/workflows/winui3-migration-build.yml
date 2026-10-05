@@ -40,7 +40,9 @@ jobs:
           $required = @(
             "AsterPlay.WinUI.exe",
             "AsterPlay.Core.dll",
-            "CustomEffectRuntimeNative.dll"
+            "CustomEffectRuntimeNative.dll",
+            "libmpv-2.dll",
+            "RUNTIME-SOURCE.txt"
           )
 
           foreach ($name in $required) {
