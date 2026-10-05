@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Dispatching;
 
 namespace AsterPlay.WinUI.Views;
@@ -28,6 +29,8 @@ public sealed partial class HomeView : UserControl
     private bool _heroImagesReady;
     private readonly bool _noServerMode;
     private bool _hasCachedSnapshot;
+    private DateTimeOffset _lastWheelDiagnosticAt = DateTimeOffset.MinValue;
+    private DateTimeOffset _lastViewChangedDiagnosticAt = DateTimeOffset.MinValue;
 
     public event EventHandler? LibraryRequested;
     public event EventHandler<EmbyItem>? MediaRequested;
@@ -57,6 +60,12 @@ public sealed partial class HomeView : UserControl
         Loaded += HomeView_Activated;
         Unloaded += HomeView_Unloaded;
 
+        AddHandler(
+            UIElement.PointerWheelChangedEvent,
+            new PointerEventHandler(HomeView_PointerWheelChangedDiagnostic),
+            handledEventsToo: true);
+        HomeScrollViewer.ViewChanged += HomeScrollViewer_ViewChangedDiagnostic;
+
         LibrariesGrid.ItemsSource = _libraries;
         ResumeGrid.ItemsSource = _resume;
         LibrarySectionsList.ItemsSource = _sections;
@@ -84,6 +93,11 @@ public sealed partial class HomeView : UserControl
     {
         if (_heroImagesReady && _heroCandidates.Count > 1)
             _heroTimer.Start();
+
+        LogHomeScrollState("activated");
+        DispatcherQueue.TryEnqueue(
+            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+            () => LogHomeScrollState("activated-deferred"));
     }
 
     private void HomeView_Unloaded(object sender, RoutedEventArgs e)
@@ -102,6 +116,56 @@ public sealed partial class HomeView : UserControl
             $"HomeView hero advanced: index={_heroIndex}, item={_heroItem?.Id}");
     }
 
+    private void HomeView_PointerWheelChangedDiagnostic(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (now - _lastWheelDiagnosticAt < TimeSpan.FromMilliseconds(180))
+            return;
+
+        _lastWheelDiagnosticAt = now;
+
+        var point = e.GetCurrentPoint(this);
+        PlaybackLog.Write(
+            "WinUIHomeScroll",
+            $"wheel: delta={point.Properties.MouseWheelDelta}, handled={e.Handled}, " +
+            $"source={e.OriginalSource?.GetType().Name ?? "-"}, " +
+            $"position={point.Position.X:0},{point.Position.Y:0}, " +
+            BuildHomeScrollState());
+
+        DispatcherQueue.TryEnqueue(
+            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+            () => LogHomeScrollState("wheel-after"));
+    }
+
+    private void HomeScrollViewer_ViewChangedDiagnostic(
+        object? sender,
+        ScrollViewerViewChangedEventArgs e)
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (now - _lastViewChangedDiagnosticAt < TimeSpan.FromMilliseconds(220))
+            return;
+
+        _lastViewChangedDiagnosticAt = now;
+        LogHomeScrollState($"view-changed intermediate={e.IsIntermediate}");
+    }
+
+    private void LogHomeScrollState(string reason) =>
+        PlaybackLog.Write(
+            "WinUIHomeScroll",
+            $"{reason}: {BuildHomeScrollState()}");
+
+    private string BuildHomeScrollState() =>
+        $"visible={HomeScrollViewer.Visibility}, " +
+        $"offset={HomeScrollViewer.VerticalOffset:0.0}, " +
+        $"scrollable={HomeScrollViewer.ScrollableHeight:0.0}, " +
+        $"extent={HomeScrollViewer.ExtentHeight:0.0}, " +
+        $"viewport={HomeScrollViewer.ViewportHeight:0.0}, " +
+        $"viewerActual={HomeScrollViewer.ActualWidth:0.0}x{HomeScrollViewer.ActualHeight:0.0}, " +
+        $"contentActual={HomeContentStack.ActualWidth:0.0}x{HomeContentStack.ActualHeight:0.0}, " +
+        $"contentDesired={HomeContentStack.DesiredSize.Width:0.0}x{HomeContentStack.DesiredSize.Height:0.0}";
+
     private void HomeScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         var width = e.NewSize.Width;
@@ -118,6 +182,9 @@ public sealed partial class HomeView : UserControl
             new Thickness(horizontalPadding, 0, horizontalPadding, 122);
         HeroContainer.Margin =
             new Thickness(-horizontalPadding, 0, -horizontalPadding, -172);
+
+        LogHomeScrollState(
+            $"size-changed {e.NewSize.Width:0.0}x{e.NewSize.Height:0.0}");
     }
 
     private void HomeView_Loaded(object sender, RoutedEventArgs e)
@@ -302,6 +369,11 @@ public sealed partial class HomeView : UserControl
 
         StartupDiagnostics.Write(
             $"HomeView state: Content; verticalOffset={HomeScrollViewer.VerticalOffset:0.0}");
+
+        LogHomeScrollState("content-visible");
+        DispatcherQueue.TryEnqueue(
+            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+            () => LogHomeScrollState("content-visible-deferred"));
     }
 
     private void ShowLoadingError(string message)
