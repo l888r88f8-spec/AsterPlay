@@ -30,11 +30,11 @@
                 <Grid>
                     <StackPanel>
                         <TextBlock Text="媒体库"
-                                   Foreground="White"
+                                   Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                    FontSize="30"
                                    FontWeight="SemiBold"/>
                         <TextBlock x:Name="ResultLabelBlock"
-                                   Foreground="#929CAB"
+                                   Foreground="{ThemeResource AsterSecondaryTextBrush}"
                                    FontSize="12"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
@@ -83,19 +83,19 @@
                             <Border Width="166"
                                     Height="244"
                                     CornerRadius="18"
-                                    Background="#171C26"
-                                    BorderBrush="#32FFFFFF"
+                                    Background="{ThemeResource AsterCardBackgroundBrush}"
+                                    BorderBrush="{ThemeResource AsterCardBorderBrush}"
                                     BorderThickness="1">
                                 <Image Source="{Binding PosterUrl}"
                                        Stretch="UniformToFill"/>
                             </Border>
                             <TextBlock Text="{Binding Title}"
-                                       Foreground="White"
+                                       Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                        FontSize="14"
                                        FontWeight="SemiBold"
                                        TextTrimming="CharacterEllipsis"/>
                             <TextBlock Text="{Binding MetaLine}"
-                                       Foreground="#8993A3"
+                                       Foreground="{ThemeResource AsterSecondaryTextBrush}"
                                        FontSize="12"
                                        TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
@@ -117,12 +117,12 @@
                         VerticalAlignment="Center"
                         Spacing="8">
                 <TextBlock Text="这里暂时没有媒体"
-                           Foreground="White"
+                           Foreground="{ThemeResource AsterPrimaryTextBrush}"
                            FontSize="23"
                            FontWeight="SemiBold"
                            HorizontalAlignment="Center"/>
                 <TextBlock Text="调整筛选或搜索条件后再试。"
-                           Foreground="#8993A3"/>
+                           Foreground="{ThemeResource AsterSecondaryTextBrush}"/>
             </StackPanel>
         </Grid>
 
@@ -147,7 +147,7 @@
                         Content="上一页"
                         Click="Previous_Click"/>
                 <TextBlock x:Name="PageLabelBlock"
-                           Foreground="#C1C8D3"
+                           Foreground="{ThemeResource AsterSecondaryTextBrush}"
                            VerticalAlignment="Center"/>
                 <Button x:Name="NextButton"
                         Content="下一页"
