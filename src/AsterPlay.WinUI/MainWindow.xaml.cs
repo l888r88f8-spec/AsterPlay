@@ -82,43 +82,42 @@ public sealed partial class MainWindow : Window
         await InitializeSessionAsync();
     }
 
-    private async Task InitializeSessionAsync()
+    private Task InitializeSessionAsync()
     {
         var settings = AppSettingsStore.Load();
         if (!settings.RestoreSessionOnStartup)
         {
             ShowLogin();
-            return;
+            return Task.CompletedTask;
         }
 
         var session = AppStateStore.Load();
         if (session is null)
         {
             ShowLogin();
-            return;
+            return Task.CompletedTask;
         }
 
         try
         {
+            // Session restoration is local and synchronous. Mount HomeView
+            // immediately so its cached metadata + cached images can render on
+            // the first application frame. HomeView refreshes from Emby in the
+            // background and reports an authentication failure if the token is
+            // no longer valid.
             _client.Restore(session);
-            await _client.GetViewsAsync();
             ServerProfileStore.AddOrUpdate(session.ServerUrl);
             _authenticated = true;
             ShowHome();
-        }
-        catch (Exception ex) when (UserError.IsAuthenticationFailure(ex))
-        {
-            PlaybackLog.Error("WinUISessionRestoreAuth", ex);
-            AppStateStore.Clear();
-            _client.Reset();
-            ShowLogin("登录状态已失效，请重新登录。");
         }
         catch (Exception ex)
         {
             PlaybackLog.Error("WinUISessionRestore", ex);
             _client.Reset();
-            ShowLogin(UserError.GetMessage(ex, "连接服务器"));
+            ShowLogin(UserError.GetMessage(ex, "恢复登录"));
         }
+
+        return Task.CompletedTask;
     }
 
     private void ShowLogin(string? message = null)
@@ -161,8 +160,22 @@ public sealed partial class MainWindow : Window
         view.MediaRequested += (_, item) => ShowDetails(item, "home");
         view.PlayRequested += async (_, item) =>
             await StartPlaybackAsync(item, "home");
+        view.AuthenticationFailed += (_, _) =>
+        {
+            PlaybackLog.Write(
+                "WinUISessionRestoreAuth",
+                "Cached home session was rejected by the server.");
+            AppStateStore.Clear();
+            _client.Reset();
+            _authenticated = false;
+            ShowLogin("登录状态已失效，请重新登录。");
+        };
+        view.InitialContentReady += (_, _) => CompleteStartup();
+
         PageHost.Content = view;
-        CompleteStartup();
+
+        if (view.HasCachedSnapshot)
+            CompleteStartup();
     }
 
     private void ShowLibrary()
