@@ -33,6 +33,16 @@
             </Setter>
         </Style>
 
+        <Style x:Key="SectionMoreButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Padding" Value="14,0"/>
+            <Setter Property="CornerRadius" Value="17"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{ThemeResource AsterSecondaryTextBrush}"/>
+            <Setter Property="Background" Value="{ThemeResource AsterCardBackgroundBrush}"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+
         <Style x:Key="HeroActionButtonStyle" TargetType="Button">
             <Setter Property="Height" Value="42"/>
             <Setter Property="MinWidth" Value="104"/>
@@ -325,8 +335,15 @@
                                             Background="Transparent"
                                             BorderThickness="0"
                                             Tag="{Binding}"
+                                            RenderTransformOrigin="0.5,0.5"
+                                            PointerEntered="MediaCard_PointerEntered"
+                                            PointerExited="MediaCard_PointerExited"
                                             Click="ResumeTile_Click"
                                             RightTapped="ResumeTile_RightTapped">
+                                        <Button.RenderTransform>
+                                            <ScaleTransform ScaleX="1"
+                                                            ScaleY="1"/>
+                                        </Button.RenderTransform>
                                         <StackPanel Width="320"
                                                     Spacing="9">
                                             <Border Width="320"
@@ -407,19 +424,20 @@
                 <!-- My media -->
                 <StackPanel Spacing="16">
                     <Grid>
-                        <TextBlock Text="我的媒体"
-                                   Foreground="{ThemeResource AsterPrimaryTextBrush}"
-                                   FontSize="30"
-                                   FontWeight="SemiBold"
-                                   VerticalAlignment="Center"/>
+                        <StackPanel Spacing="2"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="我的媒体"
+                                       Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                                       FontSize="28"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="浏览你的媒体库"
+                                       Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                                       FontSize="12"
+                                       Opacity="0.82"/>
+                        </StackPanel>
                         <Button Content="更多  ›"
+                                Style="{StaticResource SectionMoreButtonStyle}"
                                 HorizontalAlignment="Right"
-                                Height="38"
-                                Padding="16,0"
-                                CornerRadius="19"
-                                BorderThickness="0"
-                                Foreground="{ThemeResource AsterSecondaryTextBrush}"
-                                Background="{ThemeResource AsterCardBackgroundBrush}"
                                 Click="OpenLibrary_Click"/>
                     </Grid>
 
@@ -440,7 +458,14 @@
                                         BorderThickness="0"
                                         HorizontalAlignment="Stretch"
                                         Tag="{Binding}"
+                                        RenderTransformOrigin="0.5,0.5"
+                                        PointerEntered="MediaCard_PointerEntered"
+                                        PointerExited="MediaCard_PointerExited"
                                         Click="LibraryTile_Click">
+                                    <Button.RenderTransform>
+                                        <ScaleTransform ScaleX="1"
+                                                        ScaleY="1"/>
+                                    </Button.RenderTransform>
                                     <Border CornerRadius="20"
                                             Background="{ThemeResource AsterCardBackgroundBrush}"
                                             BorderBrush="{ThemeResource AsterCardBorderBrush}"
@@ -458,6 +483,23 @@
                                                     </LinearGradientBrush>
                                                 </Rectangle.Fill>
                                             </Rectangle>
+                                            <Border Width="30"
+                                                    Height="30"
+                                                    CornerRadius="15"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Top"
+                                                    Margin="0,12,12,0"
+                                                    Background="#52000000"
+                                                    BorderBrush="#3FFFFFFF"
+                                                    BorderThickness="1">
+                                                <TextBlock Text="›"
+                                                           Foreground="White"
+                                                           FontSize="20"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           Margin="1,-2,0,0"/>
+                                            </Border>
+
                                             <StackPanel VerticalAlignment="Bottom"
                                                         Margin="18"
                                                         Spacing="3">
@@ -467,7 +509,8 @@
                                                            FontWeight="SemiBold"/>
                                                 <TextBlock Text="{Binding Subtitle}"
                                                            Foreground="#E0E4EA"
-                                                           FontSize="13"/>
+                                                           FontSize="12"
+                                                           Opacity="0.92"/>
                                             </StackPanel>
                                         </Grid>
                                     </Border>
@@ -489,34 +532,29 @@
                             <StackPanel Spacing="16"
                                         Margin="0,0,0,30">
                                 <Grid>
-                                    <TextBlock Text="{Binding Name}"
-                                               Foreground="{ThemeResource AsterPrimaryTextBrush}"
-                                               FontSize="30"
-                                               FontWeight="SemiBold"/>
-                                    <Button HorizontalAlignment="Right"
-                                            Height="38"
-                                            Padding="16,0"
-                                            CornerRadius="19"
-                                            Background="{ThemeResource AsterCardBackgroundBrush}"
-                                            BorderThickness="0"
-                                            Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                                    <StackPanel Spacing="2"
+                                                VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}"
+                                                   Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                                                   FontSize="28"
+                                                   FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding CountLabel}"
+                                                   Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                                                   FontSize="12"
+                                                   Opacity="0.82"/>
+                                    </StackPanel>
+
+                                    <Button Content="更多  ›"
+                                            Style="{StaticResource SectionMoreButtonStyle}"
+                                            HorizontalAlignment="Right"
                                             Tag="{Binding}"
-                                            Click="LibrarySectionMore_Click">
-                                        <StackPanel Orientation="Horizontal"
-                                                    Spacing="6">
-                                            <TextBlock Text="{Binding CountLabel}"
-                                                       VerticalAlignment="Center"/>
-                                            <TextBlock Text="›"
-                                                       FontSize="20"
-                                                       VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Button>
+                                            Click="LibrarySectionMore_Click"/>
                                 </Grid>
 
                                 <ItemsRepeater ItemsSource="{Binding Items}">
                                     <ItemsRepeater.Layout>
-                                        <UniformGridLayout MinItemWidth="166"
-                                                           MinItemHeight="292"
+                                        <UniformGridLayout MinItemWidth="158"
+                                                           MinItemHeight="278"
                                                            MinColumnSpacing="16"
                                                            MinRowSpacing="20"
                                                            ItemsJustification="Start"
@@ -524,16 +562,23 @@
                                     </ItemsRepeater.Layout>
                                     <ItemsRepeater.ItemTemplate>
                                         <DataTemplate>
-                                            <Button MinWidth="166"
+                                            <Button MinWidth="158"
                                                     Padding="0"
                                                     Background="Transparent"
                                                     BorderThickness="0"
                                                     HorizontalAlignment="Stretch"
                                                     Tag="{Binding}"
+                                                    RenderTransformOrigin="0.5,0.5"
+                                                    PointerEntered="MediaCard_PointerEntered"
+                                                    PointerExited="MediaCard_PointerExited"
                                                     Click="SectionMedia_Click">
+                                                <Button.RenderTransform>
+                                                    <ScaleTransform ScaleX="1"
+                                                                    ScaleY="1"/>
+                                                </Button.RenderTransform>
                                                 <StackPanel Spacing="8">
-                                                    <Border Height="244"
-                                                            CornerRadius="20"
+                                                    <Border Height="232"
+                                                            CornerRadius="18"
                                                             Background="{ThemeResource AsterCardBackgroundBrush}"
                                                             BorderBrush="{ThemeResource AsterCardBorderBrush}"
                                                             BorderThickness="1">
@@ -542,7 +587,7 @@
                                                     </Border>
                                                     <TextBlock Text="{Binding Title}"
                                                                Foreground="{ThemeResource AsterPrimaryTextBrush}"
-                                                               FontSize="15"
+                                                               FontSize="14"
                                                                FontWeight="SemiBold"
                                                                TextTrimming="CharacterEllipsis"/>
                                                     <TextBlock Text="{Binding Meta}"
