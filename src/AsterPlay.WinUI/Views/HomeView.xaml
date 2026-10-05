@@ -40,11 +40,14 @@
                       HorizontalScrollMode="Disabled"
                       HorizontalScrollBarVisibility="Disabled"
                       ZoomMode="Disabled">
-            <StackPanel Padding="38,0,38,136"
-                        Spacing="34">
+            <StackPanel Width="{Binding ElementName=HomeScrollViewer, Path=ViewportWidth}"
+                        MaxWidth="1440"
+                        HorizontalAlignment="Center"
+                        Padding="38,0,38,112"
+                        Spacing="30">
 
                 <!-- Immersive hero -->
-                <Grid Height="430"
+                <Grid Height="470"
                       Margin="-38,0,-38,0">
                     <Image x:Name="HeroImage"
                            Stretch="UniformToFill"/>
@@ -74,8 +77,8 @@
 
                     <StackPanel VerticalAlignment="Bottom"
                                 HorizontalAlignment="Left"
-                                Margin="52,0,52,42"
-                                MaxWidth="760"
+                                Margin="56,0,56,46"
+                                MaxWidth="740"
                                 Spacing="10">
                         <TextBlock x:Name="WelcomeBlock"
                                    Foreground="#78BEFF"
@@ -161,16 +164,16 @@
 
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Button Width="292"
+                                    <Button Width="270"
                                             Margin="0,0,14,0"
                                             Padding="0"
                                             Background="Transparent"
                                             BorderThickness="0"
                                             Tag="{Binding}"
                                             Click="ResumeTile_Click">
-                                        <StackPanel Width="292" Spacing="8">
-                                            <Border Width="292"
-                                                    Height="164"
+                                        <StackPanel Width="270" Spacing="8">
+                                            <Border Width="270"
+                                                    Height="152"
                                                     CornerRadius="19"
                                                     Background="{ThemeResource AsterCardBackgroundBrush}"
                                                     BorderBrush="{ThemeResource AsterCardBorderBrush}"
@@ -248,23 +251,23 @@
                                 Click="OpenLibrary_Click"/>
                     </Grid>
 
-                    <ItemsControl x:Name="LibrariesGrid">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <ItemsWrapGrid Orientation="Horizontal"
-                                               ItemWidth="300"
-                                               ItemHeight="160"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
+                    <ItemsRepeater x:Name="LibrariesGrid">
+                        <ItemsRepeater.Layout>
+                            <UniformGridLayout MinItemWidth="280"
+                                               MinItemHeight="150"
+                                               MinColumnSpacing="14"
+                                               MinRowSpacing="14"
+                                               ItemsJustification="SpaceBetween"
+                                               ItemsStretch="Fill"/>
+                        </ItemsRepeater.Layout>
 
-                        <ItemsControl.ItemTemplate>
+                        <ItemsRepeater.ItemTemplate>
                             <DataTemplate>
-                                <Button Width="286"
-                                        Height="150"
-                                        Margin="0,0,14,14"
+                                <Button Height="150"
                                         Padding="0"
                                         Background="Transparent"
                                         BorderThickness="0"
+                                        HorizontalAlignment="Stretch"
                                         Tag="{Binding}"
                                         Click="LibraryTile_Click">
                                     <Border CornerRadius="22"
@@ -301,8 +304,8 @@
                                     </Border>
                                 </Button>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
                 </StackPanel>
 
                 <!-- Per-library sections -->
@@ -316,7 +319,7 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Spacing="14"
-                                        Margin="0,0,0,30">
+                                        Margin="0,0,0,24">
                                 <Grid>
                                     <TextBlock Text="{Binding Name}"
                                                Foreground="{ThemeResource AsterPrimaryTextBrush}"
@@ -340,26 +343,27 @@
                                     </Button>
                                 </Grid>
 
-                                <ItemsControl ItemsSource="{Binding Items}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <StackPanel Orientation="Horizontal"/>
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
+                                <ItemsRepeater ItemsSource="{Binding Items}">
+                                    <ItemsRepeater.Layout>
+                                        <UniformGridLayout MinItemWidth="158"
+                                                           MinItemHeight="282"
+                                                           MinColumnSpacing="14"
+                                                           MinRowSpacing="18"
+                                                           ItemsJustification="SpaceBetween"
+                                                           ItemsStretch="Fill"/>
+                                    </ItemsRepeater.Layout>
 
-                                    <ItemsControl.ItemTemplate>
+                                    <ItemsRepeater.ItemTemplate>
                                         <DataTemplate>
-                                            <Button Width="154"
-                                                    Margin="0,0,14,0"
+                                            <Button MinWidth="158"
                                                     Padding="0"
                                                     Background="Transparent"
                                                     BorderThickness="0"
+                                                    HorizontalAlignment="Stretch"
                                                     Tag="{Binding}"
                                                     Click="SectionMedia_Click">
-                                                <StackPanel Width="154"
-                                                            Spacing="7">
-                                                    <Border Width="154"
-                                                            Height="222"
+                                                <StackPanel Spacing="7">
+                                                    <Border Height="232"
                                                             CornerRadius="18"
                                                             Background="{ThemeResource AsterCardBackgroundBrush}"
                                                             BorderBrush="{ThemeResource AsterCardBorderBrush}"
@@ -381,8 +385,8 @@
                                                 </StackPanel>
                                             </Button>
                                         </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+                                    </ItemsRepeater.ItemTemplate>
+                                </ItemsRepeater>
                             </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
