@@ -20,12 +20,9 @@ public sealed partial class HomeView : UserControl
     private EmbyItem? _heroItem;
     private bool _hasCachedSnapshot;
 
-    public bool HasCachedSnapshot => _hasCachedSnapshot;
-
     public event EventHandler? LibraryRequested;
     public event EventHandler<EmbyItem>? MediaRequested;
     public event EventHandler<EmbyItem>? PlayRequested;
-    public event EventHandler? InitialContentReady;
     public event EventHandler? AuthenticationFailed;
 
     public HomeView(EmbyClient client)
@@ -46,18 +43,46 @@ public sealed partial class HomeView : UserControl
             ? "欢迎回来"
             : $"欢迎回来，{_client.UserName}";
 
-        StartupDiagnostics.Write("HomeView: loading home snapshot");
+        // First frame is deliberately data-free. Cached metadata and server
+        // refresh are scheduled only after the HomeView has been loaded so
+        // neither JSON deserialization nor network work can block the first
+        // visible home frame.
+        LoadingRing.IsActive = false;
+        LoadingRing.Visibility = Visibility.Collapsed;
+
+        Loaded += HomeView_Loaded;
+        StartupDiagnostics.Write("HomeView constructor: completed");
+    }
+
+    private void HomeView_Loaded(object sender, RoutedEventArgs e)
+    {
+        Loaded -= HomeView_Loaded;
+        StartupDiagnostics.Write("HomeView.Loaded: first home frame is ready");
+
+        DispatcherQueue.TryEnqueue(
+            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+            async () =>
+            {
+                await LoadCachedSnapshotAsync();
+                await LoadAsync();
+            });
+    }
+
+    private Task LoadCachedSnapshotAsync()
+    {
+        StartupDiagnostics.Write("HomeView: deferred snapshot load begin");
+
         var snapshot = HomeSnapshotStore.Load(
             _client.ServerUrl,
             _client.UserId);
-        StartupDiagnostics.Write($"HomeView: snapshot={(snapshot is null ? "miss" : "hit")}");
+
+        StartupDiagnostics.Write(
+            $"HomeView: deferred snapshot={(snapshot is null ? "miss" : "hit")}");
 
         if (snapshot is not null)
         {
             ApplySnapshot(snapshot);
             _hasCachedSnapshot = true;
-            LoadingRing.IsActive = false;
-            LoadingRing.Visibility = Visibility.Collapsed;
 
             PlaybackLog.Write(
                 "WinUIHomeSnapshot",
@@ -65,24 +90,14 @@ public sealed partial class HomeView : UserControl
                 $"libraries={snapshot.Views.Count}, resume={snapshot.Resume.Count}, sections={snapshot.Sections.Count}");
         }
 
-        Loaded += HomeView_Loaded;
-        StartupDiagnostics.Write("HomeView constructor: completed");
-    }
-
-    private async void HomeView_Loaded(object sender, RoutedEventArgs e)
-    {
-        StartupDiagnostics.Write($"HomeView.Loaded; cachedSnapshot={_hasCachedSnapshot}");
-        Loaded -= HomeView_Loaded;
-        await LoadAsync();
+        return Task.CompletedTask;
     }
 
     private async Task LoadAsync()
     {
         StartupDiagnostics.Write($"HomeView.LoadAsync: begin; cachedSnapshot={_hasCachedSnapshot}");
-        LoadingRing.IsActive = !_hasCachedSnapshot;
-        LoadingRing.Visibility = _hasCachedSnapshot
-            ? Visibility.Collapsed
-            : Visibility.Visible;
+        LoadingRing.IsActive = false;
+        LoadingRing.Visibility = Visibility.Collapsed;
         var loadTimer = System.Diagnostics.Stopwatch.StartNew();
 
         try
@@ -164,9 +179,7 @@ public sealed partial class HomeView : UserControl
             LoadingRing.Visibility = Visibility.Collapsed;
             DispatcherQueue.TryEnqueue(UpdateResumeButtons);
 
-            InitialContentReady?.Invoke(this, EventArgs.Empty);
-            StartupDiagnostics.Write("HomeView.LoadAsync: InitialContentReady raised");
-
+            StartupDiagnostics.Write("HomeView.LoadAsync: refresh completed");
             loadTimer.Stop();
             PlaybackLog.Write(
                 "Performance",
