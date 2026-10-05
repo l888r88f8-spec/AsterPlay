@@ -24,6 +24,7 @@ public sealed partial class HomeView : UserControl
     public event EventHandler? LibraryRequested;
     public event EventHandler<EmbyItem>? MediaRequested;
     public event EventHandler<EmbyItem>? PlayRequested;
+    public event EventHandler<EmbyItem>? RestartRequested;
     public event EventHandler? AuthenticationFailed;
     public event EventHandler? ServerRequested;
     public event EventHandler? SearchRequested;
@@ -397,7 +398,8 @@ public sealed partial class HomeView : UserControl
                 BuildEpisodeText(item),
                 _client.BuildBackdropUrl(item, 900),
                 played,
-                BuildShortProgressText(positionTicks, durationTicks, played)));
+                BuildShortProgressText(positionTicks, durationTicks, played),
+                BuildLastPlayedText(item.UserData?.LastPlayedDate)));
         }
 
         ContinueSection.Visibility = _resume.Count > 0
@@ -520,6 +522,18 @@ public sealed partial class HomeView : UserControl
             MediaRequested?.Invoke(this, tile.Item);
     }
 
+    private void ResumeDetails_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { Tag: ResumeMediaTile tile })
+            MediaRequested?.Invoke(this, tile.Item);
+    }
+
+    private void ResumeRestart_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { Tag: ResumeMediaTile tile })
+            RestartRequested?.Invoke(this, tile.Item);
+    }
+
     private void ResumeArrow_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string tag } ||
@@ -622,6 +636,33 @@ public sealed partial class HomeView : UserControl
         return percentage > 0 ? $"{percentage:0}%" : "";
     }
 
+    private static string BuildLastPlayedText(DateTimeOffset? lastPlayed)
+    {
+        if (lastPlayed is null)
+            return "";
+
+        var elapsed = DateTimeOffset.Now - lastPlayed.Value.ToLocalTime();
+        if (elapsed < TimeSpan.Zero)
+            elapsed = TimeSpan.Zero;
+
+        if (elapsed.TotalMinutes < 1)
+            return "刚刚";
+
+        if (elapsed.TotalHours < 1)
+            return $"{Math.Max(1, (int)elapsed.TotalMinutes)}分钟前";
+
+        if (elapsed.TotalHours < 24)
+            return $"{Math.Max(1, (int)elapsed.TotalHours)}小时前";
+
+        if (elapsed.TotalDays < 2)
+            return "昨天";
+
+        if (elapsed.TotalDays < 7)
+            return $"{Math.Max(2, (int)elapsed.TotalDays)}天前";
+
+        return lastPlayed.Value.ToLocalTime().ToString("M月d日");
+    }
+
     private static string BuildLibrarySubtitle(EmbyItem view)
     {
         var type = (view.CollectionType ?? "").ToLowerInvariant();
@@ -664,6 +705,13 @@ public sealed partial class HomeView : UserControl
                     : item.Type);
         }
 
+        foreach (var genre in item.Genres
+                     .Where(genre => !string.IsNullOrWhiteSpace(genre))
+                     .Take(2))
+        {
+            values.Add(genre);
+        }
+
         return string.Join("  ·  ", values);
     }
 
@@ -696,7 +744,8 @@ public sealed partial class HomeView : UserControl
         string EpisodeText,
         string BackdropUrl,
         double PlayedPercentage,
-        string ShortProgressText);
+        string ShortProgressText,
+        string LastPlayedText);
 
     private sealed record SectionMediaTile(
         EmbyItem Item,
