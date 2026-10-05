@@ -25,10 +25,12 @@ public sealed partial class MainWindow : Window
     private string _currentSection = "home-shell";
     private DateTimeOffset _lastWheelDiagnosticAt = DateTimeOffset.MinValue;
     private readonly IntPtr _hwnd;
-    private readonly WindowSubclassProc _windowSubclassProc;
+    private readonly HookProc _callWndProcHookProc;
+    private IntPtr _callWndProcHook;
+    private long _xamlWheelSequence;
 
     private const uint WmMouseWheel = 0x020A;
-    private static readonly UIntPtr WindowSubclassId = (UIntPtr)1;
+    private const int WhCallWndProc = 4;
 
     public MainWindow()
     {
@@ -38,23 +40,25 @@ public sealed partial class MainWindow : Window
         StartupDiagnostics.Write("MainWindow constructor: after InitializeComponent");
 
         _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-        _windowSubclassProc = WindowSubclassCallback;
+        _callWndProcHookProc = CallWndProcHook;
 
-        if (!SetWindowSubclass(
-                _hwnd,
-                _windowSubclassProc,
-                WindowSubclassId,
-                UIntPtr.Zero))
+        _callWndProcHook = SetWindowsHookEx(
+            WhCallWndProc,
+            _callWndProcHookProc,
+            IntPtr.Zero,
+            GetCurrentThreadId());
+
+        if (_callWndProcHook == IntPtr.Zero)
         {
             PlaybackLog.Write(
                 "WinUINativeWheel",
-                $"SetWindowSubclass failed: {Marshal.GetLastWin32Error()}");
+                $"SetWindowsHookEx failed: {Marshal.GetLastWin32Error()}");
         }
         else
         {
             PlaybackLog.Write(
                 "WinUINativeWheel",
-                "Native WM_MOUSEWHEEL hook installed.");
+                "UI-thread WM_MOUSEWHEEL hook installed.");
         }
 
         var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(_hwnd);
@@ -76,25 +80,49 @@ public sealed partial class MainWindow : Window
         StartupDiagnostics.Write("MainWindow constructor: lightweight home shell ready");
     }
 
-    private IntPtr WindowSubclassCallback(
-        IntPtr hWnd,
-        uint message,
+    private IntPtr CallWndProcHook(
+        int code,
         IntPtr wParam,
-        IntPtr lParam,
-        UIntPtr subclassId,
-        UIntPtr refData)
+        IntPtr lParam)
     {
-        if (message == WmMouseWheel &&
-            PageHost.Content is HomeView homeView)
+        if (code >= 0)
         {
-            var raw = unchecked((long)wParam);
-            var delta = unchecked((short)((raw >> 16) & 0xffff));
+            var message = Marshal.PtrToStructure<CallWndProcMessage>(lParam);
+            if (message.Message == WmMouseWheel &&
+                PageHost.Content is HomeView)
+            {
+                var raw = unchecked((long)message.WParam);
+                var delta = unchecked((short)((raw >> 16) & 0xffff));
+                var xamlSequenceBefore = _xamlWheelSequence;
 
-            if (delta != 0 && homeView.HandleNativeMouseWheel(delta))
-                return IntPtr.Zero;
+                if (delta != 0)
+                {
+                    PlaybackLog.Write(
+                        "WinUINativeWheel",
+                        $"thread-wheel: hwnd=0x{message.Hwnd.ToInt64():X}, delta={delta}");
+
+                    DispatcherQueue.TryEnqueue(
+                        Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+                        () =>
+                        {
+                            // If XAML produced its own wheel route for this same
+                            // message, let native ScrollViewer handling win and
+                            // avoid applying the delta twice.
+                            if (_xamlWheelSequence != xamlSequenceBefore)
+                                return;
+
+                            if (PageHost.Content is HomeView homeView)
+                                homeView.HandleNativeMouseWheel(delta);
+                        });
+                }
+            }
         }
 
-        return DefSubclassProc(hWnd, message, wParam, lParam);
+        return CallNextHookEx(
+            _callWndProcHook,
+            code,
+            wParam,
+            lParam);
     }
 
     private void RootGrid_PointerWheelChangedDiagnostic(
@@ -106,6 +134,7 @@ public sealed partial class MainWindow : Window
             return;
 
         _lastWheelDiagnosticAt = now;
+        _xamlWheelSequence++;
         var point = e.GetCurrentPoint(RootGrid);
 
         PlaybackLog.Write(
@@ -172,10 +201,11 @@ public sealed partial class MainWindow : Window
 
     private void MainWindow_Closed(object sender, WindowEventArgs args)
     {
-        RemoveWindowSubclass(
-            _hwnd,
-            _windowSubclassProc,
-            WindowSubclassId);
+        if (_callWndProcHook != IntPtr.Zero)
+        {
+            UnhookWindowsHookEx(_callWndProcHook);
+            _callWndProcHook = IntPtr.Zero;
+        }
 
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= FirstFrame_Rendering;
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= SplashReveal_Rendering;
@@ -807,33 +837,39 @@ public sealed partial class MainWindow : Window
     }
 
 
-    private delegate IntPtr WindowSubclassProc(
-        IntPtr hWnd,
-        uint message,
-        IntPtr wParam,
-        IntPtr lParam,
-        UIntPtr subclassId,
-        UIntPtr refData);
+    [StructLayout(LayoutKind.Sequential)]
+    private struct CallWndProcMessage
+    {
+        public IntPtr LParam;
+        public IntPtr WParam;
+        public uint Message;
+        public IntPtr Hwnd;
+    }
 
-    [DllImport("comctl32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetWindowSubclass(
-        IntPtr hWnd,
-        WindowSubclassProc callback,
-        UIntPtr subclassId,
-        UIntPtr refData);
-
-    [DllImport("comctl32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool RemoveWindowSubclass(
-        IntPtr hWnd,
-        WindowSubclassProc callback,
-        UIntPtr subclassId);
-
-    [DllImport("comctl32.dll")]
-    private static extern IntPtr DefSubclassProc(
-        IntPtr hWnd,
-        uint message,
+    private delegate IntPtr HookProc(
+        int code,
         IntPtr wParam,
         IntPtr lParam);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr SetWindowsHookEx(
+        int hookId,
+        HookProc callback,
+        IntPtr module,
+        uint threadId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool UnhookWindowsHookEx(
+        IntPtr hook);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr CallNextHookEx(
+        IntPtr hook,
+        int code,
+        IntPtr wParam,
+        IntPtr lParam);
+
+    [DllImport("kernel32.dll")]
+    private static extern uint GetCurrentThreadId();
 }
