@@ -53,7 +53,7 @@
 
             <Rectangle>
                 <Rectangle.Fill>
-                    <AcrylicBrush BackgroundSource="Backdrop"
+                    <AcrylicBrush
                                   TintColor="{ThemeResource AsterHeroFadeEndColor}"
                                   TintOpacity="0.46"
                                   TintLuminosityOpacity="0.68"
