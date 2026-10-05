@@ -188,12 +188,22 @@ public sealed partial class MainWindow : Window
         };
         view.InitialContentReady += (_, _) => CompleteStartup();
 
+        if (view.HasCachedSnapshot)
+        {
+            RoutedEventHandler? cachedHomeLoaded = null;
+            cachedHomeLoaded = (_, _) =>
+            {
+                view.Loaded -= cachedHomeLoaded;
+                StartupDiagnostics.Write(
+                    "ShowHome: cached HomeView loaded; dismissing startup coverage");
+                CompleteStartup();
+            };
+            view.Loaded += cachedHomeLoaded;
+        }
+
         StartupDiagnostics.Write($"ShowHome: cachedSnapshot={view.HasCachedSnapshot}");
         PageHost.Content = view;
         StartupDiagnostics.Write("ShowHome: PageHost.Content assigned");
-
-        if (view.HasCachedSnapshot)
-            CompleteStartup();
     }
 
     private void ShowLibrary()
