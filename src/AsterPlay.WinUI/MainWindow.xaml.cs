@@ -209,7 +209,17 @@ public sealed partial class MainWindow : Window
         NavigationDock.Visibility = Visibility.Visible;
         PageTitleBlock.Text = "设置";
         SetActiveNavigation(SettingsButton);
-        PageHost.Content = new SettingsView();
+
+        var view = new SettingsView();
+        view.LogoutRequested += (_, _) =>
+        {
+            AppStateStore.Clear();
+            _client.Reset();
+            _authenticated = false;
+            ShowLogin();
+        };
+
+        PageHost.Content = view;
     }
 
     private void ShowDetails(EmbyItem item, string returnSection)
