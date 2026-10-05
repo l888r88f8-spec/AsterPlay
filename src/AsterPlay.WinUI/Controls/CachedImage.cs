@@ -29,7 +29,6 @@ public sealed class CachedImage : Image
     {
         Loaded += CachedImage_Loaded;
         Unloaded += CachedImage_Unloaded;
-        Opacity = 0;
     }
 
     public string SourceUrl
@@ -48,7 +47,6 @@ public sealed class CachedImage : Image
         image.CancelPendingLoad();
         image._loadedUrl = "";
         image.Source = null;
-        image.Opacity = 0;
 
         if (image.IsLoaded)
             image.ScheduleViewportCheck();
@@ -123,7 +121,6 @@ public sealed class CachedImage : Image
         if (string.IsNullOrWhiteSpace(url))
         {
             Source = null;
-            Opacity = 0;
             return;
         }
 
@@ -144,8 +141,9 @@ public sealed class CachedImage : Image
     private async Task LoadAsync(string url)
     {
         _loading = true;
-        _loadCts = new CancellationTokenSource();
-        var token = _loadCts.Token;
+        var loadCts = new CancellationTokenSource();
+        _loadCts = loadCts;
+        var token = loadCts.Token;
 
         try
         {
@@ -166,7 +164,6 @@ public sealed class CachedImage : Image
             if (bytes is null || bytes.Length == 0)
             {
                 Source = null;
-                Opacity = 0.18;
                 _loadedUrl = url;
                 return;
             }
@@ -186,12 +183,10 @@ public sealed class CachedImage : Image
             {
                 ImageCacheService.Shared.Invalidate(url);
                 Source = null;
-                Opacity = 0.18;
             }
             else
             {
                 Source = bitmap;
-                Opacity = 1;
             }
 
             _loadedUrl = url;
@@ -208,15 +203,18 @@ public sealed class CachedImage : Image
                     StringComparison.Ordinal))
             {
                 Source = null;
-                Opacity = 0.18;
                 _loadedUrl = url;
             }
         }
         finally
         {
-            _loading = false;
-            _loadCts?.Dispose();
-            _loadCts = null;
+            loadCts.Dispose();
+
+            if (ReferenceEquals(_loadCts, loadCts))
+            {
+                _loadCts = null;
+                _loading = false;
+            }
         }
     }
 
@@ -284,7 +282,7 @@ public sealed class CachedImage : Image
                     viewer.ActualHeight +
                     PreloadMargin * 2);
 
-                if (!viewport.IntersectsWith(bounds))
+                if (!Intersects(viewport, bounds))
                     return false;
             }
             catch
@@ -296,6 +294,14 @@ public sealed class CachedImage : Image
 
         return true;
     }
+
+    private static bool Intersects(
+        Rect lhs,
+        Rect rhs) =>
+        lhs.Left < rhs.Right &&
+        lhs.Right > rhs.Left &&
+        lhs.Top < rhs.Bottom &&
+        lhs.Bottom > rhs.Top;
 
     private void CancelPendingLoad()
     {
