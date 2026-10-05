@@ -9,10 +9,53 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
 
-            <Color x:Key="AsterBackgroundColor">#080A0F</Color>
-            <SolidColorBrush x:Key="AsterBackgroundBrush" Color="{StaticResource AsterBackgroundColor}"/>
-            <SolidColorBrush x:Key="AsterPrimaryTextBrush" Color="#F7F8FB"/>
-            <SolidColorBrush x:Key="AsterSecondaryTextBrush" Color="#A5ADBA"/>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="AsterPageBackgroundBrush" Color="#080A0F"/>
+                    <SolidColorBrush x:Key="AsterTitleBarBrush" Color="#C90D1118"/>
+                    <SolidColorBrush x:Key="AsterPrimaryTextBrush" Color="#F7F8FB"/>
+                    <SolidColorBrush x:Key="AsterSecondaryTextBrush" Color="#A5ADBA"/>
+                    <SolidColorBrush x:Key="AsterTertiaryTextBrush" Color="#7C8797"/>
+                    <SolidColorBrush x:Key="AsterCardBackgroundBrush" Color="#171C26"/>
+                    <SolidColorBrush x:Key="AsterCardBorderBrush" Color="#32FFFFFF"/>
+                    <SolidColorBrush x:Key="AsterAmbientTopBrush" Color="#252F79CE"/>
+                    <SolidColorBrush x:Key="AsterAmbientBottomBrush" Color="#182F79A8"/>
+                    <SolidColorBrush x:Key="AsterRailArrowForegroundBrush" Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="AsterRailArrowBorderBrush" Color="#38FFFFFF"/>
+                </ResourceDictionary>
+
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="AsterPageBackgroundBrush" Color="#F4F6F9"/>
+                    <SolidColorBrush x:Key="AsterTitleBarBrush" Color="#EAF4F6F9"/>
+                    <SolidColorBrush x:Key="AsterPrimaryTextBrush" Color="#151820"/>
+                    <SolidColorBrush x:Key="AsterSecondaryTextBrush" Color="#5F6876"/>
+                    <SolidColorBrush x:Key="AsterTertiaryTextBrush" Color="#7A8492"/>
+                    <SolidColorBrush x:Key="AsterCardBackgroundBrush" Color="#E7ECF3"/>
+                    <SolidColorBrush x:Key="AsterCardBorderBrush" Color="#26000000"/>
+                    <SolidColorBrush x:Key="AsterAmbientTopBrush" Color="#204C8FEA"/>
+                    <SolidColorBrush x:Key="AsterAmbientBottomBrush" Color="#1458A9D6"/>
+                    <SolidColorBrush x:Key="AsterRailArrowForegroundBrush" Color="#20242C"/>
+                    <SolidColorBrush x:Key="AsterRailArrowBorderBrush" Color="#26000000"/>
+                </ResourceDictionary>
+
+                <ResourceDictionary x:Key="HighContrast">
+                    <SolidColorBrush x:Key="AsterPageBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}"/>
+                    <SolidColorBrush x:Key="AsterTitleBarBrush" Color="{ThemeResource SystemColorWindowColor}"/>
+                    <SolidColorBrush x:Key="AsterPrimaryTextBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+                    <SolidColorBrush x:Key="AsterSecondaryTextBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+                    <SolidColorBrush x:Key="AsterTertiaryTextBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+                    <SolidColorBrush x:Key="AsterCardBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}"/>
+                    <SolidColorBrush x:Key="AsterCardBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+                    <SolidColorBrush x:Key="AsterAmbientTopBrush" Color="Transparent"/>
+                    <SolidColorBrush x:Key="AsterAmbientBottomBrush" Color="Transparent"/>
+                    <SolidColorBrush x:Key="AsterRailArrowForegroundBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+                    <SolidColorBrush x:Key="AsterRailArrowBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <Style TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{ThemeResource AsterPrimaryTextBrush}"/>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
