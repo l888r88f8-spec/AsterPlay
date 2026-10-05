@@ -99,8 +99,8 @@
                         Spacing="36">
 
                 <!-- Mobile-inspired immersive Hero, adapted for desktop width. -->
-                <Grid Height="620"
-                      Margin="-34,0,-34,-72">
+                <Grid Height="540"
+                      Margin="-34,0,-34,-64">
                     <controls:CachedImage x:Name="HeroImage"
                                           Stretch="UniformToFill"/>
 
@@ -117,10 +117,10 @@
                         </Rectangle.Fill>
                     </Rectangle>
 
-                    <Rectangle Height="190"
+                    <Rectangle Height="170"
                                VerticalAlignment="Bottom"
                                Opacity="0.72"
-                               Margin="0,0,0,-118"
+                               Margin="0,0,0,-100"
                                IsHitTestVisible="False">
                         <Rectangle.Fill>
                             <LinearGradientBrush StartPoint="0,0"
@@ -222,7 +222,7 @@
                     <!-- Hero copy -->
                     <StackPanel VerticalAlignment="Bottom"
                                 HorizontalAlignment="Center"
-                                Margin="44,0,44,92"
+                                Margin="44,0,44,66"
                                 MaxWidth="860"
                                 Spacing="11">
                         <TextBlock x:Name="WelcomeBlock"
@@ -234,7 +234,7 @@
                         <TextBlock x:Name="HeroTitleBlock"
                                    Text="AsterPlay"
                                    Foreground="White"
-                                   FontSize="50"
+                                   FontSize="46"
                                    FontWeight="SemiBold"
                                    TextAlignment="Center"
                                    HorizontalAlignment="Center"
@@ -251,7 +251,7 @@
                                    FontSize="16"
                                    LineHeight="25"
                                    MaxWidth="820"
-                                   MaxHeight="76"
+                                   MaxHeight="66"
                                    TextAlignment="Center"
                                    HorizontalAlignment="Center"
                                    TextWrapping="Wrap"
