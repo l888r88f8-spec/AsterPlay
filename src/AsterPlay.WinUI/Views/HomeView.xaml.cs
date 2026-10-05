@@ -66,7 +66,15 @@ public sealed partial class HomeView : UserControl
     private void HomeView_Loaded(object sender, RoutedEventArgs e)
     {
         Loaded -= HomeView_Loaded;
-        StartupDiagnostics.Write("HomeView.Loaded: first home frame is ready");
+
+        HomeScrollViewer.ChangeView(
+            horizontalOffset: null,
+            verticalOffset: 0,
+            zoomFactor: null,
+            disableAnimation: true);
+
+        StartupDiagnostics.Write(
+            $"HomeView.Loaded: first home frame is ready; verticalOffset={HomeScrollViewer.VerticalOffset:0.0}");
 
         DispatcherQueue.TryEnqueue(
             Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
@@ -224,7 +232,18 @@ public sealed partial class HomeView : UserControl
         LoadingState.Visibility = Visibility.Collapsed;
         LoadingRing.IsActive = false;
         HomeScrollViewer.Visibility = Visibility.Visible;
-        StartupDiagnostics.Write("HomeView state: Content");
+
+        if (HomeScrollViewer.VerticalOffset > 1)
+        {
+            HomeScrollViewer.ChangeView(
+                horizontalOffset: null,
+                verticalOffset: 0,
+                zoomFactor: null,
+                disableAnimation: true);
+        }
+
+        StartupDiagnostics.Write(
+            $"HomeView state: Content; verticalOffset={HomeScrollViewer.VerticalOffset:0.0}");
     }
 
     private void ShowLoadingError(string message)
