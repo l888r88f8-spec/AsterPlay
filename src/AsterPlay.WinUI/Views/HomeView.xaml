@@ -6,6 +6,14 @@
     xmlns:controls="using:AsterPlay.WinUI.Controls">
 
     <UserControl.Resources>
+        <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
+                         Color="#14000000"/>
+        <SolidColorBrush x:Key="ButtonBackgroundPressed"
+                         Color="#22000000"/>
+        <SolidColorBrush x:Key="ButtonBorderBrushPointerOver"
+                         Color="#44FFFFFF"/>
+        <SolidColorBrush x:Key="ButtonBorderBrushPressed"
+                         Color="#55FFFFFF"/>
         <Style x:Key="RoundActionButtonStyle" TargetType="Button">
             <Setter Property="Width" Value="38"/>
             <Setter Property="Height" Value="38"/>
@@ -101,16 +109,17 @@
                       VerticalScrollBarVisibility="Hidden"
                       HorizontalScrollMode="Disabled"
                       HorizontalScrollBarVisibility="Disabled"
-                      ZoomMode="Disabled">
-            <StackPanel Width="{Binding ElementName=HomeScrollViewer, Path=ViewportWidth}"
-                        MaxWidth="1560"
-                        HorizontalAlignment="Center"
-                        Padding="34,0,34,122"
+                      ZoomMode="Disabled"
+                      SizeChanged="HomeScrollViewer_SizeChanged">
+            <StackPanel x:Name="HomeContentStack"
+                        Width="{Binding ElementName=HomeScrollViewer, Path=ViewportWidth}"
+                        HorizontalAlignment="Stretch"
+                        Padding="28,0,28,122"
                         Spacing="36">
 
                 <!-- Mobile-inspired immersive Hero, adapted for desktop width. -->
-                <Grid Height="500"
-                      Margin="-34,0,-34,-52">
+                <Grid Height="620"
+                      Margin="-28,0,-28,-172">
                     <controls:CachedImage x:Name="HeroImage"
                                           Stretch="UniformToFill"/>
 
@@ -120,24 +129,9 @@
                                                  EndPoint="0,1">
                                 <GradientStop Color="#16000000" Offset="0"/>
                                 <GradientStop Color="#08000000" Offset="0.42"/>
-                                <GradientStop Color="#44000000" Offset="0.72"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.90"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayMidColor}" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Rectangle.Fill>
-                    </Rectangle>
-
-                    <Rectangle Height="142"
-                               VerticalAlignment="Bottom"
-                               Opacity="0.46"
-                               Margin="0,0,0,-82"
-                               IsHitTestVisible="False">
-                        <Rectangle.Fill>
-                            <LinearGradientBrush StartPoint="0,0"
-                                                 EndPoint="0,1">
-                                <GradientStop Color="Transparent" Offset="0"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.52"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayMidColor}" Offset="1"/>
+                                <GradientStop Color="#28000000" Offset="0.74"/>
+                                <GradientStop Color="#40000000" Offset="0.92"/>
+                                <GradientStop Color="#50000000" Offset="1"/>
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
@@ -232,7 +226,7 @@
                     <!-- Hero copy -->
                     <StackPanel VerticalAlignment="Bottom"
                                 HorizontalAlignment="Center"
-                                Margin="44,0,44,34"
+                                Margin="44,0,44,154"
                                 MaxWidth="860"
                                 Spacing="11">
                         <TextBlock x:Name="WelcomeBlock"
@@ -364,6 +358,17 @@
                                                             </LinearGradientBrush>
                                                         </Rectangle.Fill>
                                                     </Rectangle>
+                                                    <Border HorizontalAlignment="Right"
+                                                            VerticalAlignment="Top"
+                                                            Margin="0,12,12,0"
+                                                            Padding="8,4"
+                                                            CornerRadius="10"
+                                                            Background="#66000000">
+                                                        <TextBlock Text="{Binding LastPlayedText}"
+                                                                   Foreground="White"
+                                                                   FontSize="11"/>
+                                                    </Border>
+
                                                     <Grid VerticalAlignment="Bottom"
                                                           Margin="16,0,16,13">
                                                         <Grid.ColumnDefinitions>
@@ -397,22 +402,14 @@
                                                        FontWeight="SemiBold"
                                                        TextTrimming="CharacterEllipsis"/>
 
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding EpisodeText}"
-                                                           Foreground="{ThemeResource AsterSecondaryTextBrush}"
-                                                           FontSize="12"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Grid.Column="1"
-                                                           Text="{Binding LastPlayedText}"
-                                                           Foreground="{ThemeResource AsterSecondaryTextBrush}"
-                                                           FontSize="11"
-                                                           Margin="12,0,0,0"
-                                                           Opacity="0.82"/>
-                                            </Grid>
+                                            <TextBlock Text="{Binding EpisodeText}"
+                                                       Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                                                       FontSize="12"
+                                                       LineHeight="17"
+                                                       TextWrapping="Wrap"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       MaxLines="2"
+                                                       MinHeight="34"/>
                                         </StackPanel>
                                     </Button>
                                 </DataTemplate>
@@ -443,16 +440,17 @@
 
                     <ItemsRepeater x:Name="LibrariesGrid">
                         <ItemsRepeater.Layout>
-                            <UniformGridLayout MinItemWidth="260"
-                                               MinItemHeight="148"
-                                               MinColumnSpacing="18"
-                                               MinRowSpacing="18"
-                                               ItemsJustification="SpaceBetween"
-                                               ItemsStretch="Fill"/>
+                            <UniformGridLayout MinItemWidth="286"
+                                               MinItemHeight="154"
+                                               MinColumnSpacing="16"
+                                               MinRowSpacing="16"
+                                               ItemsJustification="Start"
+                                               ItemsStretch="None"/>
                         </ItemsRepeater.Layout>
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate>
-                                <Button Height="148"
+                                <Button Width="286"
+                                        Height="154"
                                         Padding="0"
                                         Background="Transparent"
                                         BorderThickness="0"
@@ -589,7 +587,11 @@
                                                                Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                                                FontSize="14"
                                                                FontWeight="SemiBold"
-                                                               TextTrimming="CharacterEllipsis"/>
+                                                               LineHeight="18"
+                                                               TextWrapping="Wrap"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               MaxLines="2"
+                                                               MinHeight="36"/>
                                                     <TextBlock Text="{Binding Meta}"
                                                                Foreground="{ThemeResource AsterSecondaryTextBrush}"
                                                                FontSize="12"
