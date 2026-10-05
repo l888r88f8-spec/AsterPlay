@@ -76,7 +76,8 @@
             <GridView x:Name="ItemsGrid"
                       IsItemClickEnabled="True"
                       SelectionMode="None"
-                      ItemClick="ItemsGrid_ItemClick">
+                      ItemClick="ItemsGrid_ItemClick"
+                      RightTapped="ItemsGrid_RightTapped">
                 <GridView.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Width="166"
