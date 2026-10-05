@@ -47,7 +47,18 @@ public sealed partial class LoginView : UserControl
         {
             var serverUrl = ServerUrlBox.Text.Trim();
             await _client.AuthenticateAsync(serverUrl, UserNameBox.Text, PasswordBox.Password);
-            ServerProfileStore.AddOrUpdate(serverUrl);
+
+            string? serverName = null;
+            try
+            {
+                serverName = await _client.GetServerNameAsync();
+            }
+            catch (Exception ex)
+            {
+                PlaybackLog.Error("ServerNameLookup", ex);
+            }
+
+            ServerProfileStore.AddOrUpdate(serverUrl, serverName);
             LoginSucceeded?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
