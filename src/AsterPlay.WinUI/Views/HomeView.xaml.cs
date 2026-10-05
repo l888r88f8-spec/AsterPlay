@@ -522,16 +522,34 @@ public sealed partial class HomeView : UserControl
             MediaRequested?.Invoke(this, tile.Item);
     }
 
-    private void ResumeDetails_Click(object sender, RoutedEventArgs e)
+    private void ResumeTile_RightTapped(
+        object sender,
+        Microsoft.UI.Xaml.Input.RightTappedRoutedEventArgs e)
     {
-        if (sender is MenuFlyoutItem { Tag: ResumeMediaTile tile })
-            MediaRequested?.Invoke(this, tile.Item);
-    }
+        if (sender is not Button { Tag: ResumeMediaTile tile } button)
+            return;
 
-    private void ResumeRestart_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is MenuFlyoutItem { Tag: ResumeMediaTile tile })
+        e.Handled = true;
+
+        var flyout = new MenuFlyout();
+
+        var details = new MenuFlyoutItem
+        {
+            Text = "详情"
+        };
+        details.Click += (_, _) =>
+            MediaRequested?.Invoke(this, tile.Item);
+
+        var restart = new MenuFlyoutItem
+        {
+            Text = "从头播放"
+        };
+        restart.Click += (_, _) =>
             RestartRequested?.Invoke(this, tile.Item);
+
+        flyout.Items.Add(details);
+        flyout.Items.Add(restart);
+        flyout.ShowAt(button);
     }
 
     private void ResumeArrow_Click(object sender, RoutedEventArgs e)
