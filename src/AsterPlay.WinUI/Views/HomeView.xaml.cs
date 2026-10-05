@@ -21,6 +21,7 @@ public sealed partial class HomeView : UserControl
 
     public event EventHandler? LibraryRequested;
     public event EventHandler<EmbyItem>? MediaRequested;
+    public event EventHandler<EmbyItem>? PlayRequested;
 
     public HomeView(EmbyClient client)
     {
@@ -198,7 +199,7 @@ public sealed partial class HomeView : UserControl
     private void HeroPlay_Click(object sender, RoutedEventArgs e)
     {
         if (_heroItem is not null)
-            MediaRequested?.Invoke(this, _heroItem);
+            PlayRequested?.Invoke(this, _heroItem);
     }
 
     private void OpenLibrary_Click(object sender, RoutedEventArgs e) =>
