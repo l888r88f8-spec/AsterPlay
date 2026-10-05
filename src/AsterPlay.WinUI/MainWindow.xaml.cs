@@ -148,6 +148,8 @@ public sealed partial class MainWindow : Window
         var view = new HomeView(_client);
         view.LibraryRequested += (_, _) => ShowLibrary();
         view.MediaRequested += (_, item) => ShowDetails(item, "home");
+        view.PlayRequested += async (_, item) =>
+            await StartPlaybackAsync(item, "home");
         PageHost.Content = view;
     }
 
