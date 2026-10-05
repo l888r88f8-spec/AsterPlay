@@ -4,6 +4,7 @@ using AsterPlay.Services.Danmaku;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using System.Text.RegularExpressions;
 
 namespace AsterPlay.WinUI.Views;
 
@@ -32,7 +33,7 @@ public sealed partial class DanmakuMatchDialog : ContentDialog
         CurrentMatchTextBlock.Text =
             FormatCurrentBinding(currentBinding);
         SearchTextBox.Text =
-            DanmakuApiSupport.BuildSearchSubject(context);
+            BuildSearchSubject(context);
     }
 
     public DanmakuSeriesMatchCandidate? SelectedSeries { get; private set; }
@@ -260,10 +261,69 @@ public sealed partial class DanmakuMatchDialog : ContentDialog
         _searchCts = null;
     }
 
+    private static bool IsEpisode(DanmakuContext context) =>
+        string.Equals(
+            context.ItemType,
+            "Episode",
+            StringComparison.OrdinalIgnoreCase) ||
+        (!string.IsNullOrWhiteSpace(context.SeriesName) &&
+         context.EpisodeNumber is > 0);
+
+    private static string BuildSearchSubject(
+        DanmakuContext context)
+    {
+        if (IsEpisode(context) &&
+            !string.IsNullOrWhiteSpace(context.SeriesName))
+        {
+            var subject = context.SeriesName.Trim();
+            if (context.SeasonNumber is > 1 &&
+                ExtractSeasonNumber(subject) <= 0)
+            {
+                subject += $" S{context.SeasonNumber.Value:00}";
+            }
+
+            return subject;
+        }
+
+        if (!string.IsNullOrWhiteSpace(context.OriginalTitle))
+            return context.OriginalTitle.Trim();
+
+        return context.Title.Trim();
+    }
+
+    private static int ExtractSeasonNumber(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return 0;
+
+        var patterns = new[]
+        {
+            @"(?:^|[^A-Za-z0-9])S\s*0*(\d{1,2})(?:[^A-Za-z0-9]|$)",
+            @"第\s*0*(\d{1,2})\s*[季部期]",
+            @"(?:Season\s*|)(\d{1,2})(?:st|nd|rd|th)?\s*(?:Season|期)"
+        };
+
+        foreach (var pattern in patterns)
+        {
+            var match = Regex.Match(
+                text,
+                pattern,
+                RegexOptions.IgnoreCase);
+
+            if (match.Success &&
+                int.TryParse(match.Groups[1].Value, out var value))
+            {
+                return value;
+            }
+        }
+
+        return 0;
+    }
+
     private static string FormatCurrentMedia(
         DanmakuContext context)
     {
-        if (DanmakuApiSupport.IsEpisode(context))
+        if (IsEpisode(context))
         {
             var series = string.IsNullOrWhiteSpace(context.SeriesName)
                 ? context.Title
