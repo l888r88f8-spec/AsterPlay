@@ -11,24 +11,53 @@ public sealed partial class LoginView : UserControl
     public event EventHandler? LoginSucceeded;
     public event EventHandler? ManageServersRequested;
 
-    public LoginView(EmbyClient client, string? message = null)
+    public LoginView(
+        EmbyClient client,
+        string? message = null,
+        string? preferredServerUrl = null)
     {
         _client = client;
         InitializeComponent();
 
-        ReloadServers();
+        ReloadServers(preferredServerUrl);
         ShowMessage(message);
     }
 
-    private void ReloadServers()
+    private void ReloadServers(string? preferredServerUrl = null)
     {
         var servers = ServerProfileStore.Load();
         SavedServerBox.ItemsSource = servers;
 
+        var preferred = (preferredServerUrl ?? "").Trim().TrimEnd('/');
+        var selectedIndex = 0;
+
+        if (!string.IsNullOrWhiteSpace(preferred))
+        {
+            for (var i = 0; i < servers.Count; i++)
+            {
+                var candidate = (servers[i].Url ?? "").Trim().TrimEnd('/');
+                if (string.Equals(
+                        candidate,
+                        preferred,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    selectedIndex = i;
+                    break;
+                }
+            }
+        }
+
         if (servers.Count > 0)
         {
-            SavedServerBox.SelectedIndex = 0;
-            ServerUrlBox.Text = servers[0].Url;
+            SavedServerBox.SelectedIndex = Math.Clamp(
+                selectedIndex,
+                0,
+                servers.Count - 1);
+            ServerUrlBox.Text = servers[SavedServerBox.SelectedIndex].Url;
+        }
+        else if (!string.IsNullOrWhiteSpace(preferredServerUrl))
+        {
+            ServerUrlBox.Text = preferredServerUrl;
         }
     }
 
