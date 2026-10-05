@@ -12,10 +12,6 @@
         <SwapChainPanel x:Name="VideoPanel"
                         SizeChanged="VideoPanel_SizeChanged"/>
 
-        <Grid IsHitTestVisible="False">
-            <LinearGradientBrush x:Name="unused"/>
-        </Grid>
-
         <Grid VerticalAlignment="Top"
               Margin="24">
             <Button Content="← 返回"
