@@ -28,6 +28,7 @@ public sealed partial class MainWindow : Window
     private readonly HookProc _getMessageHookProc;
     private IntPtr _getMessageHook;
     private long _xamlWheelSequence;
+    private OverlappedPresenterState? _lastOverlappedPresenterState;
 
     private const uint WmMouseWheel = 0x020A;
     private const uint WmPointerWheel = 0x024E;
@@ -65,8 +66,11 @@ public sealed partial class MainWindow : Window
 
         var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(_hwnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
+        _appWindow.Changed += AppWindow_Changed;
 
-        _appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
+        if (_appWindow.Presenter is OverlappedPresenter initialPresenter)
+            _lastOverlappedPresenterState = initialPresenter.State;
+
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         ConfigureNativeTitleBar(isLight: true);
@@ -157,6 +161,55 @@ public sealed partial class MainWindow : Window
             $"contentOpacity={ContentLayer.Opacity:0.00}, contentHitTest={ContentLayer.IsHitTestVisible}");
     }
 
+    private void AppWindow_Changed(
+        AppWindow sender,
+        AppWindowChangedEventArgs args)
+    {
+        var presenterChanged = args.DidPresenterChange;
+        var stateChanged = false;
+        OverlappedPresenterState? newState = null;
+
+        if (sender.Presenter is OverlappedPresenter presenter)
+        {
+            newState = presenter.State;
+            stateChanged = _lastOverlappedPresenterState != newState;
+            if (stateChanged)
+                _lastOverlappedPresenterState = newState;
+        }
+
+        if (!presenterChanged && !stateChanged)
+            return;
+
+        PlaybackLog.Write(
+            "WinUIWindowState",
+            $"presenterChanged={presenterChanged}, state={newState?.ToString() ?? sender.Presenter.Kind.ToString()}");
+
+        DispatcherQueue.TryEnqueue(
+            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+            () =>
+            {
+                // WinUI custom non-client regions can keep stale pointer/capture
+                // state across maximize/restore or presenter transitions.
+                ReleaseCapture();
+
+                ExtendsContentIntoTitleBar = true;
+                SetTitleBar(AppTitleBar);
+
+                var isHome =
+                    string.Equals(_currentSection, "home", StringComparison.Ordinal) ||
+                    string.Equals(_currentSection, "home-empty", StringComparison.Ordinal);
+                var isLight =
+                    !isHome &&
+                    RootGrid.RequestedTheme != ElementTheme.Dark;
+
+                ConfigureNativeTitleBar(isLight);
+
+                PlaybackLog.Write(
+                    "WinUIWindowState",
+                    "Reapplied title bar and released mouse capture after window-state change.");
+            });
+    }
+
     private void SystemColorValuesChanged(UISettings sender, object args)
     {
         DispatcherQueue.TryEnqueue(ApplySystemTheme);
@@ -197,7 +250,6 @@ public sealed partial class MainWindow : Window
             : Windows.UI.Color.FromArgb(46, 255, 255, 255);
 
         var titleBar = _appWindow.TitleBar;
-        titleBar.ExtendsContentIntoTitleBar = true;
         titleBar.BackgroundColor = transparent;
         titleBar.InactiveBackgroundColor = transparent;
         titleBar.ButtonBackgroundColor = transparent;
@@ -217,6 +269,8 @@ public sealed partial class MainWindow : Window
             UnhookWindowsHookEx(_getMessageHook);
             _getMessageHook = IntPtr.Zero;
         }
+
+        _appWindow.Changed -= AppWindow_Changed;
 
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= FirstFrame_Rendering;
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= SplashReveal_Rendering;
@@ -893,4 +947,8 @@ public sealed partial class MainWindow : Window
 
     [DllImport("kernel32.dll")]
     private static extern uint GetCurrentThreadId();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ReleaseCapture();
 }
