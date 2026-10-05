@@ -128,6 +128,11 @@ public sealed partial class DetailsView : UserControl
             ? Visibility.Visible
             : Visibility.Collapsed;
 
+        MediaSourcesItems.ItemsSource = vm.MediaSources;
+        SourcesSection.Visibility = !vm.IsSeries && vm.MediaSources.Count > 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
         GenresBlock.Text = vm.Genres.Count > 0
             ? $"类型  {string.Join(" / ", vm.Genres)}"
             : "";
