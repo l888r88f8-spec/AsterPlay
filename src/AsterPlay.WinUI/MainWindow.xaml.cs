@@ -267,7 +267,7 @@ public sealed partial class MainWindow : Window
             EnterPlayerChrome();
 
             var launch = await _client.GetPlayableStreamAsync(item, restart);
-            var player = new PlayerPocView(_client, launch);
+            var player = new PlayerView(_client, launch);
             player.BackRequested += (_, _) =>
             {
                 if (string.Equals(returnSection, "library", StringComparison.Ordinal))
@@ -282,7 +282,7 @@ public sealed partial class MainWindow : Window
                 SetPlayerFullscreen(fullscreen);
 
             _currentSection = "player";
-            PageTitleBlock.Text = "播放器 POC";
+            PageTitleBlock.Text = "播放器";
             PageHost.Content = player;
         }
         catch (Exception ex)
