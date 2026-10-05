@@ -14,61 +14,70 @@
             <Setter Property="Foreground" Value="{ThemeResource AsterRailArrowForegroundBrush}"/>
             <Setter Property="BorderBrush" Value="{ThemeResource AsterRailArrowBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontSize" Value="21"/>
+            <Setter Property="FontSize" Value="20"/>
             <Setter Property="Background">
                 <Setter.Value>
-                    <lg:LiquidGlassBrush BlurAmount="1.2"
+                    <lg:LiquidGlassBrush BlurAmount="1.25"
                                          BloomAmount="0.10"
-                                         RefThickness="18"
-                                         RefFactor="1.7"
-                                         RefDispersion="3.0"
-                                         GlareFactor="46"
-                                         TintA="0.07"
-                                         TintR="195"
-                                         TintG="220"
+                                         RefThickness="20"
+                                         RefFactor="1.75"
+                                         RefDispersion="3.2"
+                                         GlareFactor="48"
+                                         TintA="0.08"
+                                         TintR="205"
+                                         TintG="225"
                                          TintB="255"
                                          ShapeRadius="0.98"
                                          ShapeRoundness="3.9"/>
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="HeroActionButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="42"/>
+            <Setter Property="MinWidth" Value="104"/>
+            <Setter Property="Padding" Value="20,0"/>
+            <Setter Property="CornerRadius" Value="21"/>
+            <Setter Property="BorderBrush" Value="#55FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Background" Value="#4A11151D"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
-        <!-- Fixed ambient backdrop: the current Hero image is duplicated here,
-             enlarged slightly, then blurred/tinted by Acrylic. The content
-             scrolls above it so the Hero atmosphere extends through the page. -->
+        <!-- The Hero artwork becomes the fixed ambience for the whole page. -->
         <Grid x:Name="PageBackdropLayer"
               Visibility="Collapsed"
               IsHitTestVisible="False">
             <controls:CachedImage x:Name="PageBackdropImage"
                                   Stretch="UniformToFill"
-                                  Opacity="0.82"
+                                  Opacity="0.84"
                                   RenderTransformOrigin="0.5,0.5">
                 <controls:CachedImage.RenderTransform>
-                    <ScaleTransform ScaleX="1.10"
-                                    ScaleY="1.10"/>
+                    <ScaleTransform ScaleX="1.12"
+                                    ScaleY="1.12"/>
                 </controls:CachedImage.RenderTransform>
             </controls:CachedImage>
 
             <Rectangle>
                 <Rectangle.Fill>
-                    <AcrylicBrush
-                                  TintColor="{ThemeResource AsterHeroFadeEndColor}"
-                                  TintOpacity="0.26"
-                                  TintLuminosityOpacity="0.42"
+                    <AcrylicBrush TintColor="{ThemeResource AsterHeroFadeEndColor}"
+                                  TintOpacity="0.22"
+                                  TintLuminosityOpacity="0.38"
                                   FallbackColor="{ThemeResource AsterHeroFadeEndColor}"/>
                 </Rectangle.Fill>
             </Rectangle>
 
-            <Rectangle Opacity="0.72">
+            <Rectangle Opacity="0.68">
                 <Rectangle.Fill>
                     <LinearGradientBrush StartPoint="0,0"
                                          EndPoint="0,1">
                         <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}"
                                       Offset="0"/>
                         <GradientStop Color="{ThemeResource AsterAmbientOverlayMidColor}"
-                                      Offset="0.56"/>
+                                      Offset="0.58"/>
                         <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}"
                                       Offset="1"/>
                     </LinearGradientBrush>
@@ -84,14 +93,14 @@
                       HorizontalScrollBarVisibility="Disabled"
                       ZoomMode="Disabled">
             <StackPanel Width="{Binding ElementName=HomeScrollViewer, Path=ViewportWidth}"
-                        MaxWidth="1440"
+                        MaxWidth="1560"
                         HorizontalAlignment="Center"
-                        Padding="38,0,38,112"
-                        Spacing="30">
+                        Padding="34,0,34,122"
+                        Spacing="36">
 
-                <!-- Immersive hero -->
-                <Grid Height="520"
-                      Margin="-38,0,-38,-50">
+                <!-- Mobile-inspired immersive Hero, adapted for desktop width. -->
+                <Grid Height="690"
+                      Margin="-34,0,-34,-96">
                     <controls:CachedImage x:Name="HeroImage"
                                           Stretch="UniformToFill"/>
 
@@ -99,89 +108,168 @@
                         <Rectangle.Fill>
                             <LinearGradientBrush StartPoint="0,0"
                                                  EndPoint="0,1">
-                                <GradientStop Color="#18000000" Offset="0"/>
-                                <GradientStop Color="#26000000" Offset="0.34"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.68"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayMidColor}" Offset="0.86"/>
+                                <GradientStop Color="#16000000" Offset="0"/>
+                                <GradientStop Color="#08000000" Offset="0.42"/>
+                                <GradientStop Color="#5C000000" Offset="0.72"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayMidColor}" Offset="0.90"/>
                                 <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}" Offset="1"/>
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
 
-                    <Rectangle>
-                        <Rectangle.Fill>
-                            <LinearGradientBrush StartPoint="0,0.5"
-                                                 EndPoint="1,0.5">
-                                <GradientStop Color="#B6080A0F" Offset="0"/>
-                                <GradientStop Color="#4A080A0F" Offset="0.48"/>
-                                <GradientStop Color="#0A080A0F" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Rectangle.Fill>
-                    </Rectangle>
-
-                    <Rectangle Height="170"
+                    <Rectangle Height="220"
                                VerticalAlignment="Bottom"
-                               Margin="0,0,0,-120"
+                               Margin="0,0,0,-145"
                                IsHitTestVisible="False">
                         <Rectangle.Fill>
                             <LinearGradientBrush StartPoint="0,0"
                                                  EndPoint="0,1">
-                                <GradientStop Color="Transparent"
-                                              Offset="0"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayMidColor}"
-                                              Offset="0.52"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}"
-                                              Offset="1"/>
+                                <GradientStop Color="Transparent" Offset="0"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayMidColor}" Offset="0.52"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}" Offset="1"/>
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
 
+                    <!-- Floating top controls -->
+                    <Grid Margin="42,62,42,0"
+                          VerticalAlignment="Top">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button x:Name="ServerPillButton"
+                                Grid.Column="0"
+                                Height="58"
+                                MinWidth="180"
+                                Padding="17,0"
+                                CornerRadius="29"
+                                BorderBrush="#55FFFFFF"
+                                BorderThickness="1"
+                                Click="ServerPill_Click">
+                            <Button.Background>
+                                <lg:LiquidGlassBrush BlurAmount="1.8"
+                                                     BloomAmount="0.18"
+                                                     RefThickness="34"
+                                                     RefFactor="2.15"
+                                                     RefDispersion="4.5"
+                                                     GlareFactor="62"
+                                                     TintA="0.12"
+                                                     TintR="220"
+                                                     TintG="232"
+                                                     TintB="255"
+                                                     ShapeRadius="0.96"
+                                                     ShapeRoundness="3.9"/>
+                            </Button.Background>
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="10"
+                                        VerticalAlignment="Center">
+                                <Border Width="30"
+                                        Height="30"
+                                        CornerRadius="9"
+                                        Background="#44000000">
+                                    <TextBlock Text="A"
+                                               Foreground="White"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock x:Name="ServerNameBlock"
+                                           Text="服务器"
+                                           Foreground="White"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="⌄"
+                                           Foreground="#E6FFFFFF"
+                                           FontSize="14"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Grid.Column="2"
+                                Width="58"
+                                Height="58"
+                                Padding="0"
+                                CornerRadius="29"
+                                BorderBrush="#55FFFFFF"
+                                BorderThickness="1"
+                                Click="Search_Click">
+                            <Button.Background>
+                                <lg:LiquidGlassBrush BlurAmount="1.8"
+                                                     BloomAmount="0.18"
+                                                     RefThickness="34"
+                                                     RefFactor="2.15"
+                                                     RefDispersion="4.5"
+                                                     GlareFactor="62"
+                                                     TintA="0.12"
+                                                     TintR="220"
+                                                     TintG="232"
+                                                     TintB="255"
+                                                     ShapeRadius="0.98"
+                                                     ShapeRoundness="4.0"/>
+                            </Button.Background>
+                            <FontIcon Glyph="&#xE721;"
+                                      Foreground="White"
+                                      FontSize="22"/>
+                        </Button>
+                    </Grid>
+
+                    <!-- Hero copy -->
                     <StackPanel VerticalAlignment="Bottom"
-                                HorizontalAlignment="Left"
-                                Margin="56,0,56,46"
-                                MaxWidth="740"
-                                Spacing="10">
+                                HorizontalAlignment="Center"
+                                Margin="44,0,44,118"
+                                MaxWidth="820"
+                                Spacing="11">
                         <TextBlock x:Name="WelcomeBlock"
-                                   Foreground="#78BEFF"
-                                   FontSize="13"
-                                   FontWeight="SemiBold"/>
+                                   Foreground="#DDEBFA"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"/>
 
                         <TextBlock x:Name="HeroTitleBlock"
                                    Text="AsterPlay"
                                    Foreground="White"
-                                   FontSize="48"
+                                   FontSize="56"
                                    FontWeight="SemiBold"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Center"
                                    TextWrapping="Wrap"/>
 
                         <TextBlock x:Name="HeroMetaBlock"
-                                   Foreground="#E2E5EA"
-                                   FontSize="14"/>
+                                   Foreground="#F2F3F5"
+                                   FontSize="16"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Center"/>
 
                         <TextBlock x:Name="HeroOverviewBlock"
-                                   Foreground="#C1C7D0"
-                                   FontSize="14"
-                                   LineHeight="22"
-                                   MaxWidth="720"
-                                   MaxHeight="68"
-                                   TextWrapping="Wrap"/>
+                                   Foreground="#E0E3E8"
+                                   FontSize="16"
+                                   LineHeight="25"
+                                   MaxWidth="780"
+                                   MaxHeight="76"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   TextTrimming="CharacterEllipsis"/>
 
                         <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Center"
                                     Spacing="10"
-                                    Margin="0,6,0,0">
+                                    Margin="0,5,0,0">
                             <Button x:Name="HeroPlayButton"
+                                    Style="{StaticResource HeroActionButtonStyle}"
                                     Content="▶  播放"
-                                    MinWidth="112"
-                                    Height="42"
-                                    CornerRadius="21"
                                     Click="HeroPlay_Click"/>
-                            <Button Content="详情"
-                                    Height="42"
-                                    CornerRadius="21"
+                            <Button Style="{StaticResource HeroActionButtonStyle}"
+                                    Content="详情"
                                     Click="HeroDetails_Click"/>
                             <Button x:Name="HeroFavoriteButton"
+                                    Style="{StaticResource HeroActionButtonStyle}"
                                     Content="♡  收藏"
-                                    Height="42"
-                                    CornerRadius="21"
                                     Click="HeroFavorite_Click"/>
                         </StackPanel>
                     </StackPanel>
@@ -190,12 +278,13 @@
                 <!-- Continue watching -->
                 <StackPanel x:Name="ContinueSection"
                             Visibility="Collapsed"
-                            Spacing="14">
+                            Spacing="16">
                     <Grid>
                         <TextBlock Text="继续播放"
                                    Foreground="{ThemeResource AsterPrimaryTextBrush}"
-                                   FontSize="25"
-                                   FontWeight="SemiBold"/>
+                                   FontSize="30"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
 
                         <StackPanel HorizontalAlignment="Right"
                                     Orientation="Horizontal"
@@ -227,20 +316,20 @@
                                     <StackPanel Orientation="Horizontal"/>
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
-
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Button Width="270"
-                                            Margin="0,0,14,0"
+                                    <Button Width="352"
+                                            Margin="0,0,18,0"
                                             Padding="0"
                                             Background="Transparent"
                                             BorderThickness="0"
                                             Tag="{Binding}"
                                             Click="ResumeTile_Click">
-                                        <StackPanel Width="270" Spacing="8">
-                                            <Border Width="270"
-                                                    Height="152"
-                                                    CornerRadius="19"
+                                        <StackPanel Width="352"
+                                                    Spacing="9">
+                                            <Border Width="352"
+                                                    Height="198"
+                                                    CornerRadius="24"
                                                     Background="{ThemeResource AsterCardBackgroundBrush}"
                                                     BorderBrush="{ThemeResource AsterCardBorderBrush}"
                                                     BorderThickness="1">
@@ -251,48 +340,47 @@
                                                         <Rectangle.Fill>
                                                             <LinearGradientBrush StartPoint="0,0"
                                                                                  EndPoint="0,1">
-                                                                <GradientStop Color="#00000000" Offset="0.46"/>
-                                                                <GradientStop Color="#A9000000" Offset="1"/>
+                                                                <GradientStop Color="#00000000" Offset="0.42"/>
+                                                                <GradientStop Color="#B0000000" Offset="1"/>
                                                             </LinearGradientBrush>
                                                         </Rectangle.Fill>
                                                     </Rectangle>
-
                                                     <Grid VerticalAlignment="Bottom"
-                                                          Margin="12,0,12,11">
+                                                          Margin="16,0,16,13">
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="Auto"/>
-                                                            <ColumnDefinition Width="8"/>
+                                                            <ColumnDefinition Width="10"/>
                                                             <ColumnDefinition Width="*"/>
                                                             <ColumnDefinition Width="Auto"/>
                                                         </Grid.ColumnDefinitions>
                                                         <TextBlock Text="▶"
                                                                    Foreground="White"
-                                                                   FontSize="12"
+                                                                   FontSize="13"
                                                                    VerticalAlignment="Center"/>
                                                         <ProgressBar Grid.Column="2"
                                                                      Minimum="0"
                                                                      Maximum="100"
                                                                      Value="{Binding PlayedPercentage}"
-                                                                     Height="4"
+                                                                     Height="5"
                                                                      VerticalAlignment="Center"/>
                                                         <TextBlock Grid.Column="3"
                                                                    Text="{Binding ShortProgressText}"
                                                                    Foreground="White"
-                                                                   FontSize="11"
-                                                                   Margin="10,0,0,0"/>
+                                                                   FontSize="12"
+                                                                   Margin="11,0,0,0"/>
                                                     </Grid>
                                                 </Grid>
                                             </Border>
 
                                             <TextBlock Text="{Binding ResumeTitle}"
                                                        Foreground="{ThemeResource AsterPrimaryTextBrush}"
-                                                       FontSize="14"
+                                                       FontSize="18"
                                                        FontWeight="SemiBold"
                                                        TextTrimming="CharacterEllipsis"/>
 
                                             <TextBlock Text="{Binding EpisodeText}"
                                                        Foreground="{ThemeResource AsterSecondaryTextBrush}"
-                                                       FontSize="12"
+                                                       FontSize="13"
                                                        TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
                                     </Button>
@@ -303,68 +391,69 @@
                 </StackPanel>
 
                 <!-- My media -->
-                <StackPanel Spacing="14">
+                <StackPanel Spacing="16">
                     <Grid>
                         <TextBlock Text="我的媒体"
                                    Foreground="{ThemeResource AsterPrimaryTextBrush}"
-                                   FontSize="25"
-                                   FontWeight="SemiBold"/>
-                        <Button Content="全部媒体  ›"
+                                   FontSize="30"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                        <Button Content="更多  ›"
                                 HorizontalAlignment="Right"
-                                Background="Transparent"
+                                Height="38"
+                                Padding="16,0"
+                                CornerRadius="19"
                                 BorderThickness="0"
                                 Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                                Background="{ThemeResource AsterCardBackgroundBrush}"
                                 Click="OpenLibrary_Click"/>
                     </Grid>
 
                     <ItemsRepeater x:Name="LibrariesGrid">
                         <ItemsRepeater.Layout>
-                            <UniformGridLayout MinItemWidth="280"
-                                               MinItemHeight="150"
-                                               MinColumnSpacing="14"
-                                               MinRowSpacing="14"
+                            <UniformGridLayout MinItemWidth="300"
+                                               MinItemHeight="172"
+                                               MinColumnSpacing="18"
+                                               MinRowSpacing="18"
                                                ItemsJustification="SpaceBetween"
                                                ItemsStretch="Fill"/>
                         </ItemsRepeater.Layout>
-
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate>
-                                <Button Height="150"
+                                <Button Height="172"
                                         Padding="0"
                                         Background="Transparent"
                                         BorderThickness="0"
                                         HorizontalAlignment="Stretch"
                                         Tag="{Binding}"
                                         Click="LibraryTile_Click">
-                                    <Border CornerRadius="22"
+                                    <Border CornerRadius="24"
                                             Background="{ThemeResource AsterCardBackgroundBrush}"
                                             BorderBrush="{ThemeResource AsterCardBorderBrush}"
                                             BorderThickness="1">
                                         <Grid>
                                             <controls:CachedImage SourceUrl="{Binding BackdropUrl}"
                                                                   Stretch="UniformToFill"
-                                                                  Opacity="0.82"/>
-
+                                                                  Opacity="0.88"/>
                                             <Rectangle>
                                                 <Rectangle.Fill>
                                                     <LinearGradientBrush StartPoint="0,0"
                                                                          EndPoint="0,1">
-                                                        <GradientStop Color="#14000000" Offset="0"/>
-                                                        <GradientStop Color="#9D000000" Offset="1"/>
+                                                        <GradientStop Color="#12000000" Offset="0"/>
+                                                        <GradientStop Color="#A6000000" Offset="1"/>
                                                     </LinearGradientBrush>
                                                 </Rectangle.Fill>
                                             </Rectangle>
-
                                             <StackPanel VerticalAlignment="Bottom"
-                                                        Margin="18"
+                                                        Margin="20"
                                                         Spacing="4">
                                                 <TextBlock Text="{Binding Name}"
                                                            Foreground="White"
-                                                           FontSize="22"
+                                                           FontSize="24"
                                                            FontWeight="SemiBold"/>
                                                 <TextBlock Text="{Binding Subtitle}"
-                                                           Foreground="#D7DBE2"
-                                                           FontSize="12"/>
+                                                           Foreground="#E0E4EA"
+                                                           FontSize="13"/>
                                             </StackPanel>
                                         </Grid>
                                     </Border>
@@ -374,26 +463,27 @@
                     </ItemsRepeater>
                 </StackPanel>
 
-                <!-- Per-library sections -->
+                <!-- Library sections -->
                 <ItemsControl x:Name="LibrarySectionsList">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Orientation="Vertical"/>
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
-
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Spacing="14"
-                                        Margin="0,0,0,24">
+                            <StackPanel Spacing="16"
+                                        Margin="0,0,0,30">
                                 <Grid>
                                     <TextBlock Text="{Binding Name}"
                                                Foreground="{ThemeResource AsterPrimaryTextBrush}"
-                                               FontSize="25"
+                                               FontSize="30"
                                                FontWeight="SemiBold"/>
-
                                     <Button HorizontalAlignment="Right"
-                                            Background="Transparent"
+                                            Height="38"
+                                            Padding="16,0"
+                                            CornerRadius="19"
+                                            Background="{ThemeResource AsterCardBackgroundBrush}"
                                             BorderThickness="0"
                                             Foreground="{ThemeResource AsterSecondaryTextBrush}"
                                             Tag="{Binding}"
@@ -411,39 +501,36 @@
 
                                 <ItemsRepeater ItemsSource="{Binding Items}">
                                     <ItemsRepeater.Layout>
-                                        <UniformGridLayout MinItemWidth="158"
-                                                           MinItemHeight="282"
-                                                           MinColumnSpacing="14"
-                                                           MinRowSpacing="18"
+                                        <UniformGridLayout MinItemWidth="166"
+                                                           MinItemHeight="292"
+                                                           MinColumnSpacing="16"
+                                                           MinRowSpacing="20"
                                                            ItemsJustification="Start"
                                                            ItemsStretch="None"/>
                                     </ItemsRepeater.Layout>
-
                                     <ItemsRepeater.ItemTemplate>
                                         <DataTemplate>
-                                            <Button MinWidth="158"
+                                            <Button MinWidth="166"
                                                     Padding="0"
                                                     Background="Transparent"
                                                     BorderThickness="0"
                                                     HorizontalAlignment="Stretch"
                                                     Tag="{Binding}"
                                                     Click="SectionMedia_Click">
-                                                <StackPanel Spacing="7">
-                                                    <Border Height="232"
-                                                            CornerRadius="18"
+                                                <StackPanel Spacing="8">
+                                                    <Border Height="244"
+                                                            CornerRadius="20"
                                                             Background="{ThemeResource AsterCardBackgroundBrush}"
                                                             BorderBrush="{ThemeResource AsterCardBorderBrush}"
                                                             BorderThickness="1">
                                                         <controls:CachedImage SourceUrl="{Binding PosterUrl}"
                                                                               Stretch="UniformToFill"/>
                                                     </Border>
-
                                                     <TextBlock Text="{Binding Title}"
                                                                Foreground="{ThemeResource AsterPrimaryTextBrush}"
-                                                               FontSize="14"
+                                                               FontSize="15"
                                                                FontWeight="SemiBold"
                                                                TextTrimming="CharacterEllipsis"/>
-
                                                     <TextBlock Text="{Binding Meta}"
                                                                Foreground="{ThemeResource AsterSecondaryTextBrush}"
                                                                FontSize="12"
@@ -461,37 +548,32 @@
         </ScrollViewer>
 
         <Grid x:Name="NoServerState"
-              Visibility="Collapsed"
-              HorizontalAlignment="Stretch"
-              VerticalAlignment="Stretch">
+              Visibility="Collapsed">
             <StackPanel HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Spacing="14"
                         Margin="24">
-                <Border Width="82"
-                        Height="82"
-                        CornerRadius="28"
+                <Border Width="86"
+                        Height="86"
+                        CornerRadius="30"
                         Background="{ThemeResource AsterCardBackgroundBrush}"
                         BorderBrush="{ThemeResource AsterCardBorderBrush}"
                         BorderThickness="1">
                     <FontIcon Glyph="&#xE7F8;"
-                              FontSize="34"
+                              FontSize="36"
                               Foreground="{ThemeResource AsterSecondaryTextBrush}"
                               HorizontalAlignment="Center"
                               VerticalAlignment="Center"/>
                 </Border>
-
                 <TextBlock Text="暂无服务器"
-                           FontSize="28"
+                           FontSize="30"
                            FontWeight="SemiBold"
                            Foreground="{ThemeResource AsterPrimaryTextBrush}"
                            HorizontalAlignment="Center"/>
-
                 <TextBlock Text="请先添加服务器"
                            FontSize="15"
                            Foreground="{ThemeResource AsterSecondaryTextBrush}"
                            HorizontalAlignment="Center"/>
-
                 <Button Content="前往服务器页面"
                         Margin="0,10,0,0"
                         Padding="24,11"
@@ -502,15 +584,13 @@
         </Grid>
 
         <Grid x:Name="LoadingState"
-              Visibility="Collapsed"
-              HorizontalAlignment="Stretch"
-              VerticalAlignment="Stretch">
+              Visibility="Collapsed">
             <StackPanel HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Spacing="14">
                 <ProgressRing x:Name="LoadingRing"
-                              Width="36"
-                              Height="36"
+                              Width="38"
+                              Height="38"
                               IsActive="False"/>
                 <TextBlock x:Name="LoadingTextBlock"
                            Text="正在加载"
