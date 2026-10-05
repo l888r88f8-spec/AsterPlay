@@ -84,6 +84,16 @@
                     BorderBrush="#66FFFFFF"
                     BorderThickness="1"
                     Visibility="Visible">
+                <Border.Resources>
+                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
+                                     Color="#14000000"/>
+                    <SolidColorBrush x:Key="ButtonBackgroundPressed"
+                                     Color="#22000000"/>
+                    <SolidColorBrush x:Key="ButtonBorderBrushPointerOver"
+                                     Color="Transparent"/>
+                    <SolidColorBrush x:Key="ButtonBorderBrushPressed"
+                                     Color="Transparent"/>
+                </Border.Resources>
                 <Border.Background>
                     <AcrylicBrush TintColor="{ThemeResource AsterHeroFadeEndColor}"
                                   TintOpacity="0.07"
