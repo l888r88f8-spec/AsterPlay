@@ -116,6 +116,40 @@ public sealed partial class HomeView : UserControl
             $"HomeView hero advanced: index={_heroIndex}, item={_heroItem?.Id}");
     }
 
+    internal bool HandleNativeMouseWheel(int delta)
+    {
+        if (!IsLoaded ||
+            HomeScrollViewer.Visibility != Visibility.Visible ||
+            !HomeScrollViewer.IsHitTestVisible ||
+            HomeScrollViewer.ScrollableHeight <= 0)
+        {
+            return false;
+        }
+
+        // WM_MOUSEWHEEL uses 120 units per traditional wheel notch.
+        // Keep the delta proportional so precision touchpads remain smooth.
+        var scrollDelta = delta * 0.8;
+        var target = Math.Clamp(
+            HomeScrollViewer.VerticalOffset - scrollDelta,
+            0,
+            HomeScrollViewer.ScrollableHeight);
+
+        if (Math.Abs(target - HomeScrollViewer.VerticalOffset) < 0.1)
+            return true;
+
+        HomeScrollViewer.ChangeView(
+            horizontalOffset: null,
+            verticalOffset: target,
+            zoomFactor: null,
+            disableAnimation: true);
+
+        PlaybackLog.Write(
+            "WinUINativeWheel",
+            $"delta={delta}, target={target:0.0}, {BuildHomeScrollState()}");
+
+        return true;
+    }
+
     private void HomeView_PointerWheelChangedDiagnostic(
         object sender,
         PointerRoutedEventArgs e)
