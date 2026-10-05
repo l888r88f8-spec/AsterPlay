@@ -97,6 +97,7 @@ public sealed partial class HomeView : UserControl
     {
         _heroItem = latest.FirstOrDefault(item => !string.IsNullOrWhiteSpace(item.Id));
         HeroPlayButton.IsEnabled = _heroItem is not null;
+        HeroFavoriteButton.IsEnabled = _heroItem is not null;
 
         if (_heroItem is null)
         {
@@ -109,6 +110,9 @@ public sealed partial class HomeView : UserControl
 
         HeroTitleBlock.Text = _heroItem.Name;
         HeroMetaBlock.Text = BuildHeroMeta(_heroItem);
+        HeroFavoriteButton.Content = _heroItem.UserData?.IsFavorite == true
+            ? "♥  已收藏"
+            : "♡  收藏";
         HeroOverviewBlock.Text = _heroItem.Overview ?? "";
 
         var backdrop = _client.BuildBackdropUrl(_heroItem, 1800);
@@ -200,6 +204,38 @@ public sealed partial class HomeView : UserControl
     {
         if (_heroItem is not null)
             PlayRequested?.Invoke(this, _heroItem);
+    }
+
+    private void HeroDetails_Click(object sender, RoutedEventArgs e)
+    {
+        if (_heroItem is not null)
+            MediaRequested?.Invoke(this, _heroItem);
+    }
+
+    private async void HeroFavorite_Click(object sender, RoutedEventArgs e)
+    {
+        if (_heroItem is null)
+            return;
+
+        HeroFavoriteButton.IsEnabled = false;
+
+        try
+        {
+            var target = !(_heroItem.UserData?.IsFavorite == true);
+            await _client.SetFavoriteAsync(_heroItem.Id, target);
+            _heroItem = await _client.GetItemAsync(_heroItem.Id);
+            HeroFavoriteButton.Content = _heroItem.UserData?.IsFavorite == true
+                ? "♥  已收藏"
+                : "♡  收藏";
+        }
+        catch (Exception ex)
+        {
+            PlaybackLog.Error("WinUIHomeFavorite", ex);
+        }
+        finally
+        {
+            HeroFavoriteButton.IsEnabled = true;
+        }
     }
 
     private void OpenLibrary_Click(object sender, RoutedEventArgs e) =>
