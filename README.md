@@ -68,7 +68,6 @@ The build verifies that the release contains at least:
 
 It also writes BUILD-INFO.txt and copies RUNTIME-SOURCE.txt into the publish folder.
 
-build-winui.ps1 is retained as a compatibility alias for the default WinUI 3 build.
 
 ## Acknowledgements
 
