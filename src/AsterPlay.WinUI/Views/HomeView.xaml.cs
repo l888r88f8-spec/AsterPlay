@@ -3,7 +3,6 @@ using AsterPlay.Models;
 using AsterPlay.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace AsterPlay.WinUI.Views;
 
@@ -104,7 +103,7 @@ public sealed partial class HomeView : UserControl
             HeroTitleBlock.Text = "媒体库已连接";
             HeroMetaBlock.Text = "";
             HeroOverviewBlock.Text = "从下方浏览你的媒体库。";
-            HeroImage.Source = null;
+            HeroImage.SourceUrl = "";
             return;
         }
 
@@ -115,9 +114,8 @@ public sealed partial class HomeView : UserControl
             : "♡  收藏";
         HeroOverviewBlock.Text = _heroItem.Overview ?? "";
 
-        var backdrop = _client.BuildBackdropUrl(_heroItem, 1800);
-        if (Uri.TryCreate(backdrop, UriKind.Absolute, out var uri))
-            HeroImage.Source = new BitmapImage(uri);
+        HeroImage.SourceUrl =
+            _client.BuildBackdropUrl(_heroItem, 1800);
     }
 
     private void PopulateResume(IEnumerable<EmbyItem> source)
