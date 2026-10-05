@@ -471,7 +471,10 @@ public sealed partial class PlayerPocView : UserControl
         ShowControls();
     }
 
-    private void Mute_Click(object sender, RoutedEventArgs e)
+    private void Mute_Click(object sender, RoutedEventArgs e) =>
+        ToggleMute();
+
+    private void ToggleMute()
     {
         if (_mpv is null)
             return;
@@ -617,7 +620,10 @@ public sealed partial class PlayerPocView : UserControl
         ShowControls();
     }
 
-    private void Diagnostics_Click(object sender, RoutedEventArgs e)
+    private void Diagnostics_Click(object sender, RoutedEventArgs e) =>
+        ToggleDiagnostics();
+
+    private void ToggleDiagnostics()
     {
         _diagnosticsVisible = !_diagnosticsVisible;
         DiagnosticsPanel.Visibility = _diagnosticsVisible
@@ -819,7 +825,10 @@ public sealed partial class PlayerPocView : UserControl
         ShowControls();
     }
 
-    private async void Danmaku_Click(object sender, RoutedEventArgs e)
+    private async void Danmaku_Click(object sender, RoutedEventArgs e) =>
+        await ToggleDanmakuAsync();
+
+    private async Task ToggleDanmakuAsync()
     {
         if (!_danmakuVisible &&
             DanmakuOverlay.LoadedCount == 0 &&
@@ -995,23 +1004,6 @@ public sealed partial class PlayerPocView : UserControl
             Content = "防重叠",
             IsChecked = _danmakuSettings.AvoidOverlap
         };
-        var words = new TextBox
-        {
-            Header = "屏蔽词（每行一个）",
-            Text = string.Join(Environment.NewLine, _danmakuSettings.BlockedWords),
-            AcceptsReturn = true,
-            Height = 100,
-            TextWrapping = TextWrapping.Wrap
-        };
-        var users = new TextBox
-        {
-            Header = "屏蔽发送者（每行一个）",
-            Text = string.Join(Environment.NewLine, _danmakuSettings.BlockedUsers),
-            AcceptsReturn = true,
-            Height = 90,
-            TextWrapping = TextWrapping.Wrap
-        };
-
         var panel = new StackPanel { Spacing = 10 };
         panel.Children.Add(fontSize);
         panel.Children.Add(speed);
@@ -1020,8 +1012,6 @@ public sealed partial class PlayerPocView : UserControl
         panel.Children.Add(density);
         panel.Children.Add(maxActive);
         panel.Children.Add(overlap);
-        panel.Children.Add(words);
-        panel.Children.Add(users);
 
         var dialog = new ContentDialog
         {
@@ -1048,9 +1038,7 @@ public sealed partial class PlayerPocView : UserControl
             ScreenHeightRatio = heightRatio.Value,
             DensityRatio = density.Value,
             MaxActiveComments = (int)Math.Round(maxActive.Value),
-            AvoidOverlap = overlap.IsChecked == true,
-            BlockedWords = ParseLines(words.Text),
-            BlockedUsers = ParseLines(users.Text)
+            AvoidOverlap = overlap.IsChecked == true
         };
 
         DanmakuSettingsStore.Save(_danmakuSettings);
@@ -1059,95 +1047,63 @@ public sealed partial class PlayerPocView : UserControl
         ShowControls();
     }
 
+    private async void DanmakuFilter_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var dialog = new DanmakuFilterDialog(_danmakuSettings)
+        {
+            XamlRoot = PlayerRoot.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary ||
+            dialog.Result is null)
+        {
+            return;
+        }
+
+        _danmakuSettings = dialog.Result;
+        DanmakuSettingsStore.Save(_danmakuSettings);
+        DanmakuOverlay.ApplySettings(_danmakuSettings);
+
+        StatusBlock.Text =
+            $"弹幕过滤已更新 · {_danmakuSettings.BlockedWords.Count} 词 / " +
+            $"{_danmakuSettings.BlockedUsers.Count} 用户";
+        ShowControls();
+    }
+
     private async void DanmakuSource_Click(
         object sender,
         RoutedEventArgs e)
     {
-        var url = new TextBox
+        var dialog = new DanmakuSourceSettingsDialog(
+            _danmakuSourceSettings)
         {
-            Header = "LogVar 服务器",
-            Text = _danmakuSourceSettings.LogVarBaseUrl,
-            PlaceholderText = "http://127.0.0.1:port"
-        };
-        var token = new PasswordBox
-        {
-            Header = "Access Token",
-            Password = _danmakuSourceSettings.LogVarAccessToken
-        };
-        var status = new TextBlock
-        {
-            Foreground = new SolidColorBrush(
-                Windows.UI.Color.FromArgb(255, 190, 196, 205)),
-            TextWrapping = TextWrapping.Wrap
-        };
-        var test = new Button { Content = "测试连接" };
-
-        test.Click += async (_, _) =>
-        {
-            var candidate = BuildDanmakuSourceSettings(
-                url.Text,
-                token.Password);
-
-            if (candidate is null)
-            {
-                status.Text = "请输入有效的 http:// 或 https:// 地址。";
-                return;
-            }
-
-            test.IsEnabled = false;
-            status.Text = "正在测试连接…";
-
-            try
-            {
-                await _danmakuService.TestConnectionAsync(candidate);
-                status.Text = "连接成功。";
-            }
-            catch (Exception ex)
-            {
-                status.Text = ex.Message;
-            }
-            finally
-            {
-                test.IsEnabled = true;
-            }
+            XamlRoot = PlayerRoot.XamlRoot
         };
 
-        var panel = new StackPanel { Spacing = 10 };
-        panel.Children.Add(url);
-        panel.Children.Add(token);
-        panel.Children.Add(test);
-        panel.Children.Add(status);
-
-        var dialog = new ContentDialog
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary ||
+            dialog.Result is null)
         {
-            XamlRoot = PlayerRoot.XamlRoot,
-            Title = "LogVar 弹幕服务器",
-            Content = panel,
-            PrimaryButtonText = "保存",
-            CloseButtonText = "取消"
-        };
-
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
-            return;
-
-        var settings = BuildDanmakuSourceSettings(
-            url.Text,
-            token.Password);
-
-        if (settings is null)
-        {
-            StatusBlock.Text = "LogVar 地址无效";
             return;
         }
 
-        _danmakuSourceSettings = settings;
-        DanmakuSourceSettingsStore.Save(settings);
+        _danmakuSourceSettings = dialog.Result;
+        DanmakuSourceSettingsStore.Save(_danmakuSourceSettings);
+
+        DanmakuOverlay.SetDocument(
+            new DanmakuDocument(
+                "LogVar",
+                Array.Empty<DanmakuComment>()));
+
+        StatusBlock.Text = "LogVar：正在重新匹配弹幕…";
         await LoadDanmakuAsync();
 
         if (_danmakuVisible)
             DanmakuOverlay.Reset(ResolveTimelinePositionSeconds());
 
         StatusBlock.Text = "LogVar 设置已保存";
+        ShowControls();
     }
 
     private async void DanmakuMatch_Click(
@@ -1157,127 +1113,71 @@ public sealed partial class PlayerPocView : UserControl
         if (string.IsNullOrWhiteSpace(
                 _danmakuSourceSettings.LogVarBaseUrl))
         {
-            StatusBlock.Text = "请先配置 LogVar 服务器。";
+            StatusBlock.Text = "请先配置 LogVar 服务器地址。";
+            ShowControls();
             return;
         }
 
         var context = CreateDanmakuContext();
-        var keywordBox = new TextBox
+        var currentBinding = _danmakuService.GetManualSeriesMatch(
+            context,
+            _danmakuSourceSettings);
+
+        var dialog = new DanmakuMatchDialog(
+            _danmakuService,
+            context,
+            _danmakuSourceSettings,
+            currentBinding)
         {
-            Header = "搜索剧名",
-            Text = !string.IsNullOrWhiteSpace(context.SeriesName)
-                ? context.SeriesName
-                : !string.IsNullOrWhiteSpace(context.OriginalTitle)
-                    ? context.OriginalTitle
-                    : context.Title
+            XamlRoot = PlayerRoot.XamlRoot
         };
 
-        var searchDialog = new ContentDialog
-        {
-            XamlRoot = PlayerRoot.XamlRoot,
-            Title = "弹幕剧集匹配",
-            Content = keywordBox,
-            PrimaryButtonText = "搜索",
-            SecondaryButtonText = "恢复自动匹配",
-            CloseButtonText = "取消"
-        };
+        await dialog.ShowAsync();
 
-        var firstResult = await searchDialog.ShowAsync();
-        if (firstResult == ContentDialogResult.Secondary)
+        if (dialog.UseAutomaticMatch)
         {
             _danmakuService.ClearManualSeriesMatch(
                 context,
                 _danmakuSourceSettings);
-            await LoadDanmakuAsync();
-            StatusBlock.Text = "已恢复自动匹配";
-            return;
+
+            StatusBlock.Text =
+                "LogVar：已恢复当前剧集自动匹配，正在重新加载…";
         }
-
-        if (firstResult != ContentDialogResult.Primary)
-            return;
-
-        IReadOnlyList<DanmakuSeriesMatchCandidate> series;
-        try
+        else if (
+            dialog.SelectedSeries is DanmakuSeriesMatchCandidate series &&
+            dialog.SelectedEpisode is DanmakuMatchCandidate episode)
         {
-            series = await _danmakuService.SearchSeriesCandidatesAsync(
+            var binding = _danmakuService.SetManualSeriesMatch(
                 context,
                 _danmakuSourceSettings,
-                keywordBox.Text);
+                series,
+                episode);
+
+            var offsetText = binding.EpisodeOffset == 0
+                ? "集数一一对应"
+                : binding.EpisodeOffset > 0
+                    ? $"集数偏移 +{binding.EpisodeOffset}"
+                    : $"集数偏移 {binding.EpisodeOffset}";
+
+            StatusBlock.Text =
+                $"LogVar：已绑定 {series.AnimeTitle}（{offsetText}），正在重新加载…";
         }
-        catch (Exception ex)
-        {
-            StatusBlock.Text = $"匹配搜索失败：{ex.Message}";
-            return;
-        }
-
-        if (series.Count == 0)
-        {
-            StatusBlock.Text = "没有找到匹配剧集";
-            return;
-        }
-
-        var seriesBox = new ComboBox
-        {
-            Header = "剧集",
-            ItemsSource = series,
-            DisplayMemberPath = "DisplayTitle",
-            SelectedIndex = 0
-        };
-        var episodeBox = new ComboBox
-        {
-            Header = "集数",
-            DisplayMemberPath = "DisplayTitle"
-        };
-
-        void RefreshEpisodes()
-        {
-            if (seriesBox.SelectedItem is not DanmakuSeriesMatchCandidate selected)
-                return;
-
-            episodeBox.ItemsSource = selected.Episodes;
-
-            var targetEpisode = context.EpisodeNumber.GetValueOrDefault();
-            var episode = targetEpisode > 0
-                ? selected.Episodes.FirstOrDefault(item =>
-                    item.EpisodeNumber == targetEpisode)
-                : null;
-
-            episodeBox.SelectedItem =
-                episode ?? selected.Episodes.FirstOrDefault();
-        }
-
-        seriesBox.SelectionChanged += (_, _) => RefreshEpisodes();
-        RefreshEpisodes();
-
-        var matchPanel = new StackPanel { Spacing = 12 };
-        matchPanel.Children.Add(seriesBox);
-        matchPanel.Children.Add(episodeBox);
-
-        var matchDialog = new ContentDialog
-        {
-            XamlRoot = PlayerRoot.XamlRoot,
-            Title = "选择 LogVar 匹配",
-            Content = matchPanel,
-            PrimaryButtonText = "使用选择",
-            CloseButtonText = "取消"
-        };
-
-        if (await matchDialog.ShowAsync() != ContentDialogResult.Primary ||
-            seriesBox.SelectedItem is not DanmakuSeriesMatchCandidate selectedSeries ||
-            episodeBox.SelectedItem is not DanmakuMatchCandidate selectedEpisode)
+        else
         {
             return;
         }
 
-        _danmakuService.SetManualSeriesMatch(
-            context,
-            _danmakuSourceSettings,
-            selectedSeries,
-            selectedEpisode);
+        DanmakuOverlay.SetDocument(
+            new DanmakuDocument(
+                "LogVar",
+                Array.Empty<DanmakuComment>()));
 
         await LoadDanmakuAsync();
-        StatusBlock.Text =
-            $"已绑定 {selectedSeries.AnimeTitle} · E{selectedEpisode.EpisodeNumber:00}";
+
+        if (_danmakuVisible)
+            DanmakuOverlay.Reset(ResolveTimelinePositionSeconds());
+
+        ShowControls();
     }
 
     private DanmakuContext CreateDanmakuContext()
@@ -1299,36 +1199,6 @@ public sealed partial class PlayerPocView : UserControl
             _launch.SourcePath,
             _launch.SourceFileName);
     }
-
-    private static DanmakuSourceSettings? BuildDanmakuSourceSettings(
-        string url,
-        string token)
-    {
-        url = url.Trim();
-
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
-            (uri.Scheme != Uri.UriSchemeHttp &&
-             uri.Scheme != Uri.UriSchemeHttps))
-        {
-            return null;
-        }
-
-        return new DanmakuSourceSettings
-        {
-            LogVarBaseUrl = url.TrimEnd('/'),
-            LogVarAccessToken = token.Trim()
-        };
-    }
-
-    private static List<string> ParseLines(string text) =>
-        text.Split(
-                ['\r', '\n'],
-                StringSplitOptions.RemoveEmptyEntries)
-            .Select(value => value.Trim())
-            .Where(value => value.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(200)
-            .ToList();
 
     private void Back_Click(object sender, RoutedEventArgs e) =>
         BackRequested?.Invoke(this, EventArgs.Empty);
@@ -1354,7 +1224,38 @@ public sealed partial class PlayerPocView : UserControl
                 e.Handled = true;
                 break;
 
+            case Windows.System.VirtualKey.Up when _mpv is not null:
+                VolumeSlider.Value = Math.Min(100, _mpv.Volume + 5);
+                e.Handled = true;
+                break;
+
+            case Windows.System.VirtualKey.Down when _mpv is not null:
+                VolumeSlider.Value = Math.Max(0, _mpv.Volume - 5);
+                e.Handled = true;
+                break;
+
+            case Windows.System.VirtualKey.M:
+                ToggleMute();
+                e.Handled = true;
+                break;
+
+            case Windows.System.VirtualKey.D:
+                _ = ToggleDanmakuAsync();
+                e.Handled = true;
+                break;
+
+            case Windows.System.VirtualKey.I:
+                ToggleDiagnostics();
+                e.Handled = true;
+                break;
+
             case Windows.System.VirtualKey.F:
+            case Windows.System.VirtualKey.F11:
+                ToggleFullscreen();
+                e.Handled = true;
+                break;
+
+            case Windows.System.VirtualKey.Escape when _isFullscreen:
                 ToggleFullscreen();
                 e.Handled = true;
                 break;
