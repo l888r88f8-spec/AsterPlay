@@ -9,10 +9,15 @@ namespace AsterPlay.WinUI.Views;
 
 public sealed partial class HomeView : UserControl
 {
+    private const int MaxLibrarySections = 6;
+    private const int SectionItemLimit = 6;
+
     private readonly EmbyClient _client;
     private readonly ObservableCollection<HomeLibraryTile> _libraries = [];
     private readonly ObservableCollection<ResumeMediaTile> _resume = [];
-    private readonly ObservableCollection<HomeMediaTile> _latest = [];
+    private readonly ObservableCollection<HomeLibrarySection> _sections = [];
+
+    private EmbyItem? _heroItem;
 
     public event EventHandler? LibraryRequested;
     public event EventHandler<EmbyItem>? MediaRequested;
@@ -24,7 +29,7 @@ public sealed partial class HomeView : UserControl
 
         LibrariesGrid.ItemsSource = _libraries;
         ResumeGrid.ItemsSource = _resume;
-        LatestGrid.ItemsSource = _latest;
+        LibrarySectionsList.ItemsSource = _sections;
 
         Loaded += HomeView_Loaded;
     }
@@ -47,85 +52,153 @@ public sealed partial class HomeView : UserControl
                 : $"欢迎回来，{_client.UserName}";
 
             var viewsTask = _client.GetViewsAsync();
-            var resumeTask = _client.GetResumeAsync(28);
-            var latestTask = _client.GetLatestAsync(18);
+            var resumeTask = _client.GetResumeAsync(24);
+            var latestTask = _client.GetLatestAsync(12);
+
             await Task.WhenAll(viewsTask, resumeTask, latestTask);
 
             var views = viewsTask.Result
                 .Where(IsVisibleLibrary)
-                .ToList();
+                .Take(MaxLibrarySections)
+                .ToArray();
 
-            _libraries.Clear();
-            foreach (var view in views)
-            {
-                _libraries.Add(new HomeLibraryTile(
-                    view,
-                    view.Name,
-                    string.IsNullOrWhiteSpace(view.CollectionType)
-                        ? "媒体库"
-                        : view.CollectionType));
-            }
+            PopulateHero(latestTask.Result);
+            PopulateResume(resumeTask.Result);
+            PopulateLibraries(views);
 
-            _resume.Clear();
-            foreach (var item in BuildResumeItems(resumeTask.Result))
-            {
-                var played = Math.Clamp(item.UserData?.PlayedPercentage ?? 0, 0, 100);
-                var positionTicks = Math.Max(0, item.UserData?.PlaybackPositionTicks ?? 0);
-                var durationTicks = Math.Max(0, item.RunTimeTicks ?? 0);
+            // Load each real Emby library section concurrently. Only six items
+            // are requested for the home page, while TotalRecordCount is kept
+            // for the section header count.
+            var sectionTasks = views.Select(LoadLibrarySectionAsync).ToArray();
+            var sectionResults = await Task.WhenAll(sectionTasks);
 
-                _resume.Add(new ResumeMediaTile(
-                    item,
-                    BuildResumeTitle(item),
-                    _client.BuildBackdropUrl(item, 900),
-                    played,
-                    BuildProgressText(positionTicks, durationTicks, played)));
-            }
-
-            ContinueSection.Visibility = _resume.Count > 0
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-            _latest.Clear();
-            foreach (var item in latestTask.Result.Where(x => !string.IsNullOrWhiteSpace(x.Id)))
-            {
-                _latest.Add(new HomeMediaTile(
-                    item,
-                    item.Name,
-                    BuildMeta(item),
-                    _client.BuildPrimaryUrl(item, 420),
-                    _client.BuildBackdropUrl(item, 1400)));
-            }
-
-            var hero = _latest.FirstOrDefault();
-            if (hero is not null)
-            {
-                HeroTitleBlock.Text = hero.Title;
-                HeroMetaBlock.Text = hero.Meta;
-                HeroOverviewBlock.Text = hero.Item.Overview ?? "";
-
-                if (Uri.TryCreate(hero.BackdropUrl, UriKind.Absolute, out var backdropUri))
-                    HeroImage.Source = new BitmapImage(backdropUri);
-            }
-            else
-            {
-                HeroTitleBlock.Text = "媒体库已连接";
-                HeroMetaBlock.Text = "";
-                HeroOverviewBlock.Text = "从底部导航进入媒体库浏览全部内容。";
-            }
+            _sections.Clear();
+            foreach (var section in sectionResults.Where(section => section is not null))
+                _sections.Add(section!);
         }
         catch (Exception ex)
         {
             HeroTitleBlock.Text = "首页加载失败";
             HeroMetaBlock.Text = UserError.GetMessage(ex, "加载首页");
             HeroOverviewBlock.Text = "";
+            HeroPlayButton.IsEnabled = false;
             PlaybackLog.Error("WinUIHome", ex);
         }
         finally
         {
             LoadingRing.IsActive = false;
             LoadingRing.Visibility = Visibility.Collapsed;
-            DispatcherQueue.TryEnqueue(UpdateAllRailButtons);
+            DispatcherQueue.TryEnqueue(UpdateResumeButtons);
         }
+    }
+
+    private void PopulateHero(IReadOnlyList<EmbyItem> latest)
+    {
+        _heroItem = latest.FirstOrDefault(item => !string.IsNullOrWhiteSpace(item.Id));
+        HeroPlayButton.IsEnabled = _heroItem is not null;
+
+        if (_heroItem is null)
+        {
+            HeroTitleBlock.Text = "媒体库已连接";
+            HeroMetaBlock.Text = "";
+            HeroOverviewBlock.Text = "从下方浏览你的媒体库。";
+            HeroImage.Source = null;
+            return;
+        }
+
+        HeroTitleBlock.Text = _heroItem.Name;
+        HeroMetaBlock.Text = BuildHeroMeta(_heroItem);
+        HeroOverviewBlock.Text = _heroItem.Overview ?? "";
+
+        var backdrop = _client.BuildBackdropUrl(_heroItem, 1800);
+        if (Uri.TryCreate(backdrop, UriKind.Absolute, out var uri))
+            HeroImage.Source = new BitmapImage(uri);
+    }
+
+    private void PopulateResume(IEnumerable<EmbyItem> source)
+    {
+        _resume.Clear();
+
+        foreach (var item in BuildResumeItems(source))
+        {
+            var played = Math.Clamp(item.UserData?.PlayedPercentage ?? 0, 0, 100);
+            var positionTicks = Math.Max(0, item.UserData?.PlaybackPositionTicks ?? 0);
+            var durationTicks = Math.Max(0, item.RunTimeTicks ?? 0);
+
+            _resume.Add(new ResumeMediaTile(
+                item,
+                BuildResumeTitle(item),
+                BuildEpisodeText(item),
+                _client.BuildBackdropUrl(item, 900),
+                played,
+                BuildShortProgressText(positionTicks, durationTicks, played)));
+        }
+
+        ContinueSection.Visibility = _resume.Count > 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void PopulateLibraries(IEnumerable<EmbyItem> views)
+    {
+        _libraries.Clear();
+
+        foreach (var view in views)
+        {
+            _libraries.Add(new HomeLibraryTile(
+                view,
+                view.Name,
+                BuildLibrarySubtitle(view),
+                _client.BuildBackdropUrl(view, 900)));
+        }
+    }
+
+    private async Task<HomeLibrarySection?> LoadLibrarySectionAsync(EmbyItem library)
+    {
+        try
+        {
+            var result = await _client.GetLibraryItemsAsync(
+                parentId: library.Id,
+                searchTerm: null,
+                includeItemTypes: "Movie,Series",
+                year: null,
+                sortBy: "DateCreated",
+                sortOrder: "Descending",
+                favoriteOnly: false,
+                startIndex: 0,
+                limit: SectionItemLimit);
+
+            var items = result.Items
+                .Where(item => !string.IsNullOrWhiteSpace(item.Id))
+                .Take(SectionItemLimit)
+                .Select(item => new SectionMediaTile(
+                    item,
+                    item.Name,
+                    BuildSectionMeta(item),
+                    _client.BuildPrimaryUrl(item, 420)))
+                .ToArray();
+
+            if (items.Length == 0)
+                return null;
+
+            return new HomeLibrarySection(
+                library,
+                library.Name,
+                result.TotalRecordCount,
+                result.TotalRecordCount > 0 ? result.TotalRecordCount.ToString() : "",
+                items);
+        }
+        catch (Exception ex)
+        {
+            PlaybackLog.Error("WinUIHomeSection", ex);
+            return null;
+        }
+    }
+
+    private void HeroPlay_Click(object sender, RoutedEventArgs e)
+    {
+        if (_heroItem is not null)
+            MediaRequested?.Invoke(this, _heroItem);
     }
 
     private void OpenLibrary_Click(object sender, RoutedEventArgs e) =>
@@ -134,97 +207,55 @@ public sealed partial class HomeView : UserControl
     private void LibraryTile_Click(object sender, RoutedEventArgs e) =>
         LibraryRequested?.Invoke(this, EventArgs.Empty);
 
+    private void LibrarySectionMore_Click(object sender, RoutedEventArgs e) =>
+        LibraryRequested?.Invoke(this, EventArgs.Empty);
+
     private void ResumeTile_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: ResumeMediaTile tile })
             MediaRequested?.Invoke(this, tile.Item);
     }
 
-    private void LatestTile_Click(object sender, RoutedEventArgs e)
+    private void SectionMedia_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: HomeMediaTile tile })
+        if (sender is Button { Tag: SectionMediaTile tile })
             MediaRequested?.Invoke(this, tile.Item);
     }
 
-    private void RailArrow_Click(object sender, RoutedEventArgs e)
+    private void ResumeArrow_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: string tag })
-            return;
-
-        var parts = tag.Split(':', 2);
-        if (parts.Length != 2 || !int.TryParse(parts[1], out var direction))
-            return;
-
-        var scroller = parts[0] switch
+        if (sender is not Button { Tag: string tag } ||
+            !int.TryParse(tag, out var direction) ||
+            ResumeScroller.ScrollableWidth <= 0)
         {
-            "libraries" => LibrariesScroller,
-            "resume" => ResumeScroller,
-            "latest" => LatestScroller,
-            _ => null
-        };
-
-        if (scroller is null || scroller.ScrollableWidth <= 0)
             return;
+        }
 
-        var distance = Math.Max(240, scroller.ViewportWidth * 0.82);
+        var distance = Math.Max(300, ResumeScroller.ViewportWidth * 0.82);
         var target = Math.Clamp(
-            scroller.HorizontalOffset + Math.Sign(direction) * distance,
+            ResumeScroller.HorizontalOffset + Math.Sign(direction) * distance,
             0,
-            scroller.ScrollableWidth);
+            ResumeScroller.ScrollableWidth);
 
-        scroller.ChangeView(
+        ResumeScroller.ChangeView(
             horizontalOffset: target,
             verticalOffset: null,
             zoomFactor: null,
             disableAnimation: false);
     }
 
-    private void Rail_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e)
+    private void ResumeScroller_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e) =>
+        UpdateResumeButtons();
+
+    private void ResumeScroller_SizeChanged(object sender, SizeChangedEventArgs e) =>
+        UpdateResumeButtons();
+
+    private void UpdateResumeButtons()
     {
-        if (sender is ScrollViewer scroller)
-            UpdateRailButtons(scroller);
-    }
-
-    private void Rail_SizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        if (sender is ScrollViewer scroller)
-            UpdateRailButtons(scroller);
-    }
-
-    private void UpdateRailButtons(ScrollViewer scroller)
-    {
-        Button? previous = null;
-        Button? next = null;
-
-        if (ReferenceEquals(scroller, LibrariesScroller))
-        {
-            previous = LibrariesPreviousButton;
-            next = LibrariesNextButton;
-        }
-        else if (ReferenceEquals(scroller, ResumeScroller))
-        {
-            previous = ResumePreviousButton;
-            next = ResumeNextButton;
-        }
-        else if (ReferenceEquals(scroller, LatestScroller))
-        {
-            previous = LatestPreviousButton;
-            next = LatestNextButton;
-        }
-
-        if (previous is null || next is null)
-            return;
-
         const double epsilon = 1.0;
-        previous.IsEnabled = scroller.HorizontalOffset > epsilon;
-        next.IsEnabled = scroller.HorizontalOffset < scroller.ScrollableWidth - epsilon;
-    }
-
-    private void UpdateAllRailButtons()
-    {
-        UpdateRailButtons(LibrariesScroller);
-        UpdateRailButtons(ResumeScroller);
-        UpdateRailButtons(LatestScroller);
+        ResumePreviousButton.IsEnabled = ResumeScroller.HorizontalOffset > epsilon;
+        ResumeNextButton.IsEnabled =
+            ResumeScroller.HorizontalOffset < ResumeScroller.ScrollableWidth - epsilon;
     }
 
     private static IReadOnlyList<EmbyItem> BuildResumeItems(IEnumerable<EmbyItem> source)
@@ -243,62 +274,72 @@ public sealed partial class HomeView : UserControl
                 .ThenByDescending(item => item.UserData?.PlaybackPositionTicks ?? 0)
                 .First())
             .OrderByDescending(item => item.UserData?.LastPlayedDate ?? DateTimeOffset.MinValue)
-            .Take(14)
+            .Take(12)
             .ToArray();
     }
 
     private static string BuildResumeTitle(EmbyItem item)
     {
-        if (string.Equals(item.Type, "Episode", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(item.Type, "Episode", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(item.SeriesName))
         {
-            var episodeCode = item.ParentIndexNumber is > 0 && item.IndexNumber is > 0
-                ? $"S{item.ParentIndexNumber:00}E{item.IndexNumber:00}"
-                : item.IndexNumber is > 0
-                    ? $"E{item.IndexNumber:00}"
-                    : "";
-
-            if (!string.IsNullOrWhiteSpace(item.SeriesName))
-            {
-                return string.IsNullOrWhiteSpace(episodeCode)
-                    ? $"{item.SeriesName} · {item.Name}"
-                    : $"{item.SeriesName} · {episodeCode} · {item.Name}";
-            }
-
-            return string.IsNullOrWhiteSpace(episodeCode)
-                ? item.Name
-                : $"{episodeCode} · {item.Name}";
+            return item.SeriesName;
         }
 
         return item.Name;
     }
 
-    private static string BuildProgressText(long positionTicks, long durationTicks, double percentage)
+    private static string BuildEpisodeText(EmbyItem item)
     {
-        if (positionTicks > 0 && durationTicks > 0)
+        if (!string.Equals(item.Type, "Episode", StringComparison.OrdinalIgnoreCase))
+            return BuildSectionMeta(item);
+
+        var code = item.ParentIndexNumber is > 0 && item.IndexNumber is > 0
+            ? $"S{item.ParentIndexNumber:00}E{item.IndexNumber:00}"
+            : item.IndexNumber is > 0
+                ? $"E{item.IndexNumber:00}"
+                : "";
+
+        if (string.IsNullOrWhiteSpace(code))
+            return item.Name;
+
+        return string.IsNullOrWhiteSpace(item.Name)
+            ? code
+            : $"{code} · {item.Name}";
+    }
+
+    private static string BuildShortProgressText(
+        long positionTicks,
+        long durationTicks,
+        double percentage)
+    {
+        if (positionTicks > 0)
         {
             var position = TimeSpan.FromTicks(positionTicks);
-            var remaining = TimeSpan.FromTicks(Math.Max(0, durationTicks - positionTicks));
-            return $"已看 {FormatCompactTime(position)} · 剩余 {FormatCompactTime(remaining)}";
+            return position.TotalHours >= 1
+                ? $"{(int)position.TotalHours}:{position.Minutes:00}:{position.Seconds:00}"
+                : $"{position.Minutes:00}:{position.Seconds:00}";
         }
 
-        return percentage > 0
-            ? $"已看 {percentage:0}%"
-            : "继续播放";
+        return percentage > 0 ? $"{percentage:0}%" : "";
     }
 
-    private static string FormatCompactTime(TimeSpan value)
+    private static string BuildLibrarySubtitle(EmbyItem view)
     {
-        if (value.TotalHours >= 1)
-            return $"{(int)value.TotalHours}小时 {value.Minutes}分";
-
-        return $"{Math.Max(1, value.Minutes)}分";
+        var type = (view.CollectionType ?? "").ToLowerInvariant();
+        return type switch
+        {
+            "movies" => "电影",
+            "tvshows" => "电视剧",
+            "music" => "音乐",
+            "books" => "图书",
+            _ => string.IsNullOrWhiteSpace(view.CollectionType)
+                ? "媒体库"
+                : view.CollectionType
+        };
     }
 
-    private static bool IsVisibleLibrary(EmbyItem view) =>
-        !new[] { "boxsets", "playlists", "folders", "livetv", "homevideos" }
-            .Contains((view.CollectionType ?? "").ToLowerInvariant());
-
-    private static string BuildMeta(EmbyItem item)
+    private static string BuildHeroMeta(EmbyItem item)
     {
         var values = new List<string>();
 
@@ -308,32 +349,67 @@ public sealed partial class HomeView : UserControl
         if (item.CommunityRating is > 0)
             values.Add($"★ {item.CommunityRating:0.0}");
 
+        if (item.RunTimeTicks is > 0)
+        {
+            var minutes = item.RunTimeTicks.Value / 600_000_000L;
+            values.Add(minutes >= 60
+                ? $"{minutes / 60}小时 {minutes % 60}分"
+                : $"{minutes}分");
+        }
+
         if (!string.IsNullOrWhiteSpace(item.Type))
+        {
             values.Add(string.Equals(item.Type, "Series", StringComparison.OrdinalIgnoreCase)
                 ? "剧集"
                 : string.Equals(item.Type, "Movie", StringComparison.OrdinalIgnoreCase)
                     ? "电影"
                     : item.Type);
+        }
+
+        return string.Join("  ·  ", values);
+    }
+
+    private static string BuildSectionMeta(EmbyItem item)
+    {
+        var values = new List<string>();
+
+        if (item.ProductionYear is > 0)
+            values.Add(item.ProductionYear.Value.ToString());
+
+        if (item.CommunityRating is > 0)
+            values.Add($"★ {item.CommunityRating:0.0}");
 
         return string.Join(" · ", values);
     }
 
+    private static bool IsVisibleLibrary(EmbyItem view) =>
+        !new[] { "boxsets", "playlists", "folders", "livetv", "homevideos" }
+            .Contains((view.CollectionType ?? "").ToLowerInvariant());
+
     private sealed record HomeLibraryTile(
         EmbyItem Item,
         string Name,
-        string Subtitle);
+        string Subtitle,
+        string BackdropUrl);
 
     private sealed record ResumeMediaTile(
         EmbyItem Item,
         string ResumeTitle,
+        string EpisodeText,
         string BackdropUrl,
         double PlayedPercentage,
-        string ProgressText);
+        string ShortProgressText);
 
-    private sealed record HomeMediaTile(
+    private sealed record SectionMediaTile(
         EmbyItem Item,
         string Title,
         string Meta,
-        string PosterUrl,
-        string BackdropUrl);
+        string PosterUrl);
+
+    private sealed record HomeLibrarySection(
+        EmbyItem Library,
+        string Name,
+        int TotalCount,
+        string CountLabel,
+        IReadOnlyList<SectionMediaTile> Items);
 }
