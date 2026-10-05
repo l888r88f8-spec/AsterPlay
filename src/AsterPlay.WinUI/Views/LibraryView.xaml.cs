@@ -3,6 +3,7 @@ using AsterPlay.Services;
 using AsterPlay.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 
 namespace AsterPlay.WinUI.Views;
 
@@ -59,6 +60,18 @@ public sealed partial class LibraryView : UserControl
 
     private async void Apply_Click(object sender, RoutedEventArgs e)
     {
+        SyncFilters();
+        await RunAsync(_viewModel.ApplyFiltersAsync);
+    }
+
+    private async void SearchBox_KeyDown(
+        object sender,
+        KeyRoutedEventArgs e)
+    {
+        if (e.Key != Windows.System.VirtualKey.Enter)
+            return;
+
+        e.Handled = true;
         SyncFilters();
         await RunAsync(_viewModel.ApplyFiltersAsync);
     }
