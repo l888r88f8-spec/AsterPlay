@@ -9,7 +9,7 @@ using Windows.Storage.Streams;
 
 namespace AsterPlay.WinUI.Controls;
 
-public sealed class CachedImage : Image
+public sealed class CachedImage : UserControl
 {
     public static readonly DependencyProperty SourceUrlProperty =
         DependencyProperty.Register(
@@ -18,7 +18,22 @@ public sealed class CachedImage : Image
             typeof(CachedImage),
             new PropertyMetadata("", OnSourceUrlChanged));
 
+    public static readonly DependencyProperty StretchProperty =
+        DependencyProperty.Register(
+            nameof(Stretch),
+            typeof(Stretch),
+            typeof(CachedImage),
+            new PropertyMetadata(
+                Stretch.Uniform,
+                OnStretchChanged));
+
     private const double PreloadMargin = 220;
+
+    private readonly Image _image = new()
+    {
+        HorizontalAlignment = HorizontalAlignment.Stretch,
+        VerticalAlignment = VerticalAlignment.Stretch
+    };
 
     private CancellationTokenSource? _loadCts;
     private readonly List<ScrollViewer> _scrollViewers = [];
@@ -27,6 +42,9 @@ public sealed class CachedImage : Image
 
     public CachedImage()
     {
+        Content = _image;
+        _image.Stretch = Stretch;
+
         Loaded += CachedImage_Loaded;
         Unloaded += CachedImage_Unloaded;
     }
@@ -35,6 +53,23 @@ public sealed class CachedImage : Image
     {
         get => (string)GetValue(SourceUrlProperty);
         set => SetValue(SourceUrlProperty, value);
+    }
+
+    public Stretch Stretch
+    {
+        get => (Stretch)GetValue(StretchProperty);
+        set => SetValue(StretchProperty, value);
+    }
+
+    private static void OnStretchChanged(
+        DependencyObject dependencyObject,
+        DependencyPropertyChangedEventArgs e)
+    {
+        if (dependencyObject is CachedImage image &&
+            e.NewValue is Stretch stretch)
+        {
+            image._image.Stretch = stretch;
+        }
     }
 
     private static void OnSourceUrlChanged(
@@ -46,7 +81,7 @@ public sealed class CachedImage : Image
 
         image.CancelPendingLoad();
         image._loadedUrl = "";
-        image.Source = null;
+        image._image.Source = null;
 
         if (image.IsLoaded)
             image.ScheduleViewportCheck();
@@ -120,7 +155,7 @@ public sealed class CachedImage : Image
         var url = SourceUrl;
         if (string.IsNullOrWhiteSpace(url))
         {
-            Source = null;
+            _image.Source = null;
             return;
         }
 
@@ -163,7 +198,7 @@ public sealed class CachedImage : Image
 
             if (bytes is null || bytes.Length == 0)
             {
-                Source = null;
+                _image.Source = null;
                 _loadedUrl = url;
                 return;
             }
@@ -182,11 +217,11 @@ public sealed class CachedImage : Image
             if (bitmap is null)
             {
                 ImageCacheService.Shared.Invalidate(url);
-                Source = null;
+                _image.Source = null;
             }
             else
             {
-                Source = bitmap;
+                _image.Source = bitmap;
             }
 
             _loadedUrl = url;
@@ -202,7 +237,7 @@ public sealed class CachedImage : Image
                     url,
                     StringComparison.Ordinal))
             {
-                Source = null;
+                _image.Source = null;
                 _loadedUrl = url;
             }
         }
