@@ -140,15 +140,15 @@ public sealed partial class HomeView : UserControl
     }
 
     private void HomeScrollViewer_ViewChangedDiagnostic(
-        ScrollView sender,
-        object args)
+        object? sender,
+        ScrollViewerViewChangedEventArgs e)
     {
         var now = DateTimeOffset.UtcNow;
         if (now - _lastViewChangedDiagnosticAt < TimeSpan.FromMilliseconds(220))
             return;
 
         _lastViewChangedDiagnosticAt = now;
-        LogHomeScrollState("view-changed");
+        LogHomeScrollState($"view-changed intermediate={e.IsIntermediate}");
     }
 
     private void LogHomeScrollState(string reason) =>
@@ -191,12 +191,11 @@ public sealed partial class HomeView : UserControl
     {
         Loaded -= HomeView_Loaded;
 
-        HomeScrollViewer.ScrollTo(
-            0,
-            0,
-            new ScrollingScrollOptions(
-                ScrollingAnimationMode.Disabled,
-                ScrollingSnapPointsMode.Ignore));
+        HomeScrollViewer.ChangeView(
+            horizontalOffset: null,
+            verticalOffset: 0,
+            zoomFactor: null,
+            disableAnimation: true);
 
         StartupDiagnostics.Write(
             $"HomeView.Loaded: first home frame is ready; verticalOffset={HomeScrollViewer.VerticalOffset:0.0}");
@@ -365,12 +364,11 @@ public sealed partial class HomeView : UserControl
 
         if (HomeScrollViewer.VerticalOffset > 1)
         {
-            HomeScrollViewer.ScrollTo(
-                0,
-                0,
-                new ScrollingScrollOptions(
-                    ScrollingAnimationMode.Disabled,
-                    ScrollingSnapPointsMode.Ignore));
+            HomeScrollViewer.ChangeView(
+                horizontalOffset: null,
+                verticalOffset: 0,
+                zoomFactor: null,
+                disableAnimation: true);
         }
 
         StartupDiagnostics.Write(
