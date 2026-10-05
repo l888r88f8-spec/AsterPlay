@@ -11,6 +11,7 @@ public sealed partial class HomeView : UserControl
 {
     private readonly EmbyClient _client;
     private readonly ObservableCollection<HomeLibraryTile> _libraries = [];
+    private readonly ObservableCollection<ResumeMediaTile> _resume = [];
     private readonly ObservableCollection<HomeMediaTile> _latest = [];
 
     public event EventHandler? LibraryRequested;
@@ -22,6 +23,7 @@ public sealed partial class HomeView : UserControl
         InitializeComponent();
 
         LibrariesGrid.ItemsSource = _libraries;
+        ResumeGrid.ItemsSource = _resume;
         LatestGrid.ItemsSource = _latest;
 
         Loaded += HomeView_Loaded;
@@ -45,8 +47,9 @@ public sealed partial class HomeView : UserControl
                 : $"欢迎回来，{_client.UserName}";
 
             var viewsTask = _client.GetViewsAsync();
+            var resumeTask = _client.GetResumeAsync(28);
             var latestTask = _client.GetLatestAsync(18);
-            await Task.WhenAll(viewsTask, latestTask);
+            await Task.WhenAll(viewsTask, resumeTask, latestTask);
 
             var views = viewsTask.Result
                 .Where(IsVisibleLibrary)
@@ -62,6 +65,25 @@ public sealed partial class HomeView : UserControl
                         ? "媒体库"
                         : view.CollectionType));
             }
+
+            _resume.Clear();
+            foreach (var item in BuildResumeItems(resumeTask.Result))
+            {
+                var played = Math.Clamp(item.UserData?.PlayedPercentage ?? 0, 0, 100);
+                var positionTicks = Math.Max(0, item.UserData?.PlaybackPositionTicks ?? 0);
+                var durationTicks = Math.Max(0, item.RunTimeTicks ?? 0);
+
+                _resume.Add(new ResumeMediaTile(
+                    item,
+                    BuildResumeTitle(item),
+                    _client.BuildBackdropUrl(item, 900),
+                    played,
+                    BuildProgressText(positionTicks, durationTicks, played)));
+            }
+
+            ContinueSection.Visibility = _resume.Count > 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
 
             _latest.Clear();
             foreach (var item in latestTask.Result.Where(x => !string.IsNullOrWhiteSpace(x.Id)))
@@ -108,13 +130,86 @@ public sealed partial class HomeView : UserControl
     private void OpenLibrary_Click(object sender, RoutedEventArgs e) =>
         LibraryRequested?.Invoke(this, EventArgs.Empty);
 
-    private void LibrariesGrid_ItemClick(object sender, ItemClickEventArgs e) =>
+    private void LibraryTile_Click(object sender, RoutedEventArgs e) =>
         LibraryRequested?.Invoke(this, EventArgs.Empty);
+
+    private void ResumeTile_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: ResumeMediaTile tile })
+            MediaRequested?.Invoke(this, tile.Item);
+    }
 
     private void LatestGrid_ItemClick(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is HomeMediaTile tile)
             MediaRequested?.Invoke(this, tile.Item);
+    }
+
+    private static IReadOnlyList<EmbyItem> BuildResumeItems(IEnumerable<EmbyItem> source)
+    {
+        static string GroupKey(EmbyItem item) =>
+            string.Equals(item.Type, "Episode", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(item.SeriesId)
+                ? "series:" + item.SeriesId
+                : "item:" + item.Id;
+
+        return source
+            .Where(item => !string.IsNullOrWhiteSpace(item.Id))
+            .GroupBy(GroupKey, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group
+                .OrderByDescending(item => item.UserData?.LastPlayedDate ?? DateTimeOffset.MinValue)
+                .ThenByDescending(item => item.UserData?.PlaybackPositionTicks ?? 0)
+                .First())
+            .OrderByDescending(item => item.UserData?.LastPlayedDate ?? DateTimeOffset.MinValue)
+            .Take(14)
+            .ToArray();
+    }
+
+    private static string BuildResumeTitle(EmbyItem item)
+    {
+        if (string.Equals(item.Type, "Episode", StringComparison.OrdinalIgnoreCase))
+        {
+            var episodeCode = item.ParentIndexNumber is > 0 && item.IndexNumber is > 0
+                ? $"S{item.ParentIndexNumber:00}E{item.IndexNumber:00}"
+                : item.IndexNumber is > 0
+                    ? $"E{item.IndexNumber:00}"
+                    : "";
+
+            if (!string.IsNullOrWhiteSpace(item.SeriesName))
+            {
+                return string.IsNullOrWhiteSpace(episodeCode)
+                    ? $"{item.SeriesName} · {item.Name}"
+                    : $"{item.SeriesName} · {episodeCode} · {item.Name}";
+            }
+
+            return string.IsNullOrWhiteSpace(episodeCode)
+                ? item.Name
+                : $"{episodeCode} · {item.Name}";
+        }
+
+        return item.Name;
+    }
+
+    private static string BuildProgressText(long positionTicks, long durationTicks, double percentage)
+    {
+        if (positionTicks > 0 && durationTicks > 0)
+        {
+            var position = TimeSpan.FromTicks(positionTicks);
+            var remaining = TimeSpan.FromTicks(Math.Max(0, durationTicks - positionTicks));
+            return $"已看 {FormatCompactTime(position)} · 剩余 {FormatCompactTime(remaining)}";
+        }
+
+        return percentage > 0
+            ? $"已看 {percentage:0}%"
+            : "继续播放";
+    }
+
+    private static string FormatCompactTime(TimeSpan value)
+    {
+        if (value.TotalHours >= 1)
+            return $"{(int)value.TotalHours}小时 {value.Minutes}分";
+
+        return $"{Math.Max(1, value.Minutes)}分";
     }
 
     private static bool IsVisibleLibrary(EmbyItem view) =>
@@ -145,6 +240,13 @@ public sealed partial class HomeView : UserControl
         EmbyItem Item,
         string Name,
         string Subtitle);
+
+    private sealed record ResumeMediaTile(
+        EmbyItem Item,
+        string ResumeTitle,
+        string BackdropUrl,
+        double PlayedPercentage,
+        string ProgressText);
 
     private sealed record HomeMediaTile(
         EmbyItem Item,
