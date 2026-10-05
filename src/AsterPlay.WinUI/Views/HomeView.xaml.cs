@@ -27,6 +27,10 @@ public sealed partial class HomeView : UserControl
     private int _heroIndex;
     private int _heroPreloadGeneration;
     private bool _heroImagesReady;
+    private bool _heroShowingPrimary = true;
+    private bool _heroVisualInitialized;
+    private string _currentHeroBackdropUrl = "";
+    private Storyboard? _heroTransitionStoryboard;
     private readonly bool _noServerMode;
     private bool _hasCachedSnapshot;
     private DateTimeOffset _lastWheelDiagnosticAt = DateTimeOffset.MinValue;
@@ -38,6 +42,7 @@ public sealed partial class HomeView : UserControl
     public event EventHandler<EmbyItem>? RestartRequested;
     public event EventHandler? AuthenticationFailed;
     public event EventHandler? ServerRequested;
+    public event EventHandler<ServerProfile>? ServerSwitchRequested;
     public event EventHandler? SearchRequested;
     public event EventHandler? InitialVisualReady;
 
@@ -103,6 +108,8 @@ public sealed partial class HomeView : UserControl
     private void HomeView_Unloaded(object sender, RoutedEventArgs e)
     {
         _heroTimer.Stop();
+        _heroTransitionStoryboard?.Stop();
+        _heroTransitionStoryboard = null;
     }
 
     private void HeroTimer_Tick(DispatcherQueueTimer sender, object args)
@@ -373,6 +380,8 @@ public sealed partial class HomeView : UserControl
         LoadingState.Visibility = Visibility.Collapsed;
         LoadingRing.IsActive = false;
         NoServerState.Visibility = Visibility.Visible;
+        FloatingTopControls.Visibility = Visibility.Visible;
+        SearchButton.Visibility = Visibility.Collapsed;
         StartupDiagnostics.Write("HomeView state: NoServer");
     }
 
@@ -392,6 +401,8 @@ public sealed partial class HomeView : UserControl
         NoServerState.Visibility = Visibility.Collapsed;
         LoadingState.Visibility = Visibility.Collapsed;
         LoadingRing.IsActive = false;
+        FloatingTopControls.Visibility = Visibility.Visible;
+        SearchButton.Visibility = Visibility.Visible;
         HomeScrollViewer.Visibility = Visibility.Visible;
         HomeScrollViewer.Opacity = 1;
         HomeScrollViewer.IsHitTestVisible = true;
@@ -430,8 +441,48 @@ public sealed partial class HomeView : UserControl
     private void GoToServers_Click(object sender, RoutedEventArgs e) =>
         ServerRequested?.Invoke(this, EventArgs.Empty);
 
-    private void ServerPill_Click(object sender, RoutedEventArgs e) =>
-        ServerRequested?.Invoke(this, EventArgs.Empty);
+    private void ServerPill_Click(object sender, RoutedEventArgs e)
+    {
+        var servers = ServerProfileStore.Load();
+        if (servers.Count == 0)
+        {
+            ServerRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        var currentUrl = NormalizeServerUrl(_client.ServerUrl);
+        var flyout = new MenuFlyout();
+
+        foreach (var profile in servers)
+        {
+            var isCurrent = string.Equals(
+                NormalizeServerUrl(profile.Url),
+                currentUrl,
+                StringComparison.OrdinalIgnoreCase);
+
+            var item = new MenuFlyoutItem
+            {
+                Text = isCurrent
+                    ? $"●  {profile.DisplayName}"
+                    : $"    {profile.DisplayName}",
+                Tag = profile,
+                IsEnabled = !isCurrent
+            };
+            item.Click += ServerChoice_Click;
+            flyout.Items.Add(item);
+        }
+
+        flyout.ShowAt(ServerPillButton);
+    }
+
+    private void ServerChoice_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { Tag: ServerProfile profile })
+            ServerSwitchRequested?.Invoke(this, profile);
+    }
+
+    private static string NormalizeServerUrl(string? value) =>
+        (value ?? "").Trim().TrimEnd('/');
 
     private void Search_Click(object sender, RoutedEventArgs e) =>
         SearchRequested?.Invoke(this, EventArgs.Empty);
@@ -545,6 +596,7 @@ public sealed partial class HomeView : UserControl
                     StringComparison.OrdinalIgnoreCase));
 
         _heroIndex = previousIndex >= 0 ? previousIndex : 0;
+        RebuildHeroIndicators();
         ApplyHero(_heroCandidates[_heroIndex]);
 
         _heroTimer.Stop();
@@ -586,8 +638,13 @@ public sealed partial class HomeView : UserControl
             HeroOverviewBlock.Text = "从下方浏览你的媒体库。";
             HeroFavoriteButton.Content = "♡  收藏";
             HeroImage.SourceUrl = "";
+            HeroImageAlt.SourceUrl = "";
             PageBackdropImage.SourceUrl = "";
+            PageBackdropImageAlt.SourceUrl = "";
             PageBackdropLayer.Visibility = Visibility.Collapsed;
+            _heroVisualInitialized = false;
+            _currentHeroBackdropUrl = "";
+            UpdateHeroIndicators(animate: false);
             return;
         }
 
@@ -601,9 +658,183 @@ public sealed partial class HomeView : UserControl
         var backdropUrl =
             _client.BuildBackdropUrl(_heroItem, 1800);
 
-        HeroImage.SourceUrl = backdropUrl;
-        PageBackdropImage.SourceUrl = backdropUrl;
-        PageBackdropLayer.Visibility = Visibility.Visible;
+        TransitionHeroVisual(backdropUrl);
+        UpdateHeroIndicators(animate: true);
+    }
+
+    private void TransitionHeroVisual(string backdropUrl)
+    {
+        PageBackdropLayer.Visibility = string.IsNullOrWhiteSpace(backdropUrl)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+
+        if (string.IsNullOrWhiteSpace(backdropUrl))
+            return;
+
+        if (!_heroVisualInitialized)
+        {
+            HeroImage.SourceUrl = backdropUrl;
+            HeroImage.Opacity = 1;
+            HeroImageAlt.Opacity = 0;
+            PageBackdropImage.SourceUrl = backdropUrl;
+            PageBackdropImage.Opacity = 0.84;
+            PageBackdropImageAlt.Opacity = 0;
+            _heroShowingPrimary = true;
+            _heroVisualInitialized = true;
+            _currentHeroBackdropUrl = backdropUrl;
+            return;
+        }
+
+        if (string.Equals(
+                _currentHeroBackdropUrl,
+                backdropUrl,
+                StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _heroTransitionStoryboard?.Stop();
+
+        var incomingHero = _heroShowingPrimary ? HeroImageAlt : HeroImage;
+        var outgoingHero = _heroShowingPrimary ? HeroImage : HeroImageAlt;
+        var incomingBackdrop = _heroShowingPrimary ? PageBackdropImageAlt : PageBackdropImage;
+        var outgoingBackdrop = _heroShowingPrimary ? PageBackdropImage : PageBackdropImageAlt;
+
+        incomingHero.SourceUrl = backdropUrl;
+        incomingBackdrop.SourceUrl = backdropUrl;
+        incomingHero.Opacity = 0;
+        incomingBackdrop.Opacity = 0;
+        outgoingHero.Opacity = 1;
+        outgoingBackdrop.Opacity = 0.84;
+
+        var easing = new CubicEase
+        {
+            EasingMode = EasingMode.EaseInOut
+        };
+
+        var storyboard = new Storyboard();
+
+        AddOpacityAnimation(
+            storyboard,
+            incomingHero,
+            0,
+            1,
+            760,
+            easing);
+        AddOpacityAnimation(
+            storyboard,
+            outgoingHero,
+            1,
+            0,
+            760,
+            easing);
+        AddOpacityAnimation(
+            storyboard,
+            incomingBackdrop,
+            0,
+            0.84,
+            920,
+            easing);
+        AddOpacityAnimation(
+            storyboard,
+            outgoingBackdrop,
+            0.84,
+            0,
+            920,
+            easing);
+
+        _heroShowingPrimary = !_heroShowingPrimary;
+        _currentHeroBackdropUrl = backdropUrl;
+        _heroTransitionStoryboard = storyboard;
+        storyboard.Completed += (_, _) =>
+        {
+            _heroTransitionStoryboard = null;
+        };
+        storyboard.Begin();
+    }
+
+    private static void AddOpacityAnimation(
+        Storyboard storyboard,
+        DependencyObject target,
+        double from,
+        double to,
+        int durationMs,
+        EasingFunctionBase easing)
+    {
+        var animation = new DoubleAnimation
+        {
+            From = from,
+            To = to,
+            Duration = TimeSpan.FromMilliseconds(durationMs),
+            EasingFunction = easing
+        };
+
+        Storyboard.SetTarget(animation, target);
+        Storyboard.SetTargetProperty(animation, "Opacity");
+        storyboard.Children.Add(animation);
+    }
+
+    private void RebuildHeroIndicators()
+    {
+        HeroIndicatorPanel.Children.Clear();
+
+        for (var i = 0; i < _heroCandidates.Count; i++)
+        {
+            var selected = i == _heroIndex;
+            HeroIndicatorPanel.Children.Add(new Border
+            {
+                Width = selected ? 22 : 7,
+                Height = 7,
+                CornerRadius = new CornerRadius(4),
+                Opacity = selected ? 0.96 : 0.48,
+                Background = new SolidColorBrush(
+                    Windows.UI.Color.FromArgb(255, 255, 255, 255))
+            });
+        }
+    }
+
+    private void UpdateHeroIndicators(bool animate)
+    {
+        if (HeroIndicatorPanel.Children.Count != _heroCandidates.Count)
+        {
+            RebuildHeroIndicators();
+            return;
+        }
+
+        var storyboard = animate ? new Storyboard() : null;
+        var easing = new CubicEase
+        {
+            EasingMode = EasingMode.EaseOut
+        };
+
+        for (var i = 0; i < HeroIndicatorPanel.Children.Count; i++)
+        {
+            if (HeroIndicatorPanel.Children[i] is not Border dot)
+                continue;
+
+            var selected = i == _heroIndex;
+            var targetWidth = selected ? 22d : 7d;
+            dot.Opacity = selected ? 0.96 : 0.48;
+
+            if (!animate)
+            {
+                dot.Width = targetWidth;
+                continue;
+            }
+
+            var widthAnimation = new DoubleAnimation
+            {
+                To = targetWidth,
+                Duration = TimeSpan.FromMilliseconds(220),
+                EasingFunction = easing,
+                EnableDependentAnimation = true
+            };
+            Storyboard.SetTarget(widthAnimation, dot);
+            Storyboard.SetTargetProperty(widthAnimation, "Width");
+            storyboard!.Children.Add(widthAnimation);
+        }
+
+        storyboard?.Begin();
     }
 
     private void PopulateResume(IEnumerable<EmbyItem> source)
