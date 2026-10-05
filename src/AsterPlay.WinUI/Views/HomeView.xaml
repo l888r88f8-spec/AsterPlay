@@ -118,7 +118,8 @@
                         Spacing="36">
 
                 <!-- Mobile-inspired immersive Hero, adapted for desktop width. -->
-                <Grid Height="620"
+                <Grid x:Name="HeroContainer"
+                      Height="620"
                       Margin="-28,0,-28,-172">
                     <controls:CachedImage x:Name="HeroImage"
                                           Stretch="UniformToFill"/>
