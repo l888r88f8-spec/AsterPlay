@@ -141,7 +141,7 @@ public sealed partial class MainWindow : Window
 
         var view = new HomeView(_client);
         view.LibraryRequested += (_, _) => ShowLibrary();
-        view.MediaRequested += async (_, item) => await StartPlaybackAsync(item, "home");
+        view.MediaRequested += (_, item) => ShowDetails(item, "home");
         PageHost.Content = view;
     }
 
@@ -160,7 +160,7 @@ public sealed partial class MainWindow : Window
         SetActiveNavigation(LibraryButton);
 
         var view = new LibraryView(_client);
-        view.MediaRequested += async (_, item) => await StartPlaybackAsync(item, "library");
+        view.MediaRequested += (_, item) => ShowDetails(item, "library");
         PageHost.Content = view;
     }
 
@@ -204,7 +204,38 @@ public sealed partial class MainWindow : Window
         PageHost.Content = new SettingsView();
     }
 
-    private async Task StartPlaybackAsync(EmbyItem item, string returnSection)
+    private void ShowDetails(EmbyItem item, string returnSection)
+    {
+        ExitPlayerChrome();
+
+        if (!_client.IsAuthenticated)
+        {
+            ShowLogin();
+            return;
+        }
+
+        _currentSection = "details";
+        NavigationDock.Visibility = Visibility.Collapsed;
+        PageTitleBlock.Text = "详情";
+
+        var view = new DetailsView(_client, item);
+        view.BackRequested += (_, _) =>
+        {
+            if (string.Equals(returnSection, "library", StringComparison.Ordinal))
+                ShowLibrary();
+            else
+                ShowHome();
+        };
+        view.PlaybackRequested += async (_, args) =>
+            await StartPlaybackAsync(args.Item, returnSection, args.Restart);
+
+        PageHost.Content = view;
+    }
+
+    private async Task StartPlaybackAsync(
+        EmbyItem item,
+        string returnSection,
+        bool restart = false)
     {
         if (!_client.IsAuthenticated)
         {
@@ -217,7 +248,7 @@ public sealed partial class MainWindow : Window
             PageTitleBlock.Text = "正在准备播放…";
             EnterPlayerChrome();
 
-            var launch = await _client.GetPlayableStreamAsync(item);
+            var launch = await _client.GetPlayableStreamAsync(item, restart);
             var player = new PlayerPocView(_client, launch);
             player.BackRequested += (_, _) =>
             {
