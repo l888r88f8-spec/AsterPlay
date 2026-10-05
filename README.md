@@ -35,7 +35,6 @@ AsterPlay is a native Windows desktop client for Emby built with **C# / .NET 8 /
 - Image cache: %LOCALAPPDATA%\AsterPlay\cache\images
 - Build: local Windows build, no Qt/CMake/MSYS2 required
 
-The legacy WPF source remains in the repository for shared-source compatibility and regression reference, but it is no longer the default application or release target.
 
 ## Build
 
