@@ -11,12 +11,13 @@ namespace AsterPlay.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private readonly EmbyClient _client = new();
-    private readonly UISettings _uiSettings = new();
+    private EmbyClient _client = null!;
+    private UISettings? _uiSettings;
     private readonly AppWindow _appWindow;
-    private bool _initialized;
+    private bool _startupResolutionScheduled;
+    private bool _startupResolutionCompleted;
     private bool _authenticated;
-    private string _currentSection = "login";
+    private string _currentSection = "home-shell";
 
     public MainWindow()
     {
@@ -32,14 +33,11 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
 
-        _uiSettings.ColorValuesChanged += SystemColorValuesChanged;
         Closed += MainWindow_Closed;
-        ApplySystemTheme();
+        PageTitleBlock.Text = "首页";
+        SetActiveNavigation(HomeButton);
 
-        using (StartupDiagnostics.Measure("PrepareInitialContent"))
-            PrepareInitialContent();
-
-        StartupDiagnostics.Write("MainWindow constructor: title bar and initial content ready");
+        StartupDiagnostics.Write("MainWindow constructor: lightweight home shell ready");
     }
 
     private void SystemColorValuesChanged(UISettings sender, object args)
@@ -49,6 +47,9 @@ public sealed partial class MainWindow : Window
 
     private void ApplySystemTheme()
     {
+        if (_uiSettings is null)
+            return;
+
         var background = _uiSettings.GetColorValue(UIColorType.Background);
         var luminance =
             (0.2126 * background.R) +
@@ -64,78 +65,127 @@ public sealed partial class MainWindow : Window
 
     private void MainWindow_Closed(object sender, WindowEventArgs args)
     {
-        _uiSettings.ColorValuesChanged -= SystemColorValuesChanged;
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= FirstFrame_Rendering;
+
+        if (_uiSettings is not null)
+            _uiSettings.ColorValuesChanged -= SystemColorValuesChanged;
     }
 
     private void RootGrid_Loaded(object sender, RoutedEventArgs e)
     {
         StartupDiagnostics.Write(
-            $"RootGrid.Loaded; initialized={_initialized}, section={_currentSection}");
-        _initialized = true;
+            $"RootGrid.Loaded; startupScheduled={_startupResolutionScheduled}, section={_currentSection}");
+
+        if (_startupResolutionScheduled)
+            return;
+
+        _startupResolutionScheduled = true;
+
+        // Wait for the first composition frame before touching disk, DPAPI,
+        // UISettings, EmbyClient, or page XAML. This guarantees the user sees
+        // the actual home shell first.
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += FirstFrame_Rendering;
     }
 
-    private void PrepareInitialContent()
+    private void FirstFrame_Rendering(object? sender, object e)
     {
-        if (_initialized)
-            return;
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= FirstFrame_Rendering;
+        StartupDiagnostics.Write("First home shell frame rendered");
 
-        StartupDiagnostics.Write("PrepareInitialContent: loading server profiles");
-        var servers = ServerProfileStore.Load();
-        StartupDiagnostics.Write($"PrepareInitialContent: servers={servers.Count}");
+        DispatcherQueue.TryEnqueue(
+            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+            async () => await ResolveStartupStateAsync());
+    }
 
-        if (servers.Count == 0)
-        {
-            ShowNoServerHome();
-            _initialized = true;
-            return;
-        }
-
-        StartupDiagnostics.Write("PrepareInitialContent: loading settings");
-        var settings = AppSettingsStore.Load();
-        if (!settings.RestoreSessionOnStartup)
-        {
-            StartupDiagnostics.Write("PrepareInitialContent: restore disabled -> login");
-            ShowLogin();
-            _initialized = true;
-            return;
-        }
-
-        StartupDiagnostics.Write("PrepareInitialContent: loading session");
-        var session = AppStateStore.Load();
-        StartupDiagnostics.Write(
-            $"PrepareInitialContent: session={(session is null ? "miss" : "hit")}");
-
-        if (session is null)
-        {
-            ShowLogin();
-            _initialized = true;
-            return;
-        }
+    private async Task ResolveStartupStateAsync()
+    {
+        using var timing = StartupDiagnostics.Measure("ResolveStartupState");
 
         try
         {
-            StartupDiagnostics.Write("PrepareInitialContent: restoring client");
-            _client.Restore(session);
-            ServerProfileStore.AddOrUpdate(session.ServerUrl);
+            EnsureDeferredServices();
+
+            var state = await Task.Run(() =>
+            {
+                var servers = ServerProfileStore.Load();
+                if (servers.Count == 0)
+                    return new StartupState(0, restoreSession: false, session: null);
+
+                var settings = AppSettingsStore.Load();
+                if (!settings.RestoreSessionOnStartup)
+                    return new StartupState(servers.Count, restoreSession: false, session: null);
+
+                return new StartupState(
+                    servers.Count,
+                    restoreSession: true,
+                    session: AppStateStore.Load());
+            });
+
+            StartupDiagnostics.Write(
+                $"ResolveStartupState: servers={state.ServerCount}, restore={state.RestoreSession}, session={(state.Session is null ? "miss" : "hit")}");
+
+            if (state.ServerCount == 0)
+            {
+                ShowNoServerHome();
+                return;
+            }
+
+            if (!state.RestoreSession || state.Session is null)
+            {
+                ShowLogin();
+                return;
+            }
+
+            _client.Restore(state.Session);
+            ServerProfileStore.AddOrUpdate(state.Session.ServerUrl);
             _authenticated = true;
-
-            using (StartupDiagnostics.Measure("PrepareInitialContent.ShowHome"))
-                ShowHome();
-
-            _initialized = true;
+            ShowHome();
         }
         catch (Exception ex)
         {
             PlaybackLog.Error("WinUISessionRestore", ex);
-            StartupDiagnostics.WriteException("PrepareInitialContent", ex);
+            StartupDiagnostics.WriteException("ResolveStartupState", ex);
+
+            EnsureDeferredServices();
             _client.Reset();
             ShowLogin(UserError.GetMessage(ex, "恢复登录"));
-            _initialized = true;
+        }
+        finally
+        {
+            _startupResolutionCompleted = true;
         }
     }
 
+    private void EnsureDeferredServices()
+    {
+        if (_uiSettings is null)
+        {
+            _uiSettings = new UISettings();
+            _uiSettings.ColorValuesChanged += SystemColorValuesChanged;
+            ApplySystemTheme();
+            StartupDiagnostics.Write("Deferred UISettings initialized");
+        }
+
+        if (_client is null)
+        {
+            _client = new EmbyClient();
+            StartupDiagnostics.Write("Deferred EmbyClient initialized");
+        }
+    }
+
+    private void HideInitialHomeShell()
+    {
+        InitialHomeShell.Visibility = Visibility.Collapsed;
+    }
+
+    private sealed record StartupState(
+        int ServerCount,
+        bool RestoreSession,
+        EmbySession? Session);
+
     private void ShowLogin(string? message = null)
     {
+        HideInitialHomeShell();
         ExitPlayerChrome();
         _authenticated = false;
         _currentSection = "login";
@@ -155,6 +205,7 @@ public sealed partial class MainWindow : Window
 
     private void ShowNoServerHome()
     {
+        HideInitialHomeShell();
         ExitPlayerChrome();
 
         _authenticated = false;
@@ -173,6 +224,7 @@ public sealed partial class MainWindow : Window
 
     private void ShowHome()
     {
+        HideInitialHomeShell();
         ExitPlayerChrome();
         if (!_client.IsAuthenticated)
         {
@@ -212,6 +264,7 @@ public sealed partial class MainWindow : Window
 
     private void ShowLibrary()
     {
+        HideInitialHomeShell();
         ExitPlayerChrome();
         if (!_client.IsAuthenticated)
         {
@@ -233,6 +286,7 @@ public sealed partial class MainWindow : Window
         bool returnToLogin,
         bool returnToNoServerHome = false)
     {
+        HideInitialHomeShell();
         ExitPlayerChrome();
         _currentSection = "servers";
         NavigationDock.Visibility =
@@ -274,6 +328,7 @@ public sealed partial class MainWindow : Window
 
     private void ShowSettings()
     {
+        HideInitialHomeShell();
         ExitPlayerChrome();
         if (!_authenticated)
         {
@@ -300,6 +355,7 @@ public sealed partial class MainWindow : Window
 
     private void ShowDetails(EmbyItem item, string returnSection)
     {
+        HideInitialHomeShell();
         ExitPlayerChrome();
 
         if (!_client.IsAuthenticated)
@@ -422,22 +478,38 @@ public sealed partial class MainWindow : Window
 
     private void Home_Click(object sender, RoutedEventArgs e)
     {
+        if (!_startupResolutionCompleted)
+            return;
         if (!_authenticated && ServerProfileStore.Load().Count == 0)
             ShowNoServerHome();
         else
             ShowHome();
     }
 
-    private void Library_Click(object sender, RoutedEventArgs e) => ShowLibrary();
+    private void Library_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_startupResolutionCompleted)
+            return;
+
+        ShowLibrary();
+    }
 
     private void Servers_Click(object sender, RoutedEventArgs e)
     {
+        if (!_startupResolutionCompleted)
+            return;
         var noServers = ServerProfileStore.Load().Count == 0;
         ShowServers(
             returnToLogin: !_authenticated && !noServers,
             returnToNoServerHome: noServers);
     }
-    private void Settings_Click(object sender, RoutedEventArgs e) => ShowSettings();
+    private void Settings_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_startupResolutionCompleted)
+            return;
+
+        ShowSettings();
+    }
 
     private void SetActiveNavigation(Button active)
     {
