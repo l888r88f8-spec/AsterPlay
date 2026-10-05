@@ -217,7 +217,7 @@ public sealed partial class MainWindow : Window
         {
             From = 1,
             To = targetScale,
-            Duration = TimeSpan.FromMilliseconds(520),
+            Duration = TimeSpan.FromMilliseconds(1040),
             EasingFunction = easeOut
         };
         Storyboard.SetTarget(scaleX, SplashCircleScale);
@@ -228,7 +228,7 @@ public sealed partial class MainWindow : Window
         {
             From = 1,
             To = targetScale,
-            Duration = TimeSpan.FromMilliseconds(520),
+            Duration = TimeSpan.FromMilliseconds(1040),
             EasingFunction = easeOut
         };
         Storyboard.SetTarget(scaleY, SplashCircleScale);
@@ -239,7 +239,7 @@ public sealed partial class MainWindow : Window
         {
             From = 1,
             To = 0,
-            Duration = TimeSpan.FromMilliseconds(180)
+            Duration = TimeSpan.FromMilliseconds(360)
         };
         Storyboard.SetTarget(wordmarkFade, SplashWordmark);
         Storyboard.SetTargetProperty(wordmarkFade, "Opacity");
@@ -249,8 +249,8 @@ public sealed partial class MainWindow : Window
         {
             From = 0,
             To = 1,
-            BeginTime = TimeSpan.FromMilliseconds(150),
-            Duration = TimeSpan.FromMilliseconds(320),
+            BeginTime = TimeSpan.FromMilliseconds(300),
+            Duration = TimeSpan.FromMilliseconds(640),
             EasingFunction = easeOut
         };
         Storyboard.SetTarget(chromeFade, AppTitleBar);
@@ -261,8 +261,8 @@ public sealed partial class MainWindow : Window
         {
             From = 0,
             To = 1,
-            BeginTime = TimeSpan.FromMilliseconds(150),
-            Duration = TimeSpan.FromMilliseconds(320),
+            BeginTime = TimeSpan.FromMilliseconds(300),
+            Duration = TimeSpan.FromMilliseconds(640),
             EasingFunction = easeOut
         };
         Storyboard.SetTarget(contentFade, ContentLayer);
@@ -273,8 +273,8 @@ public sealed partial class MainWindow : Window
         {
             From = 1,
             To = 0,
-            BeginTime = TimeSpan.FromMilliseconds(230),
-            Duration = TimeSpan.FromMilliseconds(290),
+            BeginTime = TimeSpan.FromMilliseconds(460),
+            Duration = TimeSpan.FromMilliseconds(580),
             EasingFunction = easeOut
         };
         Storyboard.SetTarget(splashFade, SplashLayer);
