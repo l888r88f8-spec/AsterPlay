@@ -8,6 +8,8 @@ public sealed partial class SettingsView : UserControl
 {
     private bool _loading;
 
+    public event EventHandler? LogoutRequested;
+
     public SettingsView()
     {
         InitializeComponent();
@@ -36,6 +38,9 @@ public sealed partial class SettingsView : UserControl
             _loading = false;
         }
     }
+
+    private void Logout_Click(object sender, RoutedEventArgs e) =>
+        LogoutRequested?.Invoke(this, EventArgs.Empty);
 
     private void SettingChanged(object sender, RoutedEventArgs e)
     {
