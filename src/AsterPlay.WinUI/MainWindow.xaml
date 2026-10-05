@@ -168,38 +168,5 @@
             </Border>
         </Grid>
 
-        <Grid x:Name="StartupLayer"
-              Grid.Row="0"
-              Grid.RowSpan="2"
-              Background="{ThemeResource AsterPageBackgroundBrush}"
-              IsHitTestVisible="True"
-              Canvas.ZIndex="1000">
-            <StackPanel HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Spacing="16">
-                <Border Width="58"
-                        Height="58"
-                        CornerRadius="18"
-                        Background="{ThemeResource AsterCardBackgroundBrush}"
-                        BorderBrush="{ThemeResource AsterCardBorderBrush}"
-                        BorderThickness="1">
-                    <TextBlock Text="A"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Foreground="{ThemeResource AsterPrimaryTextBrush}"
-                               FontSize="28"
-                               FontWeight="SemiBold"/>
-                </Border>
-                <TextBlock Text="AsterPlay"
-                           HorizontalAlignment="Center"
-                           Foreground="{ThemeResource AsterPrimaryTextBrush}"
-                           FontSize="18"
-                           FontWeight="SemiBold"/>
-                <ProgressRing Width="22"
-                              Height="22"
-                              IsActive="True"
-                              Foreground="{ThemeResource AsterSecondaryTextBrush}"/>
-            </StackPanel>
-        </Grid>
     </Grid>
 </Window>
