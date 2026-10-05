@@ -109,16 +109,16 @@ public sealed partial class MainWindow : Window
             {
                 var servers = ServerProfileStore.Load();
                 if (servers.Count == 0)
-                    return new StartupState(0, restoreSession: false, session: null);
+                    return new StartupState(0, RestoreSession: false, Session: null);
 
                 var settings = AppSettingsStore.Load();
                 if (!settings.RestoreSessionOnStartup)
-                    return new StartupState(servers.Count, restoreSession: false, session: null);
+                    return new StartupState(servers.Count, RestoreSession: false, Session: null);
 
                 return new StartupState(
                     servers.Count,
-                    restoreSession: true,
-                    session: AppStateStore.Load());
+                    RestoreSession: true,
+                    Session: AppStateStore.Load());
             });
 
             StartupDiagnostics.Write(
