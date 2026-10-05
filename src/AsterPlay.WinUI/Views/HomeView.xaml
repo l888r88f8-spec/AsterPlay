@@ -140,6 +140,7 @@
                                   VerticalScrollMode="Disabled"
                                   VerticalScrollBarVisibility="Disabled"
                                   ZoomMode="Disabled"
+                                  PointerWheelChanged="Rail_PointerWheelChanged"
                                   ViewChanged="Rail_ViewChanged"
                                   SizeChanged="Rail_SizeChanged">
                         <ItemsControl x:Name="LibrariesGrid">
@@ -220,6 +221,7 @@
                                   VerticalScrollMode="Disabled"
                                   VerticalScrollBarVisibility="Disabled"
                                   ZoomMode="Disabled"
+                                  PointerWheelChanged="Rail_PointerWheelChanged"
                                   ViewChanged="Rail_ViewChanged"
                                   SizeChanged="Rail_SizeChanged">
                         <ItemsControl x:Name="ResumeGrid">
@@ -318,6 +320,7 @@
                                   VerticalScrollMode="Disabled"
                                   VerticalScrollBarVisibility="Disabled"
                                   ZoomMode="Disabled"
+                                  PointerWheelChanged="Rail_PointerWheelChanged"
                                   ViewChanged="Rail_ViewChanged"
                                   SizeChanged="Rail_SizeChanged">
                         <ItemsControl x:Name="LatestGrid">
