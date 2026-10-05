@@ -54,27 +54,27 @@ public sealed class ImageCacheService
         var lazy = _inflight.GetOrAdd(
             key,
             _ => new Lazy<Task<byte[]?>>(
-                () => LoadOrDownloadAsync(url, key),
+                () => LoadAndRememberAsync(url, key),
                 LazyThreadSafetyMode.ExecutionAndPublication));
 
-        try
-        {
-            var bytes = await lazy.Value.WaitAsync(cancellationToken);
-            if (bytes is not null)
-                _memory[key] = new WeakReference<byte[]>(bytes);
+        return await lazy.Value.WaitAsync(cancellationToken);
+    }
 
-            return bytes;
-        }
-        finally
-        {
-            if (lazy.IsValueCreated &&
-                lazy.Value.IsCompleted &&
-                _inflight.TryGetValue(key, out var current) &&
-                ReferenceEquals(current, lazy))
-            {
-                _inflight.TryRemove(key, out _);
-            }
-        }
+    public async Task PreloadAsync(
+        IEnumerable<string?> urls,
+        CancellationToken cancellationToken = default)
+    {
+        var targets = urls
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .Select(url => url!)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (targets.Length == 0)
+            return;
+
+        await Task.WhenAll(
+            targets.Select(url => GetBytesAsync(url, cancellationToken)));
     }
 
     public async Task ClearAsync()
@@ -115,6 +115,24 @@ public sealed class ImageCacheService
         }
         catch
         {
+        }
+    }
+
+    private async Task<byte[]?> LoadAndRememberAsync(
+        string url,
+        string key)
+    {
+        try
+        {
+            var bytes = await LoadOrDownloadAsync(url, key);
+            if (bytes is not null)
+                _memory[key] = new WeakReference<byte[]>(bytes);
+
+            return bytes;
+        }
+        finally
+        {
+            _inflight.TryRemove(key, out _);
         }
     }
 
