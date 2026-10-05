@@ -635,7 +635,7 @@ public sealed partial class PlayerPocView : UserControl
             video.Add($"{snapshot.Width}×{snapshot.Height}");
         if (snapshot.Fps is > 0)
             video.Add($"{snapshot.Fps:0.##} fps");
-        if (!string.IsNullOrWhiteSpace(snapshot.Hwdec))
+        if (!string.IsNullOrWhiteSpace(snapshot.HwdecCurrent))
             video.Add(snapshot.Hwdec);
 
         DiagnosticsVideoBlock.Text =
