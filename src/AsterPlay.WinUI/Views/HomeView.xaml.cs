@@ -26,6 +26,7 @@ public sealed partial class HomeView : UserControl
     public event EventHandler<EmbyItem>? PlayRequested;
     public event EventHandler? AuthenticationFailed;
     public event EventHandler? ServerRequested;
+    public event EventHandler? InitialVisualReady;
 
     public HomeView(EmbyClient client, bool noServerMode = false)
     {
@@ -69,6 +70,9 @@ public sealed partial class HomeView : UserControl
             async () =>
             {
                 await LoadCachedSnapshotAsync();
+                InitialVisualReady?.Invoke(this, EventArgs.Empty);
+                StartupDiagnostics.Write(
+                    $"HomeView: initial visual ready; cachedSnapshot={_hasCachedSnapshot}");
                 await LoadAsync();
             });
     }
