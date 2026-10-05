@@ -25,15 +25,12 @@ public sealed partial class MainWindow : Window
     private string _currentSection = "home-shell";
     private DateTimeOffset _lastWheelDiagnosticAt = DateTimeOffset.MinValue;
     private readonly IntPtr _hwnd;
-    private readonly HookProc _getMessageHookProc;
-    private IntPtr _getMessageHook;
-    private long _xamlWheelSequence;
-    private OverlappedPresenterState? _lastOverlappedPresenterState;
+    private readonly HookProc _lowLevelMouseHookProc;
+    private IntPtr _lowLevelMouseHook;
+    private DateTimeOffset _lastNativeWheelDiagnosticAt = DateTimeOffset.MinValue;
 
     private const uint WmMouseWheel = 0x020A;
-    private const uint WmPointerWheel = 0x024E;
-    private const int WhGetMessage = 3;
-    private const int PmRemove = 1;
+    private const int WhMouseLl = 14;
 
     public MainWindow()
     {
@@ -43,33 +40,29 @@ public sealed partial class MainWindow : Window
         StartupDiagnostics.Write("MainWindow constructor: after InitializeComponent");
 
         _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-        _getMessageHookProc = GetMessageHook;
+        _lowLevelMouseHookProc = LowLevelMouseHook;
 
-        _getMessageHook = SetWindowsHookEx(
-            WhGetMessage,
-            _getMessageHookProc,
-            IntPtr.Zero,
-            GetCurrentThreadId());
+        _lowLevelMouseHook = SetWindowsHookEx(
+            WhMouseLl,
+            _lowLevelMouseHookProc,
+            GetModuleHandle(null),
+            0);
 
-        if (_getMessageHook == IntPtr.Zero)
+        if (_lowLevelMouseHook == IntPtr.Zero)
         {
             PlaybackLog.Write(
                 "WinUINativeWheel",
-                $"SetWindowsHookEx failed: {Marshal.GetLastWin32Error()}");
+                $"WH_MOUSE_LL install failed: {Marshal.GetLastWin32Error()}");
         }
         else
         {
             PlaybackLog.Write(
                 "WinUINativeWheel",
-                "UI-thread wheel message-queue hook installed.");
+                "WH_MOUSE_LL home wheel hook installed.");
         }
 
         var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(_hwnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
-        _appWindow.Changed += AppWindow_Changed;
-
-        if (_appWindow.Presenter is OverlappedPresenter initialPresenter)
-            _lastOverlappedPresenterState = initialPresenter.State;
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -86,52 +79,46 @@ public sealed partial class MainWindow : Window
         StartupDiagnostics.Write("MainWindow constructor: lightweight home shell ready");
     }
 
-    private IntPtr GetMessageHook(
+    private IntPtr LowLevelMouseHook(
         int code,
         IntPtr wParam,
         IntPtr lParam)
     {
         if (code >= 0 &&
-            wParam == (IntPtr)PmRemove &&
-            PageHost.Content is HomeView)
+            unchecked((uint)wParam.ToInt64()) == WmMouseWheel &&
+            GetForegroundWindow() == _hwnd &&
+            PageHost.Content is HomeView homeView)
         {
-            var message = Marshal.PtrToStructure<NativeMessage>(lParam);
-            if (message.Message == WmMouseWheel ||
-                message.Message == WmPointerWheel)
+            var input = Marshal.PtrToStructure<LowLevelMouseInput>(lParam);
+            var delta = unchecked((short)((input.MouseData >> 16) & 0xffff));
+
+            if (delta != 0 &&
+                GetWindowRect(_hwnd, out var windowRect) &&
+                input.Point.X >= windowRect.Left &&
+                input.Point.X < windowRect.Right &&
+                input.Point.Y >= windowRect.Top &&
+                input.Point.Y < windowRect.Bottom)
             {
-                var raw = unchecked((long)message.WParam);
-                var delta = unchecked((short)((raw >> 16) & 0xffff));
-                var xamlSequenceBefore = _xamlWheelSequence;
+                // Do not let WinUI's unstable wheel routing participate at all.
+                // The low-level hook remains valid across maximize/restore and
+                // always drives the single vertical home scroller.
+                homeView.HandleNativeMouseWheel(delta);
 
-                if (delta != 0)
+                var now = DateTimeOffset.UtcNow;
+                if (now - _lastNativeWheelDiagnosticAt >= TimeSpan.FromMilliseconds(500))
                 {
-                    var messageKind = message.Message == WmPointerWheel
-                        ? "WM_POINTERWHEEL"
-                        : "WM_MOUSEWHEEL";
-
+                    _lastNativeWheelDiagnosticAt = now;
                     PlaybackLog.Write(
                         "WinUINativeWheel",
-                        $"queue-wheel: kind={messageKind}, hwnd=0x{message.Hwnd.ToInt64():X}, delta={delta}");
-
-                    DispatcherQueue.TryEnqueue(
-                        Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
-                        () =>
-                        {
-                            // The queue hook sees wheel input before WinUI
-                            // converts it to PointerWheelChanged. Apply the
-                            // fallback only when XAML did not route this wheel.
-                            if (_xamlWheelSequence != xamlSequenceBefore)
-                                return;
-
-                            if (PageHost.Content is HomeView homeView)
-                                homeView.HandleNativeMouseWheel(delta);
-                        });
+                        $"low-level-wheel: delta={delta}, screen={input.Point.X},{input.Point.Y}");
                 }
+
+                return (IntPtr)1;
             }
         }
 
         return CallNextHookEx(
-            _getMessageHook,
+            _lowLevelMouseHook,
             code,
             wParam,
             lParam);
@@ -141,10 +128,6 @@ public sealed partial class MainWindow : Window
         object sender,
         PointerRoutedEventArgs e)
     {
-        // This counter is intentionally not throttled. The native wheel hook
-        // uses it to detect whether WinUI routed each observed wheel message.
-        _xamlWheelSequence++;
-
         var now = DateTimeOffset.UtcNow;
         if (now - _lastWheelDiagnosticAt < TimeSpan.FromMilliseconds(180))
             return;
@@ -159,55 +142,6 @@ public sealed partial class MainWindow : Window
             $"section={_currentSection}, page={PageHost.Content?.GetType().Name ?? "-"}, " +
             $"splashVisibility={SplashLayer.Visibility}, splashHitTest={SplashLayer.IsHitTestVisible}, " +
             $"contentOpacity={ContentLayer.Opacity:0.00}, contentHitTest={ContentLayer.IsHitTestVisible}");
-    }
-
-    private void AppWindow_Changed(
-        AppWindow sender,
-        AppWindowChangedEventArgs args)
-    {
-        var presenterChanged = args.DidPresenterChange;
-        var stateChanged = false;
-        OverlappedPresenterState? newState = null;
-
-        if (sender.Presenter is OverlappedPresenter presenter)
-        {
-            newState = presenter.State;
-            stateChanged = _lastOverlappedPresenterState != newState;
-            if (stateChanged)
-                _lastOverlappedPresenterState = newState;
-        }
-
-        if (!presenterChanged && !stateChanged)
-            return;
-
-        PlaybackLog.Write(
-            "WinUIWindowState",
-            $"presenterChanged={presenterChanged}, state={newState?.ToString() ?? sender.Presenter.Kind.ToString()}");
-
-        DispatcherQueue.TryEnqueue(
-            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
-            () =>
-            {
-                // WinUI custom non-client regions can keep stale pointer/capture
-                // state across maximize/restore or presenter transitions.
-                ReleaseCapture();
-
-                ExtendsContentIntoTitleBar = true;
-                SetTitleBar(AppTitleBar);
-
-                var isHome =
-                    string.Equals(_currentSection, "home", StringComparison.Ordinal) ||
-                    string.Equals(_currentSection, "home-empty", StringComparison.Ordinal);
-                var isLight =
-                    !isHome &&
-                    RootGrid.RequestedTheme != ElementTheme.Dark;
-
-                ConfigureNativeTitleBar(isLight);
-
-                PlaybackLog.Write(
-                    "WinUIWindowState",
-                    "Reapplied title bar and released mouse capture after window-state change.");
-            });
     }
 
     private void SystemColorValuesChanged(UISettings sender, object args)
@@ -264,13 +198,11 @@ public sealed partial class MainWindow : Window
 
     private void MainWindow_Closed(object sender, WindowEventArgs args)
     {
-        if (_getMessageHook != IntPtr.Zero)
+        if (_lowLevelMouseHook != IntPtr.Zero)
         {
-            UnhookWindowsHookEx(_getMessageHook);
-            _getMessageHook = IntPtr.Zero;
+            UnhookWindowsHookEx(_lowLevelMouseHook);
+            _lowLevelMouseHook = IntPtr.Zero;
         }
-
-        _appWindow.Changed -= AppWindow_Changed;
 
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= FirstFrame_Rendering;
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= SplashReveal_Rendering;
@@ -910,15 +842,22 @@ public sealed partial class MainWindow : Window
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct NativeMessage
+    private struct LowLevelMouseInput
     {
-        public IntPtr Hwnd;
-        public uint Message;
-        public UIntPtr WParam;
-        public IntPtr LParam;
-        public uint Time;
         public NativePoint Point;
-        public uint Private;
+        public uint MouseData;
+        public uint Flags;
+        public uint Time;
+        public UIntPtr ExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
     }
 
     private delegate IntPtr HookProc(
@@ -945,10 +884,15 @@ public sealed partial class MainWindow : Window
         IntPtr wParam,
         IntPtr lParam);
 
-    [DllImport("kernel32.dll")]
-    private static extern uint GetCurrentThreadId();
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr GetModuleHandle(string? moduleName);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool ReleaseCapture();
+    private static extern bool GetWindowRect(
+        IntPtr hWnd,
+        out NativeRect rect);
 }
