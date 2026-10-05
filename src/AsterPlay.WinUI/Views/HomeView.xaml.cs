@@ -214,7 +214,7 @@ public sealed partial class HomeView : UserControl
     private void ResumeTile_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: ResumeMediaTile tile })
-            MediaRequested?.Invoke(this, tile.Item);
+            PlayRequested?.Invoke(this, tile.Item);
     }
 
     private void SectionMedia_Click(object sender, RoutedEventArgs e)
