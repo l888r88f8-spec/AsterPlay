@@ -88,6 +88,30 @@ public sealed partial class LibraryView : UserControl
             MediaRequested?.Invoke(this, item.Item);
     }
 
+    private void ItemsGrid_RightTapped(
+        object sender,
+        RightTappedRoutedEventArgs e)
+    {
+        if (e.OriginalSource is not FrameworkElement element ||
+            element.DataContext is not LibraryItemViewModel item)
+        {
+            return;
+        }
+
+        var menu = new MenuFlyout();
+        var details = new MenuFlyoutItem
+        {
+            Text = "详情"
+        };
+
+        details.Click += (_, _) =>
+            MediaRequested?.Invoke(this, item.Item);
+
+        menu.Items.Add(details);
+        menu.ShowAt(element, e.GetPosition(element));
+        e.Handled = true;
+    }
+
     private void SyncFilters()
     {
         _viewModel.SelectedLibrary = LibraryBox.SelectedItem as LibraryChoice;
