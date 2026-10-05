@@ -24,7 +24,7 @@ public sealed class CachedImage : UserControl
             typeof(Stretch),
             typeof(CachedImage),
             new PropertyMetadata(
-                Stretch.Uniform,
+                Microsoft.UI.Xaml.Media.Stretch.Uniform,
                 OnStretchChanged));
 
     private const double PreloadMargin = 220;
