@@ -4,6 +4,7 @@ using AsterPlay.Services.Mpv;
 using AsterPlay.WinUI.Interop;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 
 namespace AsterPlay.WinUI.Views;
