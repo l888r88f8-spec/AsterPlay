@@ -109,7 +109,7 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="媒体库"
-                                   Foreground="White"
+                                   Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                    FontSize="24"
                                    FontWeight="SemiBold"/>
                         <StackPanel Grid.Column="1"
@@ -174,11 +174,11 @@
                                             </Border.Background>
                                             <StackPanel VerticalAlignment="Center" Spacing="5">
                                                 <TextBlock Text="{Binding Name}"
-                                                           Foreground="White"
+                                                           Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                                            FontSize="16"
                                                            FontWeight="SemiBold"/>
                                                 <TextBlock Text="{Binding Subtitle}"
-                                                           Foreground="#909AA9"
+                                                           Foreground="{ThemeResource AsterSecondaryTextBrush}"
                                                            FontSize="12"/>
                                             </StackPanel>
                                         </Border>
@@ -194,7 +194,7 @@
                             Visibility="Collapsed">
                     <Grid>
                         <TextBlock Text="继续播放"
-                                   Foreground="White"
+                                   Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                    FontSize="24"
                                    FontWeight="SemiBold"/>
                         <StackPanel HorizontalAlignment="Right"
@@ -241,8 +241,8 @@
                                             <Border Width="270"
                                                     Height="152"
                                                     CornerRadius="18"
-                                                    Background="#171C26"
-                                                    BorderBrush="#32FFFFFF"
+                                                    Background="{ThemeResource AsterCardBackgroundBrush}"
+                                                    BorderBrush="{ThemeResource AsterCardBorderBrush}"
                                                     BorderThickness="1">
                                                 <Grid>
                                                     <Image Source="{Binding BackdropUrl}"
@@ -268,12 +268,12 @@
                                             </Border>
 
                                             <TextBlock Text="{Binding ResumeTitle}"
-                                                       Foreground="White"
+                                                       Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                                        FontSize="14"
                                                        FontWeight="SemiBold"
                                                        TextTrimming="CharacterEllipsis"/>
                                             <TextBlock Text="{Binding ProgressText}"
-                                                       Foreground="#8993A3"
+                                                       Foreground="{ThemeResource AsterSecondaryTextBrush}"
                                                        FontSize="12"
                                                        TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
@@ -287,7 +287,7 @@
                 <StackPanel Spacing="14">
                     <Grid>
                         <TextBlock Text="最新媒体"
-                                   Foreground="White"
+                                   Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                    FontSize="24"
                                    FontWeight="SemiBold"/>
                         <StackPanel HorizontalAlignment="Right"
@@ -295,7 +295,7 @@
                                     Spacing="8">
                             <TextBlock Text="最近加入"
                                        VerticalAlignment="Center"
-                                       Foreground="#6F7B8D"
+                                       Foreground="{ThemeResource AsterTertiaryTextBrush}"
                                        FontSize="12"
                                        Margin="0,0,4,0"/>
                             <Button x:Name="LatestPreviousButton"
@@ -339,8 +339,8 @@
                                             <Border Width="164"
                                                     Height="238"
                                                     CornerRadius="18"
-                                                    Background="#171C26"
-                                                    BorderBrush="#32FFFFFF"
+                                                    Background="{ThemeResource AsterCardBackgroundBrush}"
+                                                    BorderBrush="{ThemeResource AsterCardBorderBrush}"
                                                     BorderThickness="1">
                                                 <Grid>
                                                     <Image Source="{Binding PosterUrl}"
@@ -358,12 +358,12 @@
                                                 </Grid>
                                             </Border>
                                             <TextBlock Text="{Binding Title}"
-                                                       Foreground="White"
+                                                       Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                                        FontSize="14"
                                                        FontWeight="SemiBold"
                                                        TextTrimming="CharacterEllipsis"/>
                                             <TextBlock Text="{Binding Meta}"
-                                                       Foreground="#8792A2"
+                                                       Foreground="{ThemeResource AsterSecondaryTextBrush}"
                                                        FontSize="12"
                                                        TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
