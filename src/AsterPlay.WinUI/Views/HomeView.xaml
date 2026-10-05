@@ -6,17 +6,34 @@
     xmlns:controls="using:AsterPlay.WinUI.Controls">
 
     <UserControl.Resources>
-        <!-- Media tiles keep a transparent surface in every pointer state.
-             Hover feedback is handled by scale only, so there is no white card flash. -->
         <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
-                         Color="Transparent"/>
+                         Color="#14000000"/>
         <SolidColorBrush x:Key="ButtonBackgroundPressed"
-                         Color="Transparent"/>
+                         Color="#22000000"/>
         <SolidColorBrush x:Key="ButtonBorderBrushPointerOver"
-                         Color="Transparent"/>
+                         Color="#44FFFFFF"/>
         <SolidColorBrush x:Key="ButtonBorderBrushPressed"
-                         Color="Transparent"/>
+                         Color="#55FFFFFF"/>
+
+        <!-- A deliberately minimal button template. It keeps the supplied glass
+             brush stable across hover/pressed states and prevents media tiles
+             from receiving WinUI's default rectangular pointer fill. -->
+        <ControlTemplate x:Key="FlatButtonTemplate"
+                         TargetType="Button">
+            <Border Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{TemplateBinding CornerRadius}"
+                    Padding="{TemplateBinding Padding}">
+                <ContentPresenter Content="{TemplateBinding Content}"
+                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+            </Border>
+        </ControlTemplate>
+
         <Style x:Key="RoundActionButtonStyle" TargetType="Button">
+            <Setter Property="Template" Value="{StaticResource FlatButtonTemplate}"/>
             <Setter Property="Width" Value="38"/>
             <Setter Property="Height" Value="38"/>
             <Setter Property="Padding" Value="0"/>
@@ -54,6 +71,7 @@
         </Style>
 
         <Style x:Key="HeroActionButtonStyle" TargetType="Button">
+            <Setter Property="Template" Value="{StaticResource FlatButtonTemplate}"/>
             <Setter Property="Height" Value="42"/>
             <Setter Property="MinWidth" Value="104"/>
             <Setter Property="Padding" Value="20,0"/>
@@ -150,6 +168,7 @@
                     CornerRadius="29"
                     BorderBrush="#48FFFFFF"
                     BorderThickness="1"
+                    Template="{StaticResource FlatButtonTemplate}"
                     Click="ServerPill_Click">
                 <Button.Background>
                     <lg:LiquidGlassBrush BlurAmount="3.45"
@@ -202,6 +221,7 @@
                     CornerRadius="29"
                     BorderBrush="#48FFFFFF"
                     BorderThickness="1"
+                    Template="{StaticResource FlatButtonTemplate}"
                     Click="Search_Click">
                 <Button.Background>
                     <lg:LiquidGlassBrush BlurAmount="3.45"
@@ -384,7 +404,8 @@
                                             PointerEntered="MediaCard_PointerEntered"
                                             PointerExited="MediaCard_PointerExited"
                                             Click="ResumeTile_Click"
-                                            RightTapped="ResumeTile_RightTapped">
+                                            RightTapped="ResumeTile_RightTapped"
+                                            Template="{StaticResource FlatButtonTemplate}">
                                         <Button.RenderTransform>
                                             <ScaleTransform ScaleX="1"
                                                             ScaleY="1"/>
@@ -504,7 +525,8 @@
                                         RenderTransformOrigin="0.5,0.5"
                                         PointerEntered="MediaCard_PointerEntered"
                                         PointerExited="MediaCard_PointerExited"
-                                        Click="LibraryTile_Click">
+                                        Click="LibraryTile_Click"
+                                            Template="{StaticResource FlatButtonTemplate}">
                                     <Button.RenderTransform>
                                         <ScaleTransform ScaleX="1"
                                                         ScaleY="1"/>
@@ -579,7 +601,8 @@
                                                     RenderTransformOrigin="0.5,0.5"
                                                     PointerEntered="MediaCard_PointerEntered"
                                                     PointerExited="MediaCard_PointerExited"
-                                                    Click="SectionMedia_Click">
+                                                    Click="SectionMedia_Click"
+                                            Template="{StaticResource FlatButtonTemplate}">
                                                 <Button.RenderTransform>
                                                     <ScaleTransform ScaleX="1"
                                                                     ScaleY="1"/>
