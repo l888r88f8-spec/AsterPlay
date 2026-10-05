@@ -46,7 +46,9 @@
 
         <Grid x:Name="TopInfoPanel"
               VerticalAlignment="Top"
-              Height="112">
+              Height="112"
+              PointerEntered="InteractiveOverlay_PointerEntered"
+              PointerExited="InteractiveOverlay_PointerExited">
             <Grid.Background>
                 <LinearGradientBrush StartPoint="0,0"
                                      EndPoint="0,1">
@@ -117,7 +119,9 @@
                 Background="#E91A1C22"
                 BorderBrush="#24FFFFFF"
                 BorderThickness="1"
-                Visibility="Collapsed">
+                Visibility="Collapsed"
+                PointerEntered="InteractiveOverlay_PointerEntered"
+                PointerExited="InteractiveOverlay_PointerExited">
             <StackPanel Spacing="8">
                 <TextBlock Text="媒体信息"
                            Foreground="White"
@@ -144,7 +148,9 @@
                 Margin="0,0,26,196"
                 Padding="16"
                 CornerRadius="22"
-                Visibility="Collapsed">
+                Visibility="Collapsed"
+                PointerEntered="InteractiveOverlay_PointerEntered"
+                PointerExited="InteractiveOverlay_PointerExited">
             <Border.Background>
                 <lg:LiquidGlassBrush BlurAmount="1.8"
                                      BloomAmount="0.16"
@@ -225,7 +231,9 @@
 
         <Grid x:Name="ControlsPanel"
               Height="204"
-              VerticalAlignment="Bottom">
+              VerticalAlignment="Bottom"
+              PointerEntered="InteractiveOverlay_PointerEntered"
+              PointerExited="InteractiveOverlay_PointerExited">
             <Grid.Background>
                 <LinearGradientBrush StartPoint="0,0"
                                      EndPoint="0,1">
