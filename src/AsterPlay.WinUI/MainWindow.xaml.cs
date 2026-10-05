@@ -30,6 +30,7 @@ public sealed partial class MainWindow : Window
     private long _xamlWheelSequence;
 
     private const uint WmMouseWheel = 0x020A;
+    private const uint WmPointerWheel = 0x024E;
     private const int WhCallWndProc = 4;
 
     public MainWindow()
@@ -88,7 +89,8 @@ public sealed partial class MainWindow : Window
         if (code >= 0)
         {
             var message = Marshal.PtrToStructure<CallWndProcMessage>(lParam);
-            if (message.Message == WmMouseWheel &&
+            if ((message.Message == WmMouseWheel ||
+                 message.Message == WmPointerWheel) &&
                 PageHost.Content is HomeView)
             {
                 var raw = unchecked((long)message.WParam);
@@ -97,17 +99,21 @@ public sealed partial class MainWindow : Window
 
                 if (delta != 0)
                 {
+                    var messageKind = message.Message == WmPointerWheel
+                        ? "WM_POINTERWHEEL"
+                        : "WM_MOUSEWHEEL";
+
                     PlaybackLog.Write(
                         "WinUINativeWheel",
-                        $"thread-wheel: hwnd=0x{message.Hwnd.ToInt64():X}, delta={delta}");
+                        $"thread-wheel: kind={messageKind}, hwnd=0x{message.Hwnd.ToInt64():X}, delta={delta}");
 
                     DispatcherQueue.TryEnqueue(
                         Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
                         () =>
                         {
-                            // If XAML produced its own wheel route for this same
-                            // message, let native ScrollViewer handling win and
-                            // avoid applying the delta twice.
+                            // Native input is observed before WinUI routes the
+                            // corresponding PointerWheelChanged event. Only
+                            // apply the fallback if XAML did not route it.
                             if (_xamlWheelSequence != xamlSequenceBefore)
                                 return;
 
@@ -129,12 +135,15 @@ public sealed partial class MainWindow : Window
         object sender,
         PointerRoutedEventArgs e)
     {
+        // This counter is intentionally not throttled. The native wheel hook
+        // uses it to detect whether WinUI routed each observed wheel message.
+        _xamlWheelSequence++;
+
         var now = DateTimeOffset.UtcNow;
         if (now - _lastWheelDiagnosticAt < TimeSpan.FromMilliseconds(180))
             return;
 
         _lastWheelDiagnosticAt = now;
-        _xamlWheelSequence++;
         var point = e.GetCurrentPoint(RootGrid);
 
         PlaybackLog.Write(
