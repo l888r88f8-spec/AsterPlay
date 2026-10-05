@@ -104,22 +104,22 @@
             </Rectangle>
         </Grid>
 
-        <ScrollView x:Name="HomeScrollViewer"
-                    Visibility="Visible"
-                    Opacity="0"
-                    IsHitTestVisible="False"
-                    ContentOrientation="Vertical"
-                    VerticalScrollMode="Enabled"
-                    VerticalScrollBarVisibility="Hidden"
-                    HorizontalScrollMode="Disabled"
-                    HorizontalScrollBarVisibility="Hidden"
-                    ZoomMode="Disabled"
-                    SizeChanged="HomeScrollViewer_SizeChanged">
-            <StackPanel x:Name="HomeContentStack"
-                        Width="{Binding ElementName=HomeScrollViewer, Path=ViewportWidth}"
-                        HorizontalAlignment="Stretch"
-                        Padding="28,0,28,122"
-                        Spacing="36">
+        <ScrollViewer x:Name="HomeScrollViewer"
+                      Visibility="Visible"
+                      Opacity="0"
+                      IsHitTestVisible="False"
+                      VerticalScrollMode="Enabled"
+                      VerticalScrollBarVisibility="Hidden"
+                      HorizontalScrollMode="Disabled"
+                      HorizontalScrollBarVisibility="Disabled"
+                      ZoomMode="Disabled"
+                      SizeChanged="HomeScrollViewer_SizeChanged">
+            <Grid Width="{Binding ElementName=HomeScrollViewer, Path=ViewportWidth}"
+                  HorizontalAlignment="Stretch">
+                <StackPanel x:Name="HomeContentStack"
+                            HorizontalAlignment="Stretch"
+                            Padding="28,0,28,122"
+                            Spacing="36">
 
                 <!-- Mobile-inspired immersive Hero, adapted for desktop width. -->
                 <Grid x:Name="HeroContainer"
@@ -611,8 +611,9 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-            </StackPanel>
-        </ScrollView>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
 
         <Grid x:Name="NoServerState"
               Visibility="Collapsed">
