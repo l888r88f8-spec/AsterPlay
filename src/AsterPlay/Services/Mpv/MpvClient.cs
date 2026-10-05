@@ -60,6 +60,12 @@ public sealed class MpvClient : IDisposable
             SetOption("gpu-context", "d3d11");
             SetOption("d3d11-output-mode", "composition");
             SetOption("d3d11-composition-size", "1280x720");
+
+            // Fill the entire SwapChainPanel while preserving aspect ratio.
+            // mpv crops the minimum amount from the long edge instead of
+            // stretching the image or leaving letterbox/pillarbox bars.
+            SetOption("panscan", "1.0");
+
             SetOption("hwdec", "auto");
         }
         else
