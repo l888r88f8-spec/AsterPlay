@@ -3,7 +3,6 @@ using AsterPlay.Services;
 using AsterPlay.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace AsterPlay.WinUI.Views;
 
@@ -96,11 +95,8 @@ public sealed partial class DetailsView : UserControl
 
         FavoriteButton.Content = vm.FavoriteLabel;
 
-        if (Uri.TryCreate(vm.PosterUrl, UriKind.Absolute, out var poster))
-            PosterImage.Source = new BitmapImage(poster);
-
-        if (Uri.TryCreate(vm.BackdropUrl, UriKind.Absolute, out var backdrop))
-            BackdropImage.Source = new BitmapImage(backdrop);
+        PosterImage.SourceUrl = vm.PosterUrl;
+        BackdropImage.SourceUrl = vm.BackdropUrl;
 
         DirectorsBlock.Text = string.IsNullOrWhiteSpace(vm.DirectorsLine)
             ? ""
