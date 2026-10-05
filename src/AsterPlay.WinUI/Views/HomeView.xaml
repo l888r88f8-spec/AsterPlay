@@ -326,6 +326,16 @@
                                             BorderThickness="0"
                                             Tag="{Binding}"
                                             Click="ResumeTile_Click">
+                                        <Button.ContextFlyout>
+                                            <MenuFlyout>
+                                                <MenuFlyoutItem Text="详情"
+                                                                Tag="{Binding}"
+                                                                Click="ResumeDetails_Click"/>
+                                                <MenuFlyoutItem Text="从头播放"
+                                                                Tag="{Binding}"
+                                                                Click="ResumeRestart_Click"/>
+                                            </MenuFlyout>
+                                        </Button.ContextFlyout>
                                         <StackPanel Width="320"
                                                     Spacing="9">
                                             <Border Width="320"
@@ -362,7 +372,7 @@
                                                                      Minimum="0"
                                                                      Maximum="100"
                                                                      Value="{Binding PlayedPercentage}"
-                                                                     Height="5"
+                                                                     Height="4"
                                                                      VerticalAlignment="Center"/>
                                                         <TextBlock Grid.Column="3"
                                                                    Text="{Binding ShortProgressText}"
@@ -379,10 +389,22 @@
                                                        FontWeight="SemiBold"
                                                        TextTrimming="CharacterEllipsis"/>
 
-                                            <TextBlock Text="{Binding EpisodeText}"
-                                                       Foreground="{ThemeResource AsterSecondaryTextBrush}"
-                                                       FontSize="12"
-                                                       TextTrimming="CharacterEllipsis"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding EpisodeText}"
+                                                           Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                                                           FontSize="12"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding LastPlayedText}"
+                                                           Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                                                           FontSize="11"
+                                                           Margin="12,0,0,0"
+                                                           Opacity="0.82"/>
+                                            </Grid>
                                         </StackPanel>
                                     </Button>
                                 </DataTemplate>
@@ -412,8 +434,8 @@
 
                     <ItemsRepeater x:Name="LibrariesGrid">
                         <ItemsRepeater.Layout>
-                            <UniformGridLayout MinItemWidth="300"
-                                               MinItemHeight="172"
+                            <UniformGridLayout MinItemWidth="260"
+                                               MinItemHeight="148"
                                                MinColumnSpacing="18"
                                                MinRowSpacing="18"
                                                ItemsJustification="SpaceBetween"
@@ -421,14 +443,14 @@
                         </ItemsRepeater.Layout>
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate>
-                                <Button Height="172"
+                                <Button Height="148"
                                         Padding="0"
                                         Background="Transparent"
                                         BorderThickness="0"
                                         HorizontalAlignment="Stretch"
                                         Tag="{Binding}"
                                         Click="LibraryTile_Click">
-                                    <Border CornerRadius="24"
+                                    <Border CornerRadius="20"
                                             Background="{ThemeResource AsterCardBackgroundBrush}"
                                             BorderBrush="{ThemeResource AsterCardBorderBrush}"
                                             BorderThickness="1">
@@ -446,11 +468,11 @@
                                                 </Rectangle.Fill>
                                             </Rectangle>
                                             <StackPanel VerticalAlignment="Bottom"
-                                                        Margin="20"
-                                                        Spacing="4">
+                                                        Margin="18"
+                                                        Spacing="3">
                                                 <TextBlock Text="{Binding Name}"
                                                            Foreground="White"
-                                                           FontSize="24"
+                                                           FontSize="21"
                                                            FontWeight="SemiBold"/>
                                                 <TextBlock Text="{Binding Subtitle}"
                                                            Foreground="#E0E4EA"
