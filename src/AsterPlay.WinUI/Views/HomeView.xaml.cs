@@ -334,7 +334,8 @@ public sealed partial class HomeView : UserControl
 
     private void ShowNoServerState()
     {
-        HomeScrollViewer.Visibility = Visibility.Collapsed;
+        HomeScrollViewer.Opacity = 0;
+        HomeScrollViewer.IsHitTestVisible = false;
         LoadingState.Visibility = Visibility.Collapsed;
         LoadingRing.IsActive = false;
         NoServerState.Visibility = Visibility.Visible;
@@ -343,7 +344,8 @@ public sealed partial class HomeView : UserControl
 
     private void ShowLoadingState()
     {
-        HomeScrollViewer.Visibility = Visibility.Collapsed;
+        HomeScrollViewer.Opacity = 0;
+        HomeScrollViewer.IsHitTestVisible = false;
         NoServerState.Visibility = Visibility.Collapsed;
         LoadingTextBlock.Text = "正在加载";
         LoadingRing.IsActive = true;
@@ -357,6 +359,8 @@ public sealed partial class HomeView : UserControl
         LoadingState.Visibility = Visibility.Collapsed;
         LoadingRing.IsActive = false;
         HomeScrollViewer.Visibility = Visibility.Visible;
+        HomeScrollViewer.Opacity = 1;
+        HomeScrollViewer.IsHitTestVisible = true;
 
         if (HomeScrollViewer.VerticalOffset > 1)
         {
@@ -378,7 +382,8 @@ public sealed partial class HomeView : UserControl
 
     private void ShowLoadingError(string message)
     {
-        HomeScrollViewer.Visibility = Visibility.Collapsed;
+        HomeScrollViewer.Opacity = 0;
+        HomeScrollViewer.IsHitTestVisible = false;
         NoServerState.Visibility = Visibility.Collapsed;
         LoadingRing.IsActive = false;
         LoadingTextBlock.Text = string.IsNullOrWhiteSpace(message)
