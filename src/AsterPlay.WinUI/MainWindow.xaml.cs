@@ -79,6 +79,17 @@ public sealed partial class MainWindow : Window
         if (_initialized)
             return;
 
+        StartupDiagnostics.Write("PrepareInitialContent: loading server profiles");
+        var servers = ServerProfileStore.Load();
+        StartupDiagnostics.Write($"PrepareInitialContent: servers={servers.Count}");
+
+        if (servers.Count == 0)
+        {
+            ShowNoServerHome();
+            _initialized = true;
+            return;
+        }
+
         StartupDiagnostics.Write("PrepareInitialContent: loading settings");
         var settings = AppSettingsStore.Load();
         if (!settings.RestoreSessionOnStartup)
@@ -142,6 +153,24 @@ public sealed partial class MainWindow : Window
         PageHost.Content = view;
     }
 
+    private void ShowNoServerHome()
+    {
+        ExitPlayerChrome();
+
+        _authenticated = false;
+        _currentSection = "home-empty";
+        NavigationDock.Visibility = Visibility.Visible;
+        PageTitleBlock.Text = "首页";
+        SetActiveNavigation(HomeButton);
+
+        var view = new HomeView(_client, noServerMode: true);
+        view.ServerRequested += (_, _) =>
+            ShowServers(returnToLogin: false, returnToNoServerHome: true);
+
+        PageHost.Content = view;
+        StartupDiagnostics.Write("ShowNoServerHome: empty home shell assigned");
+    }
+
     private void ShowHome()
     {
         ExitPlayerChrome();
@@ -200,21 +229,40 @@ public sealed partial class MainWindow : Window
         PageHost.Content = view;
     }
 
-    private void ShowServers(bool returnToLogin)
+    private void ShowServers(
+        bool returnToLogin,
+        bool returnToNoServerHome = false)
     {
         ExitPlayerChrome();
         _currentSection = "servers";
-        NavigationDock.Visibility = _authenticated && !returnToLogin
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        NavigationDock.Visibility =
+            (_authenticated && !returnToLogin) || returnToNoServerHome
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         PageTitleBlock.Text = "服务器";
 
-        if (_authenticated && !returnToLogin)
+        if (NavigationDock.Visibility == Visibility.Visible)
             SetActiveNavigation(ServersButton);
 
         var view = new ServerManagementView();
         view.DoneRequested += (_, _) =>
         {
+            var serverCount = ServerProfileStore.Load().Count;
+            if (serverCount == 0)
+            {
+                AppStateStore.Clear();
+                _client.Reset();
+                _authenticated = false;
+                ShowNoServerHome();
+                return;
+            }
+
+            if (returnToNoServerHome)
+            {
+                ShowLogin();
+                return;
+            }
+
             if (returnToLogin || !_authenticated)
                 ShowLogin();
             else
@@ -372,9 +420,23 @@ public sealed partial class MainWindow : Window
         AppTitleBar.Visibility = Visibility.Visible;
     }
 
-    private void Home_Click(object sender, RoutedEventArgs e) => ShowHome();
+    private void Home_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_authenticated && ServerProfileStore.Load().Count == 0)
+            ShowNoServerHome();
+        else
+            ShowHome();
+    }
+
     private void Library_Click(object sender, RoutedEventArgs e) => ShowLibrary();
-    private void Servers_Click(object sender, RoutedEventArgs e) => ShowServers(returnToLogin: false);
+
+    private void Servers_Click(object sender, RoutedEventArgs e)
+    {
+        var noServers = ServerProfileStore.Load().Count == 0;
+        ShowServers(
+            returnToLogin: !_authenticated && !noServers,
+            returnToNoServerHome: noServers);
+    }
     private void Settings_Click(object sender, RoutedEventArgs e) => ShowSettings();
 
     private void SetActiveNavigation(Button active)
