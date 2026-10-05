@@ -3,6 +3,7 @@ using AsterPlay.Models;
 using AsterPlay.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace AsterPlay.WinUI.Views;
@@ -139,10 +140,40 @@ public sealed partial class HomeView : UserControl
             MediaRequested?.Invoke(this, tile.Item);
     }
 
-    private void LatestGrid_ItemClick(object sender, ItemClickEventArgs e)
+    private void LatestTile_Click(object sender, RoutedEventArgs e)
     {
-        if (e.ClickedItem is HomeMediaTile tile)
+        if (sender is Button { Tag: HomeMediaTile tile })
             MediaRequested?.Invoke(this, tile.Item);
+    }
+
+    private void HorizontalRail_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is not ScrollViewer scroller || scroller.ScrollableWidth <= 0)
+            return;
+
+        var point = e.GetCurrentPoint(scroller);
+        var delta = point.Properties.MouseWheelDelta;
+
+        if (delta == 0)
+            return;
+
+        // Translate the normal vertical mouse wheel into direct horizontal
+        // movement for media rails. Disable the extra scroll animation so
+        // each wheel notch tracks the user's input immediately.
+        var step = Math.Clamp(Math.Abs(delta) * 1.15, 72, 220);
+        var target = delta > 0
+            ? scroller.HorizontalOffset - step
+            : scroller.HorizontalOffset + step;
+
+        target = Math.Clamp(target, 0, scroller.ScrollableWidth);
+
+        scroller.ChangeView(
+            horizontalOffset: target,
+            verticalOffset: null,
+            zoomFactor: null,
+            disableAnimation: true);
+
+        e.Handled = true;
     }
 
     private static IReadOnlyList<EmbyItem> BuildResumeItems(IEnumerable<EmbyItem> source)
