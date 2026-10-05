@@ -4,6 +4,7 @@ using AsterPlay.WinUI.Views;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Windowing;
 using Windows.UI.ViewManagement;
 
@@ -16,6 +17,8 @@ public sealed partial class MainWindow : Window
     private readonly AppWindow _appWindow;
     private bool _startupResolutionScheduled;
     private bool _startupResolutionCompleted;
+    private bool _splashRevealScheduled;
+    private bool _splashTransitionStarted;
     private bool _authenticated;
     private string _currentSection = "home-shell";
 
@@ -66,6 +69,7 @@ public sealed partial class MainWindow : Window
     private void MainWindow_Closed(object sender, WindowEventArgs args)
     {
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= FirstFrame_Rendering;
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= SplashReveal_Rendering;
 
         if (_uiSettings is not null)
             _uiSettings.ColorValuesChanged -= SystemColorValuesChanged;
@@ -173,9 +177,122 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void HideInitialHomeShell()
+    private void ScheduleSplashReveal()
     {
-        InitialHomeShell.Visibility = Visibility.Collapsed;
+        if (_splashTransitionStarted || _splashRevealScheduled)
+            return;
+
+        _splashRevealScheduled = true;
+        StartupDiagnostics.Write("Splash reveal scheduled after target page frame");
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += SplashReveal_Rendering;
+    }
+
+    private void SplashReveal_Rendering(object? sender, object e)
+    {
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= SplashReveal_Rendering;
+        _splashRevealScheduled = false;
+        StartSplashTransition();
+    }
+
+    private void StartSplashTransition()
+    {
+        if (_splashTransitionStarted)
+            return;
+
+        _splashTransitionStarted = true;
+
+        var width = Math.Max(1, RootGrid.ActualWidth);
+        var height = Math.Max(1, RootGrid.ActualHeight);
+        var targetScale =
+            Math.Max(14.0, Math.Max(width, height) / 96.0 * 1.75);
+
+        var easeOut = new CubicEase
+        {
+            EasingMode = EasingMode.EaseOut
+        };
+
+        var storyboard = new Storyboard();
+
+        var scaleX = new DoubleAnimation
+        {
+            From = 1,
+            To = targetScale,
+            Duration = TimeSpan.FromMilliseconds(520),
+            EasingFunction = easeOut
+        };
+        Storyboard.SetTarget(scaleX, SplashCircleScale);
+        Storyboard.SetTargetProperty(scaleX, "ScaleX");
+        storyboard.Children.Add(scaleX);
+
+        var scaleY = new DoubleAnimation
+        {
+            From = 1,
+            To = targetScale,
+            Duration = TimeSpan.FromMilliseconds(520),
+            EasingFunction = easeOut
+        };
+        Storyboard.SetTarget(scaleY, SplashCircleScale);
+        Storyboard.SetTargetProperty(scaleY, "ScaleY");
+        storyboard.Children.Add(scaleY);
+
+        var wordmarkFade = new DoubleAnimation
+        {
+            From = 1,
+            To = 0,
+            Duration = TimeSpan.FromMilliseconds(180)
+        };
+        Storyboard.SetTarget(wordmarkFade, SplashWordmark);
+        Storyboard.SetTargetProperty(wordmarkFade, "Opacity");
+        storyboard.Children.Add(wordmarkFade);
+
+        var chromeFade = new DoubleAnimation
+        {
+            From = 0,
+            To = 1,
+            BeginTime = TimeSpan.FromMilliseconds(150),
+            Duration = TimeSpan.FromMilliseconds(320),
+            EasingFunction = easeOut
+        };
+        Storyboard.SetTarget(chromeFade, AppTitleBar);
+        Storyboard.SetTargetProperty(chromeFade, "Opacity");
+        storyboard.Children.Add(chromeFade);
+
+        var contentFade = new DoubleAnimation
+        {
+            From = 0,
+            To = 1,
+            BeginTime = TimeSpan.FromMilliseconds(150),
+            Duration = TimeSpan.FromMilliseconds(320),
+            EasingFunction = easeOut
+        };
+        Storyboard.SetTarget(contentFade, ContentLayer);
+        Storyboard.SetTargetProperty(contentFade, "Opacity");
+        storyboard.Children.Add(contentFade);
+
+        var splashFade = new DoubleAnimation
+        {
+            From = 1,
+            To = 0,
+            BeginTime = TimeSpan.FromMilliseconds(230),
+            Duration = TimeSpan.FromMilliseconds(290),
+            EasingFunction = easeOut
+        };
+        Storyboard.SetTarget(splashFade, SplashLayer);
+        Storyboard.SetTargetProperty(splashFade, "Opacity");
+        storyboard.Children.Add(splashFade);
+
+        storyboard.Completed += (_, _) =>
+        {
+            AppTitleBar.Opacity = 1;
+            ContentLayer.Opacity = 1;
+            SplashLayer.IsHitTestVisible = false;
+            SplashLayer.Visibility = Visibility.Collapsed;
+            StartupDiagnostics.Write("Splash transition completed");
+        };
+
+        StartupDiagnostics.Write(
+            $"Splash transition started; targetScale={targetScale:0.0}");
+        storyboard.Begin();
     }
 
     private sealed record StartupState(
@@ -185,7 +302,6 @@ public sealed partial class MainWindow : Window
 
     private void ShowLogin(string? message = null)
     {
-        HideInitialHomeShell();
         ExitPlayerChrome();
         _authenticated = false;
         _currentSection = "login";
@@ -201,11 +317,11 @@ public sealed partial class MainWindow : Window
         view.ManageServersRequested += (_, _) => ShowServers(returnToLogin: true);
 
         PageHost.Content = view;
+        ScheduleSplashReveal();
     }
 
     private void ShowNoServerHome()
     {
-        HideInitialHomeShell();
         ExitPlayerChrome();
 
         _authenticated = false;
@@ -220,11 +336,11 @@ public sealed partial class MainWindow : Window
 
         PageHost.Content = view;
         StartupDiagnostics.Write("ShowNoServerHome: empty home shell assigned");
+        ScheduleSplashReveal();
     }
 
     private void ShowHome()
     {
-        HideInitialHomeShell();
         ExitPlayerChrome();
         if (!_client.IsAuthenticated)
         {
@@ -253,6 +369,11 @@ public sealed partial class MainWindow : Window
             _authenticated = false;
             ShowLogin("登录状态已失效，请重新登录。");
         };
+        view.InitialVisualReady += (_, _) =>
+        {
+            StartupDiagnostics.Write("ShowHome: cache decision completed; revealing app");
+            ScheduleSplashReveal();
+        };
 
         // HomeView construction is now intentionally data-free. Once the shell
         // is attached to PageHost there is nothing left to wait for before
@@ -264,7 +385,6 @@ public sealed partial class MainWindow : Window
 
     private void ShowLibrary()
     {
-        HideInitialHomeShell();
         ExitPlayerChrome();
         if (!_client.IsAuthenticated)
         {
@@ -286,7 +406,6 @@ public sealed partial class MainWindow : Window
         bool returnToLogin,
         bool returnToNoServerHome = false)
     {
-        HideInitialHomeShell();
         ExitPlayerChrome();
         _currentSection = "servers";
         NavigationDock.Visibility =
@@ -328,7 +447,6 @@ public sealed partial class MainWindow : Window
 
     private void ShowSettings()
     {
-        HideInitialHomeShell();
         ExitPlayerChrome();
         if (!_authenticated)
         {
@@ -355,7 +473,6 @@ public sealed partial class MainWindow : Window
 
     private void ShowDetails(EmbyItem item, string returnSection)
     {
-        HideInitialHomeShell();
         ExitPlayerChrome();
 
         if (!_client.IsAuthenticated)
