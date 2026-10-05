@@ -11,6 +11,12 @@ public sealed class EmbySession
     public string UserName { get; set; } = "";
 }
 
+public sealed class EmbyPublicSystemInfo
+{
+    [JsonPropertyName("ServerName")]
+    public string ServerName { get; set; } = "";
+}
+
 public sealed class AuthResponse
 {
     [JsonPropertyName("AccessToken")]
