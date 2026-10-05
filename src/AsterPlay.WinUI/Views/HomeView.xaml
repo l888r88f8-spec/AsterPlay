@@ -113,10 +113,15 @@
                                     Height="42"
                                     CornerRadius="21"
                                     Click="HeroPlay_Click"/>
-                            <Button Content="浏览媒体库"
+                            <Button Content="详情"
                                     Height="42"
                                     CornerRadius="21"
-                                    Click="OpenLibrary_Click"/>
+                                    Click="HeroDetails_Click"/>
+                            <Button x:Name="HeroFavoriteButton"
+                                    Content="♡  收藏"
+                                    Height="42"
+                                    CornerRadius="21"
+                                    Click="HeroFavorite_Click"/>
                         </StackPanel>
                     </StackPanel>
                 </Grid>
