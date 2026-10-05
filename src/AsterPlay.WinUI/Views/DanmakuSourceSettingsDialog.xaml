@@ -1,0 +1,40 @@
+<ContentDialog
+    x:Class="AsterPlay.WinUI.Views.DanmakuSourceSettingsDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="LogVar 弹幕服务器"
+    PrimaryButtonText="保存"
+    CloseButtonText="取消"
+    DefaultButton="Primary"
+    PrimaryButtonClick="Save_Click"
+    Closed="Dialog_Closed">
+
+    <StackPanel Width="500" Spacing="14">
+        <TextBlock
+            Text="配置 LogVar / danmu_api。服务器地址与 Access Token 分开填写。"
+            Foreground="{ThemeResource AsterSecondaryTextBrush}"
+            TextWrapping="Wrap"/>
+
+        <TextBox x:Name="LogVarUrlTextBox"
+                 Header="服务器地址"
+                 PlaceholderText="http://192.168.1.10:9321"/>
+
+        <PasswordBox x:Name="LogVarAccessTokenBox"
+                     Header="Access Token（可选）"/>
+
+        <TextBlock
+            Text="不要填写 /api/v2/... 路径；Token 会继续由 AsterPlay 使用 Windows DPAPI 加密保存。"
+            Foreground="{ThemeResource AsterSecondaryTextBrush}"
+            FontSize="12"
+            TextWrapping="Wrap"/>
+
+        <Button x:Name="TestConnectionButton"
+                Content="测试连接"
+                HorizontalAlignment="Left"
+                Click="TestConnection_Click"/>
+
+        <TextBlock x:Name="ValidationTextBlock"
+                   Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                   TextWrapping="Wrap"/>
+    </StackPanel>
+</ContentDialog>
