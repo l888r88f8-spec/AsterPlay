@@ -35,6 +35,47 @@
     </UserControl.Resources>
 
     <Grid>
+        <!-- Fixed ambient backdrop: the current Hero image is duplicated here,
+             enlarged slightly, then blurred/tinted by Acrylic. The content
+             scrolls above it so the Hero atmosphere extends through the page. -->
+        <Grid x:Name="PageBackdropLayer"
+              Visibility="Collapsed"
+              IsHitTestVisible="False">
+            <controls:CachedImage x:Name="PageBackdropImage"
+                                  Stretch="UniformToFill"
+                                  Opacity="0.72"
+                                  RenderTransformOrigin="0.5,0.5">
+                <controls:CachedImage.RenderTransform>
+                    <ScaleTransform ScaleX="1.10"
+                                    ScaleY="1.10"/>
+                </controls:CachedImage.RenderTransform>
+            </controls:CachedImage>
+
+            <Rectangle>
+                <Rectangle.Fill>
+                    <AcrylicBrush BackgroundSource="Backdrop"
+                                  TintColor="{ThemeResource AsterHeroFadeEndColor}"
+                                  TintOpacity="0.46"
+                                  TintLuminosityOpacity="0.68"
+                                  FallbackColor="{ThemeResource AsterHeroFadeEndColor}"/>
+                </Rectangle.Fill>
+            </Rectangle>
+
+            <Rectangle Opacity="0.78">
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,0"
+                                         EndPoint="0,1">
+                        <GradientStop Color="#22000000"
+                                      Offset="0"/>
+                        <GradientStop Color="{ThemeResource AsterHeroFadeMidColor}"
+                                      Offset="0.52"/>
+                        <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}"
+                                      Offset="1"/>
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+        </Grid>
+
         <ScrollViewer x:Name="HomeScrollViewer"
                       Visibility="Collapsed"
                       VerticalScrollMode="Enabled"
