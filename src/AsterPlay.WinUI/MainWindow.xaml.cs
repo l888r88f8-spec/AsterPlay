@@ -63,6 +63,16 @@ public sealed partial class MainWindow : Window
         _uiSettings.ColorValuesChanged -= SystemColorValuesChanged;
     }
 
+    private void CompleteStartup()
+    {
+        if (StartupLayer.Visibility != Visibility.Visible)
+            return;
+
+        StartupLayer.IsHitTestVisible = false;
+        StartupLayer.Visibility = Visibility.Collapsed;
+        StartupDiagnostics.Write("Startup layer dismissed");
+    }
+
     private async void RootGrid_Loaded(object sender, RoutedEventArgs e)
     {
         if (_initialized)
@@ -128,6 +138,7 @@ public sealed partial class MainWindow : Window
         view.ManageServersRequested += (_, _) => ShowServers(returnToLogin: true);
 
         PageHost.Content = view;
+        CompleteStartup();
     }
 
     private void ShowHome()
@@ -151,6 +162,7 @@ public sealed partial class MainWindow : Window
         view.PlayRequested += async (_, item) =>
             await StartPlaybackAsync(item, "home");
         PageHost.Content = view;
+        CompleteStartup();
     }
 
     private void ShowLibrary()
