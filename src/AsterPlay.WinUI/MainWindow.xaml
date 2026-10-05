@@ -30,6 +30,7 @@
 
         <Grid x:Name="AppTitleBar"
               Grid.Row="0"
+              Opacity="0"
               Background="{ThemeResource AsterTitleBarBrush}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="220"/>
@@ -67,21 +68,8 @@
         </Grid>
 
         <Grid x:Name="ContentLayer"
-              Grid.Row="1">
-            <Grid x:Name="InitialHomeShell">
-                <StackPanel HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Spacing="14">
-                    <ProgressRing Width="34"
-                                  Height="34"
-                                  IsActive="True"/>
-                    <TextBlock Text="正在加载"
-                               Foreground="{ThemeResource AsterSecondaryTextBrush}"
-                               FontSize="14"
-                               HorizontalAlignment="Center"/>
-                </StackPanel>
-            </Grid>
-
+              Grid.Row="1"
+              Opacity="0">
             <ContentControl x:Name="PageHost"
                             HorizontalContentAlignment="Stretch"
                             VerticalContentAlignment="Stretch"/>
@@ -148,6 +136,51 @@
                     </Button>
                 </StackPanel>
             </Border>
+        </Grid>
+
+        <Grid x:Name="SplashLayer"
+              Grid.Row="0"
+              Grid.RowSpan="2"
+              Background="{ThemeResource AsterPageBackgroundBrush}"
+              IsHitTestVisible="True"
+              Canvas.ZIndex="2000">
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="16">
+                <Border x:Name="SplashCircle"
+                        Width="96"
+                        Height="96"
+                        CornerRadius="48"
+                        RenderTransformOrigin="0.5,0.5">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0"
+                                             EndPoint="1,1">
+                            <GradientStop Color="#4C8FEA"
+                                          Offset="0"/>
+                            <GradientStop Color="#6E5CE7"
+                                          Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Border.RenderTransform>
+                        <ScaleTransform x:Name="SplashCircleScale"
+                                        ScaleX="1"
+                                        ScaleY="1"/>
+                    </Border.RenderTransform>
+                    <TextBlock Text="A"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Foreground="White"
+                               FontSize="42"
+                               FontWeight="SemiBold"/>
+                </Border>
+
+                <TextBlock x:Name="SplashWordmark"
+                           Text="AsterPlay"
+                           Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
         </Grid>
 
     </Grid>
