@@ -67,19 +67,6 @@ public sealed partial class MainWindow : Window
         _uiSettings.ColorValuesChanged -= SystemColorValuesChanged;
     }
 
-    private void CompleteStartup()
-    {
-        StartupDiagnostics.Write(
-            $"CompleteStartup requested; startupLayer={StartupLayer.Visibility}, section={_currentSection}");
-
-        if (StartupLayer.Visibility != Visibility.Visible)
-            return;
-
-        StartupLayer.IsHitTestVisible = false;
-        StartupLayer.Visibility = Visibility.Collapsed;
-        StartupDiagnostics.Write("Startup layer dismissed");
-    }
-
     private void RootGrid_Loaded(object sender, RoutedEventArgs e)
     {
         StartupDiagnostics.Write(
@@ -153,7 +140,6 @@ public sealed partial class MainWindow : Window
         view.ManageServersRequested += (_, _) => ShowServers(returnToLogin: true);
 
         PageHost.Content = view;
-        CompleteStartup();
     }
 
     private void ShowHome()
@@ -193,7 +179,6 @@ public sealed partial class MainWindow : Window
         // HomeView Loaded event.
         PageHost.Content = view;
         StartupDiagnostics.Write("ShowHome: home shell assigned to PageHost");
-        CompleteStartup();
     }
 
     private void ShowLibrary()
