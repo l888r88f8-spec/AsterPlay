@@ -22,6 +22,8 @@
                     <SolidColorBrush x:Key="AsterAmbientBottomBrush" Color="#182F79A8"/>
                     <SolidColorBrush x:Key="AsterRailArrowForegroundBrush" Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="AsterRailArrowBorderBrush" Color="#38FFFFFF"/>
+                    <Color x:Key="AsterHeroFadeMidColor">#B5080A0F</Color>
+                    <Color x:Key="AsterHeroFadeEndColor">#FF080A0F</Color>
                 </ResourceDictionary>
 
                 <ResourceDictionary x:Key="Light">
@@ -36,6 +38,8 @@
                     <SolidColorBrush x:Key="AsterAmbientBottomBrush" Color="#1458A9D6"/>
                     <SolidColorBrush x:Key="AsterRailArrowForegroundBrush" Color="#20242C"/>
                     <SolidColorBrush x:Key="AsterRailArrowBorderBrush" Color="#26000000"/>
+                    <Color x:Key="AsterHeroFadeMidColor">#72F4F6F9</Color>
+                    <Color x:Key="AsterHeroFadeEndColor">#FFF4F6F9</Color>
                 </ResourceDictionary>
 
                 <ResourceDictionary x:Key="HighContrast">
@@ -50,6 +54,8 @@
                     <SolidColorBrush x:Key="AsterAmbientBottomBrush" Color="Transparent"/>
                     <SolidColorBrush x:Key="AsterRailArrowForegroundBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
                     <SolidColorBrush x:Key="AsterRailArrowBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+                    <Color x:Key="AsterHeroFadeMidColor">#90000000</Color>
+                    <Color x:Key="AsterHeroFadeEndColor">#FF000000</Color>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
