@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using AsterPlay.Models;
 using AsterPlay.Services;
 using AsterPlay.WinUI.Views;
@@ -23,6 +24,11 @@ public sealed partial class MainWindow : Window
     private bool _authenticated;
     private string _currentSection = "home-shell";
     private DateTimeOffset _lastWheelDiagnosticAt = DateTimeOffset.MinValue;
+    private readonly IntPtr _hwnd;
+    private readonly WindowSubclassProc _windowSubclassProc;
+
+    private const uint WmMouseWheel = 0x020A;
+    private static readonly UIntPtr WindowSubclassId = (UIntPtr)1;
 
     public MainWindow()
     {
@@ -31,8 +37,27 @@ public sealed partial class MainWindow : Window
             InitializeComponent();
         StartupDiagnostics.Write("MainWindow constructor: after InitializeComponent");
 
-        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-        var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
+        _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        _windowSubclassProc = WindowSubclassCallback;
+
+        if (!SetWindowSubclass(
+                _hwnd,
+                _windowSubclassProc,
+                WindowSubclassId,
+                UIntPtr.Zero))
+        {
+            PlaybackLog.Write(
+                "WinUINativeWheel",
+                $"SetWindowSubclass failed: {Marshal.GetLastWin32Error()}");
+        }
+        else
+        {
+            PlaybackLog.Write(
+                "WinUINativeWheel",
+                "Native WM_MOUSEWHEEL hook installed.");
+        }
+
+        var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(_hwnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
 
         _appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
@@ -49,6 +74,27 @@ public sealed partial class MainWindow : Window
         SetActiveNavigation(HomeButton);
 
         StartupDiagnostics.Write("MainWindow constructor: lightweight home shell ready");
+    }
+
+    private IntPtr WindowSubclassCallback(
+        IntPtr hWnd,
+        uint message,
+        IntPtr wParam,
+        IntPtr lParam,
+        UIntPtr subclassId,
+        UIntPtr refData)
+    {
+        if (message == WmMouseWheel &&
+            PageHost.Content is HomeView homeView)
+        {
+            var raw = unchecked((long)wParam);
+            var delta = unchecked((short)((raw >> 16) & 0xffff));
+
+            if (delta != 0 && homeView.HandleNativeMouseWheel(delta))
+                return IntPtr.Zero;
+        }
+
+        return DefSubclassProc(hWnd, message, wParam, lParam);
     }
 
     private void RootGrid_PointerWheelChangedDiagnostic(
@@ -126,6 +172,11 @@ public sealed partial class MainWindow : Window
 
     private void MainWindow_Closed(object sender, WindowEventArgs args)
     {
+        RemoveWindowSubclass(
+            _hwnd,
+            _windowSubclassProc,
+            WindowSubclassId);
+
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= FirstFrame_Rendering;
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= SplashReveal_Rendering;
 
@@ -754,4 +805,35 @@ public sealed partial class MainWindow : Window
                 : inactiveForeground;
         }
     }
+
+
+    private delegate IntPtr WindowSubclassProc(
+        IntPtr hWnd,
+        uint message,
+        IntPtr wParam,
+        IntPtr lParam,
+        UIntPtr subclassId,
+        UIntPtr refData);
+
+    [DllImport("comctl32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowSubclass(
+        IntPtr hWnd,
+        WindowSubclassProc callback,
+        UIntPtr subclassId,
+        UIntPtr refData);
+
+    [DllImport("comctl32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool RemoveWindowSubclass(
+        IntPtr hWnd,
+        WindowSubclassProc callback,
+        UIntPtr subclassId);
+
+    [DllImport("comctl32.dll")]
+    private static extern IntPtr DefSubclassProc(
+        IntPtr hWnd,
+        uint message,
+        IntPtr wParam,
+        IntPtr lParam);
 }
