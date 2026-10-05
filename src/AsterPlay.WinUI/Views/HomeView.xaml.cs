@@ -7,7 +7,6 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Dispatching;
-using Microsoft.UI.Xaml.Input;
 
 namespace AsterPlay.WinUI.Views;
 
@@ -55,11 +54,6 @@ public sealed partial class HomeView : UserControl
         _heroTimer.IsRepeating = true;
         _heroTimer.Tick += HeroTimer_Tick;
 
-        AddHandler(
-            UIElement.PointerWheelChangedEvent,
-            new PointerEventHandler(HomeView_PointerWheelChanged),
-            handledEventsToo: true);
-
         Loaded += HomeView_Activated;
         Unloaded += HomeView_Unloaded;
 
@@ -106,37 +100,6 @@ public sealed partial class HomeView : UserControl
         ApplyHero(_heroCandidates[_heroIndex]);
         StartupDiagnostics.Write(
             $"HomeView hero advanced: index={_heroIndex}, item={_heroItem?.Id}");
-    }
-
-    private void HomeView_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
-    {
-        if (HomeScrollViewer.Visibility != Visibility.Visible)
-            return;
-
-        var delta = e.GetCurrentPoint(this).Properties.MouseWheelDelta;
-        if (delta == 0 || HomeScrollViewer.ScrollableHeight <= 0)
-            return;
-
-        var distance = Math.Clamp(Math.Abs(delta) * 0.9, 56, 180);
-        var target = Math.Clamp(
-            HomeScrollViewer.VerticalOffset - Math.Sign(delta) * distance,
-            0,
-            HomeScrollViewer.ScrollableHeight);
-
-        if (Math.Abs(target - HomeScrollViewer.VerticalOffset) < 0.5)
-            return;
-
-        // Do not queue animated ChangeView operations for wheel input. Repeated
-        // animated requests can end up being coalesced/ignored by ScrollViewer
-        // after the page has been active for a while, which makes the wheel
-        // appear to stop responding.
-        HomeScrollViewer.ChangeView(
-            horizontalOffset: null,
-            verticalOffset: target,
-            zoomFactor: null,
-            disableAnimation: true);
-
-        e.Handled = true;
     }
 
     private void HomeScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
