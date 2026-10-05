@@ -4,12 +4,14 @@ using AsterPlay.WinUI.Views;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Windows.UI.ViewManagement;
 
 namespace AsterPlay.WinUI;
 
 public sealed partial class MainWindow : Window
 {
     private readonly EmbyClient _client = new();
+    private readonly UISettings _uiSettings = new();
     private bool _initialized;
     private bool _authenticated;
     private string _currentSection = "login";
@@ -22,7 +24,37 @@ public sealed partial class MainWindow : Window
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
+
+        _uiSettings.ColorValuesChanged += SystemColorValuesChanged;
+        Closed += MainWindow_Closed;
+        ApplySystemTheme();
+
         StartupDiagnostics.Write("MainWindow constructor: title bar ready");
+    }
+
+    private void SystemColorValuesChanged(UISettings sender, object args)
+    {
+        DispatcherQueue.TryEnqueue(ApplySystemTheme);
+    }
+
+    private void ApplySystemTheme()
+    {
+        var background = _uiSettings.GetColorValue(UIColorType.Background);
+        var luminance =
+            (0.2126 * background.R) +
+            (0.7152 * background.G) +
+            (0.0722 * background.B);
+
+        RootGrid.RequestedTheme = luminance >= 128
+            ? ElementTheme.Light
+            : ElementTheme.Dark;
+
+        StartupDiagnostics.Write($"System theme applied: {RootGrid.RequestedTheme}");
+    }
+
+    private void MainWindow_Closed(object sender, WindowEventArgs args)
+    {
+        _uiSettings.ColorValuesChanged -= SystemColorValuesChanged;
     }
 
     private async void RootGrid_Loaded(object sender, RoutedEventArgs e)
@@ -251,12 +283,6 @@ public sealed partial class MainWindow : Window
         var selected = new SolidColorBrush(Windows.UI.Color.FromArgb(58, 80, 145, 214));
 
         foreach (var button in new[] { HomeButton, LibraryButton, ServersButton, SettingsButton })
-        {
             button.Background = ReferenceEquals(button, active) ? selected : inactive;
-            button.Foreground = new SolidColorBrush(
-                ReferenceEquals(button, active)
-                    ? Windows.UI.Color.FromArgb(255, 255, 255, 255)
-                    : Windows.UI.Color.FromArgb(255, 199, 206, 216));
-        }
     }
 }
