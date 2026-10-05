@@ -105,7 +105,9 @@
         </Grid>
 
         <ScrollViewer x:Name="HomeScrollViewer"
-                      Visibility="Collapsed"
+                      Visibility="Visible"
+                      Opacity="0"
+                      IsHitTestVisible="False"
                       VerticalScrollMode="Enabled"
                       VerticalScrollBarVisibility="Hidden"
                       HorizontalScrollMode="Disabled"
