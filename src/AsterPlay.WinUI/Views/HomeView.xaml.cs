@@ -3,7 +3,6 @@ using AsterPlay.Models;
 using AsterPlay.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace AsterPlay.WinUI.Views;
@@ -145,39 +144,6 @@ public sealed partial class HomeView : UserControl
     {
         if (sender is Button { Tag: HomeMediaTile tile })
             MediaRequested?.Invoke(this, tile.Item);
-    }
-
-    private void HomeScrollViewer_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
-    {
-        var delta = e.GetCurrentPoint(HomeScrollViewer).Properties.MouseWheelDelta;
-        ScrollHomeByWheel(delta, e);
-    }
-
-    private void Rail_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
-    {
-        var delta = e.GetCurrentPoint(HomeScrollViewer).Properties.MouseWheelDelta;
-        ScrollHomeByWheel(delta, e);
-    }
-
-    private void ScrollHomeByWheel(int delta, PointerRoutedEventArgs e)
-    {
-        if (delta == 0 || HomeScrollViewer.ScrollableHeight <= 0)
-            return;
-
-        var step = Math.Clamp(Math.Abs(delta) * 1.05, 72, 190);
-        var target = delta > 0
-            ? HomeScrollViewer.VerticalOffset - step
-            : HomeScrollViewer.VerticalOffset + step;
-
-        target = Math.Clamp(target, 0, HomeScrollViewer.ScrollableHeight);
-
-        HomeScrollViewer.ChangeView(
-            horizontalOffset: null,
-            verticalOffset: target,
-            zoomFactor: null,
-            disableAnimation: true);
-
-        e.Handled = true;
     }
 
     private void RailArrow_Click(object sender, RoutedEventArgs e)
