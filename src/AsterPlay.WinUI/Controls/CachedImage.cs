@@ -44,6 +44,7 @@ public sealed class CachedImage : UserControl
 
     private CancellationTokenSource? _loadCts;
     private readonly List<ScrollViewer> _scrollViewers = [];
+    private readonly List<ScrollView> _scrollViews = [];
     private bool _loading;
     private string _loadedUrl = "";
 
@@ -148,6 +149,11 @@ public sealed class CachedImage : UserControl
                 _scrollViewers.Add(viewer);
                 viewer.ViewChanged += ScrollViewer_ViewChanged;
             }
+            else if (current is ScrollView scrollView)
+            {
+                _scrollViews.Add(scrollView);
+                scrollView.ViewChanged += ScrollView_ViewChanged;
+            }
         }
     }
 
@@ -156,12 +162,21 @@ public sealed class CachedImage : UserControl
         foreach (var viewer in _scrollViewers)
             viewer.ViewChanged -= ScrollViewer_ViewChanged;
 
+        foreach (var scrollView in _scrollViews)
+            scrollView.ViewChanged -= ScrollView_ViewChanged;
+
         _scrollViewers.Clear();
+        _scrollViews.Clear();
     }
 
     private void ScrollViewer_ViewChanged(
         object? sender,
         ScrollViewerViewChangedEventArgs e) =>
+        TryStartLoad();
+
+    private void ScrollView_ViewChanged(
+        ScrollView sender,
+        object args) =>
         TryStartLoad();
 
     private void CachedImage_SizeChanged(
@@ -318,46 +333,58 @@ public sealed class CachedImage : UserControl
         if (ActualWidth <= 0 || ActualHeight <= 0)
             return false;
 
-        if (_scrollViewers.Count == 0)
+        if (_scrollViewers.Count == 0 && _scrollViews.Count == 0)
             return true;
 
         foreach (var viewer in _scrollViewers)
         {
-            if (viewer.ActualWidth <= 0 ||
-                viewer.ActualHeight <= 0)
-            {
-                continue;
-            }
+            if (!IsNearViewport(viewer))
+                return false;
+        }
 
-            try
-            {
-                var transform = TransformToVisual(viewer);
-                var bounds = transform.TransformBounds(
-                    new Rect(
-                        0,
-                        0,
-                        ActualWidth,
-                        ActualHeight));
-
-                var viewport = new Rect(
-                    -PreloadMargin,
-                    -PreloadMargin,
-                    viewer.ActualWidth +
-                    PreloadMargin * 2,
-                    viewer.ActualHeight +
-                    PreloadMargin * 2);
-
-                if (!Intersects(viewport, bounds))
-                    return false;
-            }
-            catch
-            {
-                // If the element is temporarily between visual trees,
-                // avoid blocking the load forever.
-            }
+        foreach (var scrollView in _scrollViews)
+        {
+            if (!IsNearViewport(scrollView))
+                return false;
         }
 
         return true;
+    }
+
+    private bool IsNearViewport(FrameworkElement viewer)
+    {
+        if (viewer.ActualWidth <= 0 ||
+            viewer.ActualHeight <= 0)
+        {
+            return true;
+        }
+
+        try
+        {
+            var transform = TransformToVisual(viewer);
+            var bounds = transform.TransformBounds(
+                new Rect(
+                    0,
+                    0,
+                    ActualWidth,
+                    ActualHeight));
+
+            var viewport = new Rect(
+                -PreloadMargin,
+                -PreloadMargin,
+                viewer.ActualWidth +
+                PreloadMargin * 2,
+                viewer.ActualHeight +
+                PreloadMargin * 2);
+
+            return Intersects(viewport, bounds);
+        }
+        catch
+        {
+            // If the element is temporarily between visual trees,
+            // avoid blocking the load forever.
+            return true;
+        }
     }
 
     private static bool Intersects(
