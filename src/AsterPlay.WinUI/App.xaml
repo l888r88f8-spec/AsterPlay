@@ -12,7 +12,7 @@
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="AsterPageBackgroundBrush" Color="#080A0F"/>
-                    <SolidColorBrush x:Key="AsterTitleBarBrush" Color="#C90D1118"/>
+                    <SolidColorBrush x:Key="AsterTitleBarBrush" Color="#FF0D1118"/>
                     <SolidColorBrush x:Key="AsterPrimaryTextBrush" Color="#F7F8FB"/>
                     <SolidColorBrush x:Key="AsterSecondaryTextBrush" Color="#A5ADBA"/>
                     <SolidColorBrush x:Key="AsterTertiaryTextBrush" Color="#7C8797"/>
@@ -24,11 +24,14 @@
                     <SolidColorBrush x:Key="AsterRailArrowBorderBrush" Color="#38FFFFFF"/>
                     <Color x:Key="AsterHeroFadeMidColor">#B5080A0F</Color>
                     <Color x:Key="AsterHeroFadeEndColor">#FF080A0F</Color>
+                    <Color x:Key="AsterAmbientOverlayTopColor">#38080A0F</Color>
+                    <Color x:Key="AsterAmbientOverlayMidColor">#78080A0F</Color>
+                    <Color x:Key="AsterAmbientOverlayBottomColor">#BA080A0F</Color>
                 </ResourceDictionary>
 
                 <ResourceDictionary x:Key="Light">
                     <SolidColorBrush x:Key="AsterPageBackgroundBrush" Color="#F4F6F9"/>
-                    <SolidColorBrush x:Key="AsterTitleBarBrush" Color="#EAF4F6F9"/>
+                    <SolidColorBrush x:Key="AsterTitleBarBrush" Color="#FFF4F6F9"/>
                     <SolidColorBrush x:Key="AsterPrimaryTextBrush" Color="#151820"/>
                     <SolidColorBrush x:Key="AsterSecondaryTextBrush" Color="#5F6876"/>
                     <SolidColorBrush x:Key="AsterTertiaryTextBrush" Color="#7A8492"/>
@@ -40,6 +43,9 @@
                     <SolidColorBrush x:Key="AsterRailArrowBorderBrush" Color="#26000000"/>
                     <Color x:Key="AsterHeroFadeMidColor">#72F4F6F9</Color>
                     <Color x:Key="AsterHeroFadeEndColor">#FFF4F6F9</Color>
+                    <Color x:Key="AsterAmbientOverlayTopColor">#22F4F6F9</Color>
+                    <Color x:Key="AsterAmbientOverlayMidColor">#66F4F6F9</Color>
+                    <Color x:Key="AsterAmbientOverlayBottomColor">#B0F4F6F9</Color>
                 </ResourceDictionary>
 
                 <ResourceDictionary x:Key="HighContrast">
@@ -56,6 +62,9 @@
                     <SolidColorBrush x:Key="AsterRailArrowBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
                     <Color x:Key="AsterHeroFadeMidColor">#90000000</Color>
                     <Color x:Key="AsterHeroFadeEndColor">#FF000000</Color>
+                    <Color x:Key="AsterAmbientOverlayTopColor">#60000000</Color>
+                    <Color x:Key="AsterAmbientOverlayMidColor">#A0000000</Color>
+                    <Color x:Key="AsterAmbientOverlayBottomColor">#D0000000</Color>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
