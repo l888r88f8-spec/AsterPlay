@@ -60,7 +60,8 @@
                               DisplayMemberPath="Name"/>
                     <TextBox x:Name="SearchBox"
                              Width="250"
-                             PlaceholderText="搜索"/>
+                             PlaceholderText="搜索"
+                             KeyDown="SearchBox_KeyDown"/>
                     <CheckBox x:Name="FavoriteOnlyBox"
                               Content="仅收藏"
                               VerticalAlignment="Center"/>
