@@ -6,6 +6,8 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml.Input;
 
 namespace AsterPlay.WinUI.Views;
 
@@ -18,8 +20,11 @@ public sealed partial class HomeView : UserControl
     private readonly ObservableCollection<HomeLibraryTile> _libraries = [];
     private readonly ObservableCollection<ResumeMediaTile> _resume = [];
     private readonly ObservableCollection<HomeLibrarySection> _sections = [];
+    private readonly List<EmbyItem> _heroCandidates = [];
+    private readonly DispatcherQueueTimer _heroTimer;
 
     private EmbyItem? _heroItem;
+    private int _heroIndex;
     private readonly bool _noServerMode;
     private bool _hasCachedSnapshot;
 
@@ -43,6 +48,18 @@ public sealed partial class HomeView : UserControl
 
         StartupDiagnostics.Write("HomeView constructor: after InitializeComponent");
 
+        _heroTimer = DispatcherQueue.CreateTimer();
+        _heroTimer.Interval = TimeSpan.FromSeconds(8);
+        _heroTimer.IsRepeating = true;
+        _heroTimer.Tick += HeroTimer_Tick;
+
+        AddHandler(
+            UIElement.PointerWheelChangedEvent,
+            new PointerEventHandler(HomeView_PointerWheelChanged),
+            handledEventsToo: true);
+
+        Unloaded += HomeView_Unloaded;
+
         LibrariesGrid.ItemsSource = _libraries;
         ResumeGrid.ItemsSource = _resume;
         LibrarySectionsList.ItemsSource = _sections;
@@ -64,6 +81,64 @@ public sealed partial class HomeView : UserControl
         }
 
         StartupDiagnostics.Write("HomeView constructor: completed");
+    }
+
+    private void HomeView_Unloaded(object sender, RoutedEventArgs e)
+    {
+        _heroTimer.Stop();
+    }
+
+    private void HeroTimer_Tick(DispatcherQueueTimer sender, object args)
+    {
+        if (_heroCandidates.Count <= 1)
+            return;
+
+        _heroIndex = (_heroIndex + 1) % _heroCandidates.Count;
+        ApplyHero(_heroCandidates[_heroIndex]);
+        StartupDiagnostics.Write(
+            $"HomeView hero advanced: index={_heroIndex}, item={_heroItem?.Id}");
+    }
+
+    private void HomeView_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
+    {
+        if (HomeScrollViewer.Visibility != Visibility.Visible)
+            return;
+
+        var delta = e.GetCurrentPoint(this).Properties.MouseWheelDelta;
+        if (delta == 0 || HomeScrollViewer.ScrollableHeight <= 0)
+            return;
+
+        var distance = Math.Max(56, Math.Abs(delta) * 0.78);
+        var target = Math.Clamp(
+            HomeScrollViewer.VerticalOffset - Math.Sign(delta) * distance,
+            0,
+            HomeScrollViewer.ScrollableHeight);
+
+        HomeScrollViewer.ChangeView(
+            horizontalOffset: null,
+            verticalOffset: target,
+            zoomFactor: null,
+            disableAnimation: false);
+
+        e.Handled = true;
+    }
+
+    private void HomeScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        var width = e.NewSize.Width;
+        var horizontalPadding = width switch
+        {
+            >= 2200 => 48d,
+            >= 1700 => 36d,
+            >= 1200 => 28d,
+            >= 900 => 22d,
+            _ => 16d
+        };
+
+        HomeContentStack.Padding =
+            new Thickness(horizontalPadding, 0, horizontalPadding, 122);
+        HeroContainer.Margin =
+            new Thickness(-horizontalPadding, 0, -horizontalPadding, -172);
     }
 
     private void HomeView_Loaded(object sender, RoutedEventArgs e)
@@ -354,7 +429,40 @@ public sealed partial class HomeView : UserControl
 
     private void PopulateHero(IReadOnlyList<EmbyItem> latest)
     {
-        _heroItem = latest.FirstOrDefault(item => !string.IsNullOrWhiteSpace(item.Id));
+        var previousId = _heroItem?.Id;
+
+        _heroCandidates.Clear();
+        _heroCandidates.AddRange(
+            latest
+                .Where(item => !string.IsNullOrWhiteSpace(item.Id))
+                .Take(8));
+
+        if (_heroCandidates.Count == 0)
+        {
+            _heroTimer.Stop();
+            ApplyHero(null);
+            return;
+        }
+
+        var previousIndex = string.IsNullOrWhiteSpace(previousId)
+            ? -1
+            : _heroCandidates.FindIndex(item =>
+                string.Equals(
+                    item.Id,
+                    previousId,
+                    StringComparison.OrdinalIgnoreCase));
+
+        _heroIndex = previousIndex >= 0 ? previousIndex : 0;
+        ApplyHero(_heroCandidates[_heroIndex]);
+
+        _heroTimer.Stop();
+        if (_heroCandidates.Count > 1)
+            _heroTimer.Start();
+    }
+
+    private void ApplyHero(EmbyItem? item)
+    {
+        _heroItem = item;
         HeroPlayButton.IsEnabled = _heroItem is not null;
         HeroFavoriteButton.IsEnabled = _heroItem is not null;
 
@@ -363,6 +471,7 @@ public sealed partial class HomeView : UserControl
             HeroTitleBlock.Text = "媒体库已连接";
             HeroMetaBlock.Text = "";
             HeroOverviewBlock.Text = "从下方浏览你的媒体库。";
+            HeroFavoriteButton.Content = "♡  收藏";
             HeroImage.SourceUrl = "";
             PageBackdropImage.SourceUrl = "";
             PageBackdropLayer.Visibility = Visibility.Collapsed;
@@ -489,6 +598,15 @@ public sealed partial class HomeView : UserControl
             var target = !(_heroItem.UserData?.IsFavorite == true);
             await _client.SetFavoriteAsync(_heroItem.Id, target);
             _heroItem = await _client.GetItemAsync(_heroItem.Id);
+
+            var candidateIndex = _heroCandidates.FindIndex(item =>
+                string.Equals(
+                    item.Id,
+                    _heroItem.Id,
+                    StringComparison.OrdinalIgnoreCase));
+            if (candidateIndex >= 0)
+                _heroCandidates[candidateIndex] = _heroItem;
+
             HeroFavoriteButton.Content = _heroItem.UserData?.IsFavorite == true
                 ? "♥  已收藏"
                 : "♡  收藏";
