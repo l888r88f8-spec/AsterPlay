@@ -70,6 +70,7 @@
               Visibility="Collapsed"
               IsHitTestVisible="False">
             <controls:CachedImage x:Name="PageBackdropImage"
+                                  LazyLoadingEnabled="False"
                                   Stretch="UniformToFill"
                                   Opacity="0.84"
                                   RenderTransformOrigin="0.5,0.5">
@@ -122,6 +123,7 @@
                       Height="620"
                       Margin="-28,0,-28,-172">
                     <controls:CachedImage x:Name="HeroImage"
+                                          LazyLoadingEnabled="False"
                                           Stretch="UniformToFill"/>
 
                     <Rectangle>

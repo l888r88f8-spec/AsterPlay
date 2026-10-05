@@ -27,6 +27,13 @@ public sealed class CachedImage : UserControl
                 Microsoft.UI.Xaml.Media.Stretch.Uniform,
                 OnStretchChanged));
 
+    public static readonly DependencyProperty LazyLoadingEnabledProperty =
+        DependencyProperty.Register(
+            nameof(LazyLoadingEnabled),
+            typeof(bool),
+            typeof(CachedImage),
+            new PropertyMetadata(true, OnLazyLoadingEnabledChanged));
+
     private const double PreloadMargin = 220;
 
     private readonly Image _image = new()
@@ -61,6 +68,12 @@ public sealed class CachedImage : UserControl
         set => SetValue(StretchProperty, value);
     }
 
+    public bool LazyLoadingEnabled
+    {
+        get => (bool)GetValue(LazyLoadingEnabledProperty);
+        set => SetValue(LazyLoadingEnabledProperty, value);
+    }
+
     private static void OnStretchChanged(
         DependencyObject dependencyObject,
         DependencyPropertyChangedEventArgs e)
@@ -70,6 +83,21 @@ public sealed class CachedImage : UserControl
         {
             image._image.Stretch = stretch;
         }
+    }
+
+    private static void OnLazyLoadingEnabledChanged(
+        DependencyObject dependencyObject,
+        DependencyPropertyChangedEventArgs e)
+    {
+        if (dependencyObject is not CachedImage image || !image.IsLoaded)
+            return;
+
+        if (image.LazyLoadingEnabled)
+            image.AttachScrollViewers();
+        else
+            image.DetachScrollViewers();
+
+        image.ScheduleViewportCheck();
     }
 
     private static void OnSourceUrlChanged(
@@ -91,7 +119,9 @@ public sealed class CachedImage : UserControl
         object sender,
         RoutedEventArgs e)
     {
-        AttachScrollViewers();
+        if (LazyLoadingEnabled)
+            AttachScrollViewers();
+
         SizeChanged += CachedImage_SizeChanged;
         ScheduleViewportCheck();
     }
@@ -167,7 +197,7 @@ public sealed class CachedImage : UserControl
             return;
         }
 
-        if (!IsNearViewport())
+        if (LazyLoadingEnabled && !IsNearViewport())
             return;
 
         _ = LoadAsync(url);

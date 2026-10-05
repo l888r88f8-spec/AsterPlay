@@ -7,7 +7,6 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Dispatching;
-using Microsoft.UI.Xaml.Input;
 
 namespace AsterPlay.WinUI.Views;
 
@@ -25,6 +24,8 @@ public sealed partial class HomeView : UserControl
 
     private EmbyItem? _heroItem;
     private int _heroIndex;
+    private int _heroPreloadGeneration;
+    private bool _heroImagesReady;
     private readonly bool _noServerMode;
     private bool _hasCachedSnapshot;
 
@@ -53,11 +54,7 @@ public sealed partial class HomeView : UserControl
         _heroTimer.IsRepeating = true;
         _heroTimer.Tick += HeroTimer_Tick;
 
-        AddHandler(
-            UIElement.PointerWheelChangedEvent,
-            new PointerEventHandler(HomeView_PointerWheelChanged),
-            handledEventsToo: true);
-
+        Loaded += HomeView_Activated;
         Unloaded += HomeView_Unloaded;
 
         LibrariesGrid.ItemsSource = _libraries;
@@ -83,6 +80,12 @@ public sealed partial class HomeView : UserControl
         StartupDiagnostics.Write("HomeView constructor: completed");
     }
 
+    private void HomeView_Activated(object sender, RoutedEventArgs e)
+    {
+        if (_heroImagesReady && _heroCandidates.Count > 1)
+            _heroTimer.Start();
+    }
+
     private void HomeView_Unloaded(object sender, RoutedEventArgs e)
     {
         _heroTimer.Stop();
@@ -97,30 +100,6 @@ public sealed partial class HomeView : UserControl
         ApplyHero(_heroCandidates[_heroIndex]);
         StartupDiagnostics.Write(
             $"HomeView hero advanced: index={_heroIndex}, item={_heroItem?.Id}");
-    }
-
-    private void HomeView_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
-    {
-        if (HomeScrollViewer.Visibility != Visibility.Visible)
-            return;
-
-        var delta = e.GetCurrentPoint(this).Properties.MouseWheelDelta;
-        if (delta == 0 || HomeScrollViewer.ScrollableHeight <= 0)
-            return;
-
-        var distance = Math.Max(56, Math.Abs(delta) * 0.78);
-        var target = Math.Clamp(
-            HomeScrollViewer.VerticalOffset - Math.Sign(delta) * distance,
-            0,
-            HomeScrollViewer.ScrollableHeight);
-
-        HomeScrollViewer.ChangeView(
-            horizontalOffset: null,
-            verticalOffset: target,
-            zoomFactor: null,
-            disableAnimation: false);
-
-        e.Handled = true;
     }
 
     private void HomeScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -430,6 +409,8 @@ public sealed partial class HomeView : UserControl
     private void PopulateHero(IReadOnlyList<EmbyItem> latest)
     {
         var previousId = _heroItem?.Id;
+        var preloadGeneration = ++_heroPreloadGeneration;
+        _heroImagesReady = false;
 
         _heroCandidates.Clear();
         _heroCandidates.AddRange(
@@ -456,7 +437,28 @@ public sealed partial class HomeView : UserControl
         ApplyHero(_heroCandidates[_heroIndex]);
 
         _heroTimer.Stop();
-        if (_heroCandidates.Count > 1)
+        _ = PreloadHeroCandidatesAsync(preloadGeneration);
+    }
+
+    private async Task PreloadHeroCandidatesAsync(int generation)
+    {
+        var urls = _heroCandidates
+            .Select(item => _client.BuildBackdropUrl(item, 1800))
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        await ImageCacheService.Shared.PreloadAsync(urls);
+
+        if (generation != _heroPreloadGeneration)
+            return;
+
+        _heroImagesReady = true;
+
+        StartupDiagnostics.Write(
+            $"HomeView hero preload complete: generation={generation}, images={urls.Length}");
+
+        if (IsLoaded && _heroCandidates.Count > 1)
             _heroTimer.Start();
     }
 
