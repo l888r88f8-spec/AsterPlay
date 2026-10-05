@@ -22,6 +22,15 @@ public sealed partial class LibraryView : UserControl
         Loaded += LibraryView_Loaded;
     }
 
+    public void FocusSearch()
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            SearchBox.Focus(FocusState.Programmatic);
+            SearchBox.SelectAll();
+        });
+    }
+
     private async void LibraryView_Loaded(object sender, RoutedEventArgs e)
     {
         Loaded -= LibraryView_Loaded;
