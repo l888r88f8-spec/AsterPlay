@@ -1,0 +1,114 @@
+<UserControl
+    x:Class="AsterPlay.WinUI.Views.ServerManagementView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:lg="using:LiquidGlassWinUI">
+
+    <Grid Padding="48,34,48,118">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="24"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+            <TextBlock Text="服务器"
+                       Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                       FontSize="36"
+                       FontWeight="SemiBold"/>
+            <TextBlock Text="管理可以登录的 Emby 服务器。AsterPlay 不保存密码。"
+                       Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                       Margin="0,6,0,0"/>
+        </StackPanel>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="18"/>
+                <ColumnDefinition Width="380"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Padding="20" CornerRadius="28">
+                <Border.Background>
+                    <lg:LiquidGlassBrush BlurAmount="1.6"
+                                         BloomAmount="0.16"
+                                         RefThickness="34"
+                                         RefFactor="2.0"
+                                         RefDispersion="4"
+                                         GlareFactor="58"
+                                         TintA="0.08"
+                                         ShapeRadius="0.88"
+                                         ShapeRoundness="3.8"/>
+                </Border.Background>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="12"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="已保存服务器"
+                               Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                               FontSize="19"
+                               FontWeight="SemiBold"/>
+                    <ListView x:Name="ServerList"
+                              Grid.Row="2"
+                              SelectionChanged="ServerList_SelectionChanged">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Padding="6" Spacing="4">
+                                    <TextBlock Text="{Binding DisplayName}"
+                                               Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                                               FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding Url}"
+                                               Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                                               FontSize="12"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="2"
+                    Padding="24"
+                    CornerRadius="28">
+                <Border.Background>
+                    <lg:LiquidGlassBrush BlurAmount="1.7"
+                                         BloomAmount="0.18"
+                                         RefThickness="38"
+                                         RefFactor="2.1"
+                                         RefDispersion="4.5"
+                                         GlareFactor="62"
+                                         TintA="0.09"
+                                         ShapeRadius="0.90"
+                                         ShapeRoundness="3.8"/>
+                </Border.Background>
+
+                <StackPanel Spacing="10">
+                    <TextBlock Text="添加 / 编辑"
+                               Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                               FontSize="19"
+                               FontWeight="SemiBold"/>
+                    <TextBlock Text="名称"
+                               Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                               Margin="0,8,0,0"/>
+                    <TextBox x:Name="NameBox" Height="40"/>
+                    <TextBlock Text="服务器地址"
+                               Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                               Margin="0,8,0,0"/>
+                    <TextBox x:Name="UrlBox"
+                             Height="40"
+                             Text="http://127.0.0.1:8096"/>
+                    <Button Content="保存服务器"
+                            Margin="0,14,0,0"
+                            Click="Save_Click"/>
+                    <Button Content="删除选中服务器"
+                            Click="Remove_Click"/>
+                    <Button Content="返回"
+                            Margin="0,10,0,0"
+                            Click="Done_Click"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

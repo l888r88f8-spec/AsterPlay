@@ -1,0 +1,94 @@
+name: WinUI 3 validation
+
+on:
+  push:
+    branches:
+      - winui3-migration
+  pull_request:
+    paths:
+      - "src/AsterPlay.Core/**"
+      - "src/AsterPlay.WinUI/**"
+      - "build-winui.ps1"
+      - ".github/workflows/winui3-migration-build.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: winui3-migration-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Bootstrap pinned portable .NET 8 SDK
+        shell: cmd
+        run: bootstrap-dotnet.cmd
+
+      - name: Build WinUI 3 x64 package
+        shell: pwsh
+        run: .\build-windows.ps1
+
+      - name: Verify WinUI migration package
+        shell: pwsh
+        run: |
+          $publish = Join-Path $PWD "dist\AsterPlay"
+          $required = @(
+            "AsterPlay.exe",
+            "AsterPlay.Core.dll",
+            "CustomEffectRuntimeNative.dll",
+            "libmpv-2.dll",
+            "RUNTIME-SOURCE.txt"
+          )
+
+          foreach ($name in $required) {
+            if (-not (Test-Path (Join-Path $publish $name))) {
+              throw "Missing WinUI release file: $name"
+            }
+          }
+
+          Write-Host "WinUI 3 package verification passed."
+
+      - name: Smoke start WinUI app
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD "dist\AsterPlay\AsterPlay.exe"
+          $process = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 5
+
+          if ($process.HasExited) {
+            $startupLog = Join-Path $PWD "dist\AsterPlay\winui-startup.log"
+            if (Test-Path $startupLog) {
+              Write-Host "=== AsterPlay WinUI startup log ==="
+              Get-Content -Raw $startupLog | Write-Host
+            }
+            throw "AsterPlay exited during startup smoke test with code $($process.ExitCode)."
+          }
+
+          Stop-Process -Id $process.Id -Force
+          Write-Host "AsterPlay WinUI 3 started successfully and stayed alive for 5 seconds."
+
+      - name: Dump WinUI startup diagnostics
+        if: failure()
+        shell: pwsh
+        run: |
+          Write-Host "=== Recent Application events ==="
+          Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = (Get-Date).AddMinutes(-10) } -ErrorAction SilentlyContinue |
+            Select-Object -First 80 TimeCreated, Id, LevelDisplayName, ProviderName, Message |
+            Format-List | Out-String -Width 300 | Write-Host
+
+          Write-Host "=== Windows Error Reporting queue ==="
+          Get-ChildItem "$env:ProgramData\Microsoft\Windows\WER\ReportQueue" -Recurse -ErrorAction SilentlyContinue |
+            Select-Object -First 100 FullName |
+            Format-Table -AutoSize | Out-String -Width 300 | Write-Host
+
+      - name: Upload WinUI migration package
+        uses: actions/upload-artifact@v4
+        with:
+          name: AsterPlay-WinUI-validation-win-x64
+          path: dist/AsterPlay
+          if-no-files-found: error

@@ -1,0 +1,161 @@
+<UserControl
+    x:Class="AsterPlay.WinUI.Views.LibraryView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:lg="using:LiquidGlassWinUI"
+    xmlns:controls="using:AsterPlay.WinUI.Controls">
+
+    <Grid Padding="36,24,36,116">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="18"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="14"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Padding="22"
+                CornerRadius="26">
+            <Border.Background>
+                <lg:LiquidGlassBrush BlurAmount="1.5"
+                                     BloomAmount="0.15"
+                                     RefThickness="34"
+                                     RefFactor="2.0"
+                                     RefDispersion="4"
+                                     GlareFactor="56"
+                                     TintA="0.07"
+                                     ShapeRadius="0.88"
+                                     ShapeRoundness="3.8"/>
+            </Border.Background>
+            <StackPanel Spacing="14">
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Text="媒体库"
+                                   Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                                   FontSize="30"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock x:Name="ResultLabelBlock"
+                                   Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                                   FontSize="12"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <Button Content="刷新"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Click="Apply_Click"/>
+                </Grid>
+
+                <StackPanel Orientation="Horizontal"
+                            Spacing="10">
+                    <ComboBox x:Name="LibraryBox"
+                              Width="190"
+                              DisplayMemberPath="Name"/>
+                    <ComboBox x:Name="TypeBox"
+                              Width="150"
+                              DisplayMemberPath="Name"/>
+                    <TextBox x:Name="YearBox"
+                             Width="105"
+                             PlaceholderText="年份"/>
+                    <ComboBox x:Name="SortBox"
+                              Width="170"
+                              DisplayMemberPath="Name"/>
+                    <TextBox x:Name="SearchBox"
+                             Width="250"
+                             PlaceholderText="搜索"
+                             KeyDown="SearchBox_KeyDown"/>
+                    <CheckBox x:Name="FavoriteOnlyBox"
+                              Content="仅收藏"
+                              VerticalAlignment="Center"/>
+                    <Button Content="应用"
+                            Click="Apply_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="2">
+            <GridView x:Name="ItemsGrid"
+                      IsItemClickEnabled="True"
+                      SelectionMode="None"
+                      ItemClick="ItemsGrid_ItemClick"
+                      RightTapped="ItemsGrid_RightTapped">
+                <GridView.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Width="166"
+                                    Margin="0,0,14,18"
+                                    Spacing="7">
+                            <Border Width="166"
+                                    Height="244"
+                                    CornerRadius="18"
+                                    Background="{ThemeResource AsterCardBackgroundBrush}"
+                                    BorderBrush="{ThemeResource AsterCardBorderBrush}"
+                                    BorderThickness="1">
+                                <controls:CachedImage SourceUrl="{Binding PosterUrl}"
+                                                      Stretch="UniformToFill"/>
+                            </Border>
+                            <TextBlock Text="{Binding Title}"
+                                       Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding MetaLine}"
+                                       Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                                       FontSize="12"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </GridView.ItemTemplate>
+            </GridView>
+
+            <ProgressRing x:Name="LoadingRing"
+                          Width="38"
+                          Height="38"
+                          IsActive="False"
+                          Visibility="Collapsed"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"/>
+
+            <StackPanel x:Name="EmptyPanel"
+                        Visibility="Collapsed"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8">
+                <TextBlock Text="这里暂时没有媒体"
+                           Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                           FontSize="23"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="调整筛选或搜索条件后再试。"
+                           Foreground="{ThemeResource AsterSecondaryTextBrush}"/>
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="4"
+                Padding="16,10"
+                HorizontalAlignment="Center"
+                CornerRadius="22">
+            <Border.Background>
+                <lg:LiquidGlassBrush BlurAmount="1.3"
+                                     BloomAmount="0.12"
+                                     RefThickness="26"
+                                     RefFactor="1.8"
+                                     RefDispersion="3.5"
+                                     GlareFactor="48"
+                                     TintA="0.07"
+                                     ShapeRadius="0.90"
+                                     ShapeRoundness="3.8"/>
+            </Border.Background>
+            <StackPanel Orientation="Horizontal"
+                        Spacing="14">
+                <Button x:Name="PreviousButton"
+                        Content="上一页"
+                        Click="Previous_Click"/>
+                <TextBlock x:Name="PageLabelBlock"
+                           Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                           VerticalAlignment="Center"/>
+                <Button x:Name="NextButton"
+                        Content="下一页"
+                        Click="Next_Click"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

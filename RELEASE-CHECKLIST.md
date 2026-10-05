@@ -110,7 +110,7 @@ Check:
 - Working set does not grow continuously during normal page switching.
 - Long playback does not show sustained Overlay frame-time spikes.
 - Playback progress reports continue at the expected cadence.
-- Closing PlayerWindow releases mpv/render resources.
+- Closing PlayerView releases mpv/composition resources.
 
 `playback.log` includes `[Performance]` entries for home, library page loads, and details loads, including elapsed time and memory figures.
 

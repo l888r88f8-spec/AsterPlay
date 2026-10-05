@@ -35,6 +35,8 @@ jobs:
           $publish = Join-Path $PWD "dist\AsterPlay"
           $required = @(
             "AsterPlay.exe",
+            "AsterPlay.Core.dll",
+            "CustomEffectRuntimeNative.dll",
             "libmpv-2.dll",
             "coreclr.dll",
             "hostfxr.dll",

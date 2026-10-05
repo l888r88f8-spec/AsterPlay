@@ -1,0 +1,168 @@
+<Window
+    x:Class="AsterPlay.WinUI.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:lg="using:LiquidGlassWinUI"
+    Title="AsterPlay">
+
+
+    <Grid x:Name="RootGrid"
+          Background="{ThemeResource AsterPageBackgroundBrush}"
+          Loaded="RootGrid_Loaded">
+        <Grid.Resources>
+        <Style x:Key="DockButtonStyle" TargetType="Button">
+            <Setter Property="MinWidth" Value="82"/>
+            <Setter Property="Height" Value="62"/>
+            <Setter Property="Margin" Value="3"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{ThemeResource AsterSecondaryTextBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        </Grid.Resources>
+        <Grid.RowDefinitions>
+            <RowDefinition x:Name="TitleBarRow" Height="48"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid x:Name="AppTitleBar"
+              Grid.Row="0"
+              Background="{ThemeResource AsterTitleBarBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="220"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        Spacing="10"
+                        Margin="18,0,0,0">
+                <Border Width="27"
+                        Height="27"
+                        CornerRadius="9">
+                    <Border.Background>
+                        <lg:LiquidGlassBrush BlurAmount="1.2"
+                                             BloomAmount="0.20"
+                                             RefThickness="18"
+                                             RefFactor="1.7"
+                                             RefDispersion="3.5"
+                                             GlareFactor="58"
+                                             TintA="0.16"
+                                             TintR="70"
+                                             TintG="145"
+                                             TintB="255"
+                                             ShapeRadius="0.94"
+                                             ShapeRoundness="3.8"/>
+                    </Border.Background>
+                    <TextBlock Text="A"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Foreground="White"
+                               FontWeight="SemiBold"/>
+                </Border>
+                <TextBlock Text="AsterPlay"
+                           Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <TextBlock x:Name="PageTitleBlock"
+                       Grid.Column="1"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                       FontSize="13"/>
+        </Grid>
+
+        <Grid x:Name="ContentLayer"
+              Grid.Row="1">
+            <ContentControl x:Name="PageHost"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"/>
+
+            <Border x:Name="NavigationDock"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom"
+                    Margin="0,0,0,18"
+                    Padding="9"
+                    CornerRadius="32"
+                    Visibility="Collapsed">
+                <Border.Background>
+                    <lg:LiquidGlassBrush BlurAmount="1.9"
+                                         BloomAmount="0.18"
+                                         Brightness="0.02"
+                                         Contrast="1.06"
+                                         Saturation="1.10"
+                                         RefThickness="42"
+                                         RefFactor="2.35"
+                                         RefDispersion="5"
+                                         DispersionRange="0.42"
+                                         RefFresnelFactor="26"
+                                         GlareAngle="-145"
+                                         GlareFactor="70"
+                                         GlareRange="38"
+                                         TintA="0.09"
+                                         TintR="185"
+                                         TintG="215"
+                                         TintB="255"
+                                         ShapeRadius="0.96"
+                                         ShapeRoundness="3.7"/>
+                </Border.Background>
+                <StackPanel Orientation="Horizontal"
+                            Spacing="2">
+                    <Button x:Name="HomeButton"
+                            Style="{StaticResource DockButtonStyle}"
+                            Click="Home_Click">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="⌂"
+                                       FontSize="20"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="首页"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="LibraryButton"
+                            Style="{StaticResource DockButtonStyle}"
+                            Click="Library_Click">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="▦"
+                                       FontSize="19"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="媒体库"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="ServersButton"
+                            Style="{StaticResource DockButtonStyle}"
+                            Click="Servers_Click">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="◫"
+                                       FontSize="19"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="服务器"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="SettingsButton"
+                            Style="{StaticResource DockButtonStyle}"
+                            Click="Settings_Click">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="⚙"
+                                       FontSize="19"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="设置"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
