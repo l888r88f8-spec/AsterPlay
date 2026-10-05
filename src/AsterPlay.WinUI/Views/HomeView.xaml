@@ -112,7 +112,7 @@
                     VerticalScrollMode="Enabled"
                     VerticalScrollBarVisibility="Hidden"
                     HorizontalScrollMode="Disabled"
-                    HorizontalScrollBarVisibility="Disabled"
+                    HorizontalScrollBarVisibility="Hidden"
                     ZoomMode="Disabled"
                     SizeChanged="HomeScrollViewer_SizeChanged">
             <StackPanel x:Name="HomeContentStack"
