@@ -92,12 +92,18 @@ public sealed partial class MainWindow : Window
             var input = Marshal.PtrToStructure<LowLevelMouseInput>(lParam);
             var delta = unchecked((short)((input.MouseData >> 16) & 0xffff));
 
-            if (delta != 0)
+            var hitWindow = WindowFromPoint(input.Point);
+            _ = GetWindowThreadProcessId(hitWindow, out var hitProcessId);
+            var currentProcessId = GetCurrentProcessId();
+
+            if (delta != 0 &&
+                hitWindow != IntPtr.Zero &&
+                hitProcessId == currentProcessId)
             {
-                // WinUI 3 content can be hosted across composition/child-site
-                // windows that are not a stable traditional HWND child tree.
-                // Foreground-window ownership is the reliable boundary here;
-                // do not reject wheel input based on pointer-region HWNDs.
+                // WinUI's XAML/composition host windows do not form a stable
+                // traditional child-HWND tree, but they do belong to this
+                // process. Process ownership gives us a DPI-independent input
+                // boundary without stealing wheel input outside AsterPlay.
                 homeView.HandleNativeMouseWheel(delta);
 
                 var now = DateTimeOffset.UtcNow;
@@ -106,7 +112,8 @@ public sealed partial class MainWindow : Window
                     _lastNativeWheelDiagnosticAt = now;
                     PlaybackLog.Write(
                         "WinUINativeWheel",
-                        $"low-level-wheel: delta={delta}, screen={input.Point.X},{input.Point.Y}");
+                        $"low-level-wheel: delta={delta}, screen={input.Point.X},{input.Point.Y}, " +
+                        $"hit=0x{hitWindow.ToInt64():X}, pid={hitProcessId}");
                 }
 
                 return (IntPtr)1;
@@ -876,5 +883,17 @@ public sealed partial class MainWindow : Window
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr WindowFromPoint(
+        NativePoint point);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(
+        IntPtr hWnd,
+        out uint processId);
+
+    [DllImport("kernel32.dll")]
+    private static extern uint GetCurrentProcessId();
 
 }
