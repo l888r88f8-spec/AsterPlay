@@ -349,8 +349,8 @@
                                                            MinItemHeight="282"
                                                            MinColumnSpacing="14"
                                                            MinRowSpacing="18"
-                                                           ItemsJustification="SpaceBetween"
-                                                           ItemsStretch="Fill"/>
+                                                           ItemsJustification="Start"
+                                                           ItemsStretch="None"/>
                                     </ItemsRepeater.Layout>
 
                                     <ItemsRepeater.ItemTemplate>
