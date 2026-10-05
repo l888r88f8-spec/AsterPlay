@@ -146,6 +146,33 @@ public sealed partial class HomeView : UserControl
             MediaRequested?.Invoke(this, tile.Item);
     }
 
+    private void HomeScrollViewer_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is not ScrollViewer scroller || scroller.ScrollableHeight <= 0)
+            return;
+
+        var point = e.GetCurrentPoint(scroller);
+        var delta = point.Properties.MouseWheelDelta;
+
+        if (delta == 0)
+            return;
+
+        var step = Math.Clamp(Math.Abs(delta) * 1.05, 72, 190);
+        var target = delta > 0
+            ? scroller.VerticalOffset - step
+            : scroller.VerticalOffset + step;
+
+        target = Math.Clamp(target, 0, scroller.ScrollableHeight);
+
+        scroller.ChangeView(
+            horizontalOffset: null,
+            verticalOffset: target,
+            zoomFactor: null,
+            disableAnimation: true);
+
+        e.Handled = true;
+    }
+
     private void HorizontalRail_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
     {
         if (sender is not ScrollViewer scroller || scroller.ScrollableWidth <= 0)
