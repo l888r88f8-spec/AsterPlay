@@ -44,6 +44,7 @@ public sealed partial class HomeView : UserControl
     {
         LoadingRing.IsActive = true;
         LoadingRing.Visibility = Visibility.Visible;
+        var loadTimer = System.Diagnostics.Stopwatch.StartNew();
 
         try
         {
@@ -89,6 +90,14 @@ public sealed partial class HomeView : UserControl
             LoadingRing.IsActive = false;
             LoadingRing.Visibility = Visibility.Collapsed;
             DispatcherQueue.TryEnqueue(UpdateResumeButtons);
+
+            loadTimer.Stop();
+            PlaybackLog.Write(
+                "Performance",
+                $"WinUI home load: {loadTimer.Elapsed.TotalMilliseconds:0} ms, " +
+                $"libraries={_libraries.Count}, resume={_resume.Count}, sections={_sections.Count}, " +
+                $"workingSet={Environment.WorkingSet / 1024d / 1024d:0.0} MB, " +
+                $"managed={GC.GetTotalMemory(false) / 1024d / 1024d:0.0} MB");
         }
     }
 
