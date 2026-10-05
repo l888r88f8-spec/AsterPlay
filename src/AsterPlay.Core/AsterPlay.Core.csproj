@@ -22,6 +22,16 @@
     <Compile Include="..\AsterPlay\Services\AppSettingsStore.cs" Link="Services\AppSettingsStore.cs" />
     <Compile Include="..\AsterPlay\Services\Playback\PlaybackProfile.cs" Link="Services\Playback\PlaybackProfile.cs" />
     <Compile Include="..\AsterPlay\ViewModels\LibraryViewModel.cs" Link="ViewModels\LibraryViewModel.cs" />
+    <Compile Include="..\AsterPlay\ViewModels\DetailsViewModel.cs" Link="ViewModels\DetailsViewModel.cs" />
+    <Compile Include="..\AsterPlay\Models\DanmakuModels.cs" Link="Models\DanmakuModels.cs" />
+    <Compile Include="..\AsterPlay\Models\DanmakuSourceModels.cs" Link="Models\DanmakuSourceModels.cs" />
+    <Compile Include="..\AsterPlay\Services\Danmaku\IDanmakuSource.cs" Link="Services\Danmaku\IDanmakuSource.cs" />
+    <Compile Include="..\AsterPlay\Services\Danmaku\DanmakuApiSupport.cs" Link="Services\Danmaku\DanmakuApiSupport.cs" />
+    <Compile Include="..\AsterPlay\Services\Danmaku\LogVarDanmakuSource.cs" Link="Services\Danmaku\LogVarDanmakuSource.cs" />
+    <Compile Include="..\AsterPlay\Services\Danmaku\DanmakuService.cs" Link="Services\Danmaku\DanmakuService.cs" />
+    <Compile Include="..\AsterPlay\Services\Danmaku\DanmakuSettingsStore.cs" Link="Services\Danmaku\DanmakuSettingsStore.cs" />
+    <Compile Include="..\AsterPlay\Services\Danmaku\DanmakuSeriesMatchStore.cs" Link="Services\Danmaku\DanmakuSeriesMatchStore.cs" />
+    <Compile Include="..\AsterPlay\Services\Danmaku\DanmakuSourceSettingsStore.cs" Link="Services\Danmaku\DanmakuSourceSettingsStore.cs" />
     <Compile Include="..\AsterPlay\Services\Mpv\MpvClient.cs" Link="Services\Mpv\MpvClient.cs" />
     <Compile Include="..\AsterPlay\Services\Mpv\MpvDiagnosticSnapshot.cs" Link="Services\Mpv\MpvDiagnosticSnapshot.cs" />
     <Compile Include="..\AsterPlay\Services\Mpv\PlayerTrack.cs" Link="Services\Mpv\PlayerTrack.cs" />
