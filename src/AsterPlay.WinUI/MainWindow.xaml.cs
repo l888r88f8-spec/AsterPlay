@@ -75,6 +75,7 @@ public sealed partial class MainWindow : Window
 
     private void ShowLogin(string? message = null)
     {
+        ExitPlayerChrome();
         _authenticated = false;
         _currentSection = "login";
         NavigationDock.Visibility = Visibility.Collapsed;
@@ -93,6 +94,7 @@ public sealed partial class MainWindow : Window
 
     private void ShowHome()
     {
+        ExitPlayerChrome();
         if (!_client.IsAuthenticated)
         {
             ShowLogin();
@@ -113,6 +115,7 @@ public sealed partial class MainWindow : Window
 
     private void ShowLibrary()
     {
+        ExitPlayerChrome();
         if (!_client.IsAuthenticated)
         {
             ShowLogin();
@@ -131,6 +134,7 @@ public sealed partial class MainWindow : Window
 
     private void ShowServers(bool returnToLogin)
     {
+        ExitPlayerChrome();
         _currentSection = "servers";
         NavigationDock.Visibility = _authenticated && !returnToLogin
             ? Visibility.Visible
@@ -154,6 +158,7 @@ public sealed partial class MainWindow : Window
 
     private void ShowSettings()
     {
+        ExitPlayerChrome();
         if (!_authenticated)
         {
             ShowLogin();
@@ -178,7 +183,7 @@ public sealed partial class MainWindow : Window
         try
         {
             PageTitleBlock.Text = "正在准备播放…";
-            NavigationDock.Visibility = Visibility.Collapsed;
+            EnterPlayerChrome();
 
             var launch = await _client.GetPlayableStreamAsync(item);
             var player = new PlayerPocView(_client, launch);
@@ -214,6 +219,25 @@ public sealed partial class MainWindow : Window
             else
                 ShowHome();
         }
+    }
+
+    private void EnterPlayerChrome()
+    {
+        NavigationDock.Visibility = Visibility.Collapsed;
+        AppTitleBar.Visibility = Visibility.Collapsed;
+        TitleBarRow.Height = new GridLength(0);
+
+        Grid.SetRow(ContentLayer, 0);
+        Grid.SetRowSpan(ContentLayer, 2);
+    }
+
+    private void ExitPlayerChrome()
+    {
+        Grid.SetRow(ContentLayer, 1);
+        Grid.SetRowSpan(ContentLayer, 1);
+
+        TitleBarRow.Height = new GridLength(48);
+        AppTitleBar.Visibility = Visibility.Visible;
     }
 
     private void Home_Click(object sender, RoutedEventArgs e) => ShowHome();
