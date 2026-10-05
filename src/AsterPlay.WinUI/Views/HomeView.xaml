@@ -5,9 +5,14 @@
     xmlns:lg="using:LiquidGlassWinUI">
 
     <Grid>
-        <ScrollViewer>
-            <StackPanel Padding="48,28,48,132"
-                        Spacing="30">
+        <ScrollViewer x:Name="HomeScrollViewer"
+                      VerticalScrollMode="Enabled"
+                      VerticalScrollBarVisibility="Hidden"
+                      HorizontalScrollMode="Disabled"
+                      HorizontalScrollBarVisibility="Disabled"
+                      ZoomMode="Disabled">
+            <StackPanel Padding="48,24,48,136"
+                        Spacing="28">
                 <Grid Height="330">
                     <Border CornerRadius="32">
                         <Border.Background>
@@ -37,8 +42,8 @@
                                 </Rectangle.Fill>
                             </Rectangle>
                             <StackPanel VerticalAlignment="Bottom"
-                                        Margin="34"
-                                        MaxWidth="680"
+                                        Margin="36"
+                                        MaxWidth="700"
                                         HorizontalAlignment="Left"
                                         Spacing="10">
                                 <TextBlock x:Name="WelcomeBlock"
@@ -48,7 +53,7 @@
                                 <TextBlock x:Name="HeroTitleBlock"
                                            Text="AsterPlay"
                                            Foreground="White"
-                                           FontSize="42"
+                                           FontSize="46"
                                            FontWeight="SemiBold"
                                            TextWrapping="Wrap"/>
                                 <TextBlock x:Name="HeroMetaBlock"
@@ -80,11 +85,13 @@
                                 Click="OpenLibrary_Click"/>
                     </Grid>
 
-                    <ScrollViewer HorizontalScrollMode="Enabled"
+                    <ScrollViewer x:Name="LibrariesScroller"
+                                  HorizontalScrollMode="Enabled"
                                   HorizontalScrollBarVisibility="Hidden"
                                   VerticalScrollMode="Disabled"
                                   VerticalScrollBarVisibility="Disabled"
-                                  ZoomMode="Disabled">
+                                  ZoomMode="Disabled"
+                                  PointerWheelChanged="HorizontalRail_PointerWheelChanged">
                         <ItemsControl x:Name="LibrariesGrid">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -141,11 +148,13 @@
                                FontSize="24"
                                FontWeight="SemiBold"/>
 
-                    <ScrollViewer HorizontalScrollMode="Enabled"
+                    <ScrollViewer x:Name="ResumeScroller"
+                                  HorizontalScrollMode="Enabled"
                                   HorizontalScrollBarVisibility="Hidden"
                                   VerticalScrollMode="Disabled"
                                   VerticalScrollBarVisibility="Disabled"
-                                  ZoomMode="Disabled">
+                                  ZoomMode="Disabled"
+                                  PointerWheelChanged="HorizontalRail_PointerWheelChanged">
                         <ItemsControl x:Name="ResumeGrid">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -210,47 +219,78 @@
                 </StackPanel>
 
                 <StackPanel Spacing="14">
-                    <TextBlock Text="最新媒体"
-                               Foreground="White"
-                               FontSize="24"
-                               FontWeight="SemiBold"/>
-                    <GridView x:Name="LatestGrid"
-                              SelectionMode="None"
-                              IsItemClickEnabled="True"
-                              ItemClick="LatestGrid_ItemClick">
-                        <GridView.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <ItemsWrapGrid Orientation="Horizontal"
-                                               MaximumRowsOrColumns="1"/>
-                            </ItemsPanelTemplate>
-                        </GridView.ItemsPanel>
-                        <GridView.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Width="164"
+                    <Grid>
+                        <TextBlock Text="最新媒体"
+                                   Foreground="White"
+                                   FontSize="24"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Text="最近加入"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Center"
+                                   Foreground="#6F7B8D"
+                                   FontSize="12"/>
+                    </Grid>
+
+                    <ScrollViewer x:Name="LatestScroller"
+                                  HorizontalScrollMode="Enabled"
+                                  HorizontalScrollBarVisibility="Hidden"
+                                  VerticalScrollMode="Disabled"
+                                  VerticalScrollBarVisibility="Disabled"
+                                  ZoomMode="Disabled"
+                                  PointerWheelChanged="HorizontalRail_PointerWheelChanged">
+                        <ItemsControl x:Name="LatestGrid">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Width="164"
                                             Margin="0,0,14,0"
-                                            Spacing="8">
-                                    <Border Width="164"
-                                            Height="238"
-                                            CornerRadius="18"
-                                            Background="#171C26"
-                                            BorderBrush="#32FFFFFF"
-                                            BorderThickness="1">
-                                        <Image Source="{Binding PosterUrl}"
-                                               Stretch="UniformToFill"/>
-                                    </Border>
-                                    <TextBlock Text="{Binding Title}"
-                                               Foreground="White"
-                                               FontSize="14"
-                                               FontWeight="SemiBold"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding Meta}"
-                                               Foreground="#8792A2"
-                                               FontSize="12"
-                                               TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </GridView.ItemTemplate>
-                    </GridView>
+                                            Padding="0"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Tag="{Binding}"
+                                            Click="LatestTile_Click">
+                                        <StackPanel Width="164"
+                                                    Spacing="8">
+                                            <Border Width="164"
+                                                    Height="238"
+                                                    CornerRadius="18"
+                                                    Background="#171C26"
+                                                    BorderBrush="#32FFFFFF"
+                                                    BorderThickness="1">
+                                                <Grid>
+                                                    <Image Source="{Binding PosterUrl}"
+                                                           Stretch="UniformToFill"/>
+                                                    <Rectangle VerticalAlignment="Bottom"
+                                                               Height="56">
+                                                        <Rectangle.Fill>
+                                                            <LinearGradientBrush StartPoint="0,0"
+                                                                                 EndPoint="0,1">
+                                                                <GradientStop Color="#00000000" Offset="0"/>
+                                                                <GradientStop Color="#72000000" Offset="1"/>
+                                                            </LinearGradientBrush>
+                                                        </Rectangle.Fill>
+                                                    </Rectangle>
+                                                </Grid>
+                                            </Border>
+                                            <TextBlock Text="{Binding Title}"
+                                                       Foreground="White"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Meta}"
+                                                       Foreground="#8792A2"
+                                                       FontSize="12"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>
