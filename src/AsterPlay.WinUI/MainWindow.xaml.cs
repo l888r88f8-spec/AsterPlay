@@ -33,8 +33,10 @@ public sealed partial class MainWindow : Window
         var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
 
+        _appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
+        ConfigureNativeTitleBar(isLight: true);
 
         Closed += MainWindow_Closed;
         PageTitleBlock.Text = "首页";
@@ -59,11 +61,41 @@ public sealed partial class MainWindow : Window
             (0.7152 * background.G) +
             (0.0722 * background.B);
 
-        RootGrid.RequestedTheme = luminance >= 128
+        var isLight = luminance >= 128;
+        RootGrid.RequestedTheme = isLight
             ? ElementTheme.Light
             : ElementTheme.Dark;
 
+        ConfigureNativeTitleBar(isLight);
+
         StartupDiagnostics.Write($"System theme applied: {RootGrid.RequestedTheme}");
+    }
+
+    private void ConfigureNativeTitleBar(bool isLight)
+    {
+        var transparent = Windows.UI.Color.FromArgb(0, 0, 0, 0);
+        var foreground = isLight
+            ? Windows.UI.Color.FromArgb(255, 24, 28, 36)
+            : Windows.UI.Color.FromArgb(255, 245, 247, 250);
+        var hover = isLight
+            ? Windows.UI.Color.FromArgb(24, 0, 0, 0)
+            : Windows.UI.Color.FromArgb(28, 255, 255, 255);
+        var pressed = isLight
+            ? Windows.UI.Color.FromArgb(42, 0, 0, 0)
+            : Windows.UI.Color.FromArgb(46, 255, 255, 255);
+
+        var titleBar = _appWindow.TitleBar;
+        titleBar.ExtendsContentIntoTitleBar = true;
+        titleBar.BackgroundColor = transparent;
+        titleBar.InactiveBackgroundColor = transparent;
+        titleBar.ButtonBackgroundColor = transparent;
+        titleBar.ButtonInactiveBackgroundColor = transparent;
+        titleBar.ButtonForegroundColor = foreground;
+        titleBar.ButtonInactiveForegroundColor = foreground;
+        titleBar.ButtonHoverBackgroundColor = hover;
+        titleBar.ButtonHoverForegroundColor = foreground;
+        titleBar.ButtonPressedBackgroundColor = pressed;
+        titleBar.ButtonPressedForegroundColor = foreground;
     }
 
     private void MainWindow_Closed(object sender, WindowEventArgs args)
