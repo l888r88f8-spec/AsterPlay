@@ -13,11 +13,11 @@
           Loaded="RootGrid_Loaded">
         <Grid.Resources>
         <Style x:Key="DockButtonStyle" TargetType="Button">
-            <Setter Property="MinWidth" Value="92"/>
-            <Setter Property="Height" Value="68"/>
+            <Setter Property="MinWidth" Value="84"/>
+            <Setter Property="Height" Value="56"/>
             <Setter Property="Margin" Value="2"/>
-            <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="CornerRadius" Value="22"/>
+            <Setter Property="Padding" Value="9,4"/>
+            <Setter Property="CornerRadius" Value="19"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{ThemeResource AsterSecondaryTextBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -78,16 +78,16 @@
             <Border x:Name="NavigationDock"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Bottom"
-                    Margin="0,0,0,22"
-                    Padding="8"
-                    CornerRadius="38"
+                    Margin="0,0,0,12"
+                    Padding="6"
+                    CornerRadius="32"
                     BorderBrush="#66FFFFFF"
                     BorderThickness="1"
                     Visibility="Visible">
                 <Border.Background>
                     <AcrylicBrush TintColor="{ThemeResource AsterHeroFadeEndColor}"
-                                  TintOpacity="0.20"
-                                  TintLuminosityOpacity="0.72"
+                                  TintOpacity="0.10"
+                                  TintLuminosityOpacity="0.50"
                                   FallbackColor="{ThemeResource AsterHeroFadeEndColor}"/>
                 </Border.Background>
                 <StackPanel Orientation="Horizontal"
@@ -98,10 +98,10 @@
                         <StackPanel Spacing="2">
                             <FontIcon FontFamily="Segoe MDL2 Assets"
                                       Glyph="&#xE80F;"
-                                      FontSize="20"
+                                      FontSize="18"
                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="首页"
-                                       FontSize="11"
+                                       FontSize="10"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -111,10 +111,10 @@
                         <StackPanel Spacing="2">
                             <FontIcon FontFamily="Segoe MDL2 Assets"
                                       Glyph="&#xE8F1;"
-                                      FontSize="20"
+                                      FontSize="18"
                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="媒体库"
-                                       FontSize="11"
+                                       FontSize="10"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -124,10 +124,10 @@
                         <StackPanel Spacing="2">
                             <FontIcon FontFamily="Segoe MDL2 Assets"
                                       Glyph="&#xE7F8;"
-                                      FontSize="20"
+                                      FontSize="18"
                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="服务器"
-                                       FontSize="11"
+                                       FontSize="10"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -137,10 +137,10 @@
                         <StackPanel Spacing="2">
                             <FontIcon FontFamily="Segoe MDL2 Assets"
                                       Glyph="&#xE713;"
-                                      FontSize="20"
+                                      FontSize="18"
                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="设置"
-                                       FontSize="11"
+                                       FontSize="10"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
