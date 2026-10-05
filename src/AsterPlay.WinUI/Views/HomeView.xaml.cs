@@ -18,17 +18,20 @@ public sealed partial class HomeView : UserControl
     private readonly ObservableCollection<HomeLibrarySection> _sections = [];
 
     private EmbyItem? _heroItem;
+    private readonly bool _noServerMode;
     private bool _hasCachedSnapshot;
 
     public event EventHandler? LibraryRequested;
     public event EventHandler<EmbyItem>? MediaRequested;
     public event EventHandler<EmbyItem>? PlayRequested;
     public event EventHandler? AuthenticationFailed;
+    public event EventHandler? ServerRequested;
 
-    public HomeView(EmbyClient client)
+    public HomeView(EmbyClient client, bool noServerMode = false)
     {
-        StartupDiagnostics.Write("HomeView constructor: entered");
+        StartupDiagnostics.Write($"HomeView constructor: entered; noServerMode={noServerMode}");
         _client = client;
+        _noServerMode = noServerMode;
 
         using (StartupDiagnostics.Measure("HomeView.InitializeComponent"))
             InitializeComponent();
@@ -43,14 +46,16 @@ public sealed partial class HomeView : UserControl
             ? "欢迎回来"
             : $"欢迎回来，{_client.UserName}";
 
-        // First frame is deliberately data-free. Cached metadata and server
-        // refresh are scheduled only after the HomeView has been loaded so
-        // neither JSON deserialization nor network work can block the first
-        // visible home frame.
-        LoadingRing.IsActive = false;
-        LoadingRing.Visibility = Visibility.Collapsed;
+        if (_noServerMode)
+        {
+            ShowNoServerState();
+        }
+        else
+        {
+            ShowLoadingState();
+            Loaded += HomeView_Loaded;
+        }
 
-        Loaded += HomeView_Loaded;
         StartupDiagnostics.Write("HomeView constructor: completed");
     }
 
@@ -83,6 +88,7 @@ public sealed partial class HomeView : UserControl
         {
             ApplySnapshot(snapshot);
             _hasCachedSnapshot = true;
+            ShowContentState();
 
             PlaybackLog.Write(
                 "WinUIHomeSnapshot",
@@ -96,8 +102,8 @@ public sealed partial class HomeView : UserControl
     private async Task LoadAsync()
     {
         StartupDiagnostics.Write($"HomeView.LoadAsync: begin; cachedSnapshot={_hasCachedSnapshot}");
-        LoadingRing.IsActive = false;
-        LoadingRing.Visibility = Visibility.Collapsed;
+        if (!_hasCachedSnapshot)
+            ShowLoadingState();
         var loadTimer = System.Diagnostics.Stopwatch.StartNew();
 
         try
@@ -153,6 +159,7 @@ public sealed partial class HomeView : UserControl
                 snapshot);
 
             _hasCachedSnapshot = true;
+            ShowContentState();
             StartupDiagnostics.Write("HomeView.LoadAsync: refreshed snapshot saved");
         }
         catch (Exception ex)
@@ -167,16 +174,11 @@ public sealed partial class HomeView : UserControl
 
             if (!_hasCachedSnapshot)
             {
-                HeroTitleBlock.Text = "首页加载失败";
-                HeroMetaBlock.Text = UserError.GetMessage(ex, "加载首页");
-                HeroOverviewBlock.Text = "";
-                HeroPlayButton.IsEnabled = false;
+                ShowLoadingError(UserError.GetMessage(ex, "加载首页"));
             }
         }
         finally
         {
-            LoadingRing.IsActive = false;
-            LoadingRing.Visibility = Visibility.Collapsed;
             DispatcherQueue.TryEnqueue(UpdateResumeButtons);
 
             StartupDiagnostics.Write("HomeView.LoadAsync: refresh completed");
@@ -189,6 +191,49 @@ public sealed partial class HomeView : UserControl
                 $"managed={GC.GetTotalMemory(false) / 1024d / 1024d:0.0} MB");
         }
     }
+
+    private void ShowNoServerState()
+    {
+        HomeScrollViewer.Visibility = Visibility.Collapsed;
+        LoadingState.Visibility = Visibility.Collapsed;
+        LoadingRing.IsActive = false;
+        NoServerState.Visibility = Visibility.Visible;
+        StartupDiagnostics.Write("HomeView state: NoServer");
+    }
+
+    private void ShowLoadingState()
+    {
+        HomeScrollViewer.Visibility = Visibility.Collapsed;
+        NoServerState.Visibility = Visibility.Collapsed;
+        LoadingTextBlock.Text = "正在加载";
+        LoadingRing.IsActive = true;
+        LoadingState.Visibility = Visibility.Visible;
+        StartupDiagnostics.Write("HomeView state: Loading");
+    }
+
+    private void ShowContentState()
+    {
+        NoServerState.Visibility = Visibility.Collapsed;
+        LoadingState.Visibility = Visibility.Collapsed;
+        LoadingRing.IsActive = false;
+        HomeScrollViewer.Visibility = Visibility.Visible;
+        StartupDiagnostics.Write("HomeView state: Content");
+    }
+
+    private void ShowLoadingError(string message)
+    {
+        HomeScrollViewer.Visibility = Visibility.Collapsed;
+        NoServerState.Visibility = Visibility.Collapsed;
+        LoadingRing.IsActive = false;
+        LoadingTextBlock.Text = string.IsNullOrWhiteSpace(message)
+            ? "加载失败，请检查服务器连接"
+            : message;
+        LoadingState.Visibility = Visibility.Visible;
+        StartupDiagnostics.Write($"HomeView state: LoadError; {message}");
+    }
+
+    private void GoToServers_Click(object sender, RoutedEventArgs e) =>
+        ServerRequested?.Invoke(this, EventArgs.Empty);
 
     private void ApplySnapshot(HomeSnapshot snapshot)
     {
