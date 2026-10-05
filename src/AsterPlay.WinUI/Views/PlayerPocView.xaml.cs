@@ -314,12 +314,35 @@ public sealed partial class PlayerPocView : UserControl
         _mpv.SetD3D11CompositionSize(width, height);
     }
 
-    private void PlayPause_Click(object sender, RoutedEventArgs e)
+    private void PlayPause_Click(object sender, RoutedEventArgs e) =>
+        TogglePauseAndReport();
+
+    private void TogglePauseAndReport()
     {
         if (_mpv is null)
             return;
 
+        var wasPaused = _mpv.IsPaused;
         _mpv.TogglePause();
+
+        _lastPositionTicks =
+            (long)Math.Max(
+                0,
+                ResolveTimelinePositionSeconds() * 10_000_000d);
+
+        if (_danmakuVisible)
+            DanmakuOverlay.Sync(
+                ResolveTimelinePositionSeconds(),
+                _mpv.IsPaused);
+
+        _ = SafeReportAsync(() =>
+            _client.ReportPlaybackProgressAsync(
+                _launch,
+                _lastPositionTicks,
+                _mpv.IsPaused,
+                _mpv.Volume,
+                wasPaused ? "Unpause" : "Pause"));
+
         ShowControls();
     }
 
@@ -1210,7 +1233,7 @@ public sealed partial class PlayerPocView : UserControl
         switch (e.Key)
         {
             case Windows.System.VirtualKey.Space:
-                _mpv?.TogglePause();
+                TogglePauseAndReport();
                 e.Handled = true;
                 break;
 
