@@ -6,14 +6,16 @@
     xmlns:controls="using:AsterPlay.WinUI.Controls">
 
     <UserControl.Resources>
+        <!-- Media tiles keep a transparent surface in every pointer state.
+             Hover feedback is handled by scale only, so there is no white card flash. -->
         <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
-                         Color="#14000000"/>
+                         Color="Transparent"/>
         <SolidColorBrush x:Key="ButtonBackgroundPressed"
-                         Color="#22000000"/>
+                         Color="Transparent"/>
         <SolidColorBrush x:Key="ButtonBorderBrushPointerOver"
-                         Color="#44FFFFFF"/>
+                         Color="Transparent"/>
         <SolidColorBrush x:Key="ButtonBorderBrushPressed"
-                         Color="#55FFFFFF"/>
+                         Color="Transparent"/>
         <Style x:Key="RoundActionButtonStyle" TargetType="Button">
             <Setter Property="Width" Value="38"/>
             <Setter Property="Height" Value="38"/>
@@ -25,13 +27,13 @@
             <Setter Property="FontSize" Value="20"/>
             <Setter Property="Background">
                 <Setter.Value>
-                    <lg:LiquidGlassBrush BlurAmount="1.25"
-                                         BloomAmount="0.10"
-                                         RefThickness="20"
-                                         RefFactor="1.75"
-                                         RefDispersion="3.2"
-                                         GlareFactor="48"
-                                         TintA="0.08"
+                    <lg:LiquidGlassBrush BlurAmount="2.75"
+                                         BloomAmount="0.12"
+                                         RefThickness="26"
+                                         RefFactor="1.95"
+                                         RefDispersion="4.2"
+                                         GlareFactor="54"
+                                         TintA="0.055"
                                          TintR="205"
                                          TintG="225"
                                          TintB="255"
@@ -60,7 +62,22 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Background" Value="#3811151D"/>
+            <Setter Property="Background">
+                <Setter.Value>
+                    <lg:LiquidGlassBrush BlurAmount="3.15"
+                                         BloomAmount="0.12"
+                                         RefThickness="30"
+                                         RefFactor="2.05"
+                                         RefDispersion="4.6"
+                                         GlareFactor="58"
+                                         TintA="0.10"
+                                         TintR="220"
+                                         TintG="230"
+                                         TintB="248"
+                                         ShapeRadius="0.96"
+                                         ShapeRoundness="3.9"/>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
 
@@ -73,6 +90,16 @@
                                   LazyLoadingEnabled="False"
                                   Stretch="UniformToFill"
                                   Opacity="0.84"
+                                  RenderTransformOrigin="0.5,0.5">
+                <controls:CachedImage.RenderTransform>
+                    <ScaleTransform ScaleX="1.12"
+                                    ScaleY="1.12"/>
+                </controls:CachedImage.RenderTransform>
+            </controls:CachedImage>
+            <controls:CachedImage x:Name="PageBackdropImageAlt"
+                                  LazyLoadingEnabled="False"
+                                  Stretch="UniformToFill"
+                                  Opacity="0"
                                   RenderTransformOrigin="0.5,0.5">
                 <controls:CachedImage.RenderTransform>
                     <ScaleTransform ScaleX="1.12"
@@ -104,6 +131,98 @@
             </Rectangle>
         </Grid>
 
+        <!-- Fixed controls live outside the ScrollViewer so they never move with page content. -->
+        <Grid x:Name="FloatingTopControls"
+              Margin="42,34,172,0"
+              VerticalAlignment="Top"
+              Canvas.ZIndex="80">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Button x:Name="ServerPillButton"
+                    Grid.Column="0"
+                    Height="58"
+                    MinWidth="176"
+                    Padding="17,0"
+                    CornerRadius="29"
+                    BorderBrush="#48FFFFFF"
+                    BorderThickness="1"
+                    Click="ServerPill_Click">
+                <Button.Background>
+                    <lg:LiquidGlassBrush BlurAmount="3.45"
+                                         BloomAmount="0.15"
+                                         RefThickness="38"
+                                         RefFactor="2.35"
+                                         RefDispersion="5.1"
+                                         GlareFactor="62"
+                                         TintA="0.075"
+                                         TintR="232"
+                                         TintG="238"
+                                         TintB="255"
+                                         ShapeRadius="0.97"
+                                         ShapeRoundness="4.0"/>
+                </Button.Background>
+                <StackPanel Orientation="Horizontal"
+                            Spacing="10"
+                            VerticalAlignment="Center">
+                    <Border Width="30"
+                            Height="30"
+                            CornerRadius="15"
+                            BorderBrush="#44FFFFFF"
+                            BorderThickness="1"
+                            Background="#24000000">
+                        <TextBlock Text="A"
+                                   Foreground="White"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock x:Name="ServerNameBlock"
+                               Text="服务器"
+                               Foreground="White"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="⌄"
+                               Foreground="#DFFFFFFF"
+                               FontSize="14"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <Button x:Name="SearchButton"
+                    Grid.Column="2"
+                    Width="58"
+                    Height="58"
+                    Padding="0"
+                    CornerRadius="29"
+                    BorderBrush="#48FFFFFF"
+                    BorderThickness="1"
+                    Click="Search_Click">
+                <Button.Background>
+                    <lg:LiquidGlassBrush BlurAmount="3.45"
+                                         BloomAmount="0.15"
+                                         RefThickness="38"
+                                         RefFactor="2.35"
+                                         RefDispersion="5.1"
+                                         GlareFactor="62"
+                                         TintA="0.075"
+                                         TintR="232"
+                                         TintG="238"
+                                         TintB="255"
+                                         ShapeRadius="0.98"
+                                         ShapeRoundness="4.0"/>
+                </Button.Background>
+                <FontIcon Glyph="&#xE721;"
+                          Foreground="White"
+                          FontSize="22"/>
+            </Button>
+        </Grid>
+
         <ScrollViewer x:Name="HomeScrollViewer"
                       Visibility="Visible"
                       Opacity="0"
@@ -127,7 +246,12 @@
                       Margin="-28,0,-28,-172">
                     <controls:CachedImage x:Name="HeroImage"
                                           LazyLoadingEnabled="False"
-                                          Stretch="UniformToFill"/>
+                                          Stretch="UniformToFill"
+                                          Opacity="1"/>
+                    <controls:CachedImage x:Name="HeroImageAlt"
+                                          LazyLoadingEnabled="False"
+                                          Stretch="UniformToFill"
+                                          Opacity="0"/>
 
                     <Rectangle>
                         <Rectangle.Fill>
@@ -141,93 +265,6 @@
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
-
-                    <!-- Floating top controls -->
-                    <Grid Margin="42,34,42,0"
-                          VerticalAlignment="Top">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <Button x:Name="ServerPillButton"
-                                Grid.Column="0"
-                                Height="58"
-                                MinWidth="180"
-                                Padding="17,0"
-                                CornerRadius="29"
-                                BorderBrush="#55FFFFFF"
-                                BorderThickness="1"
-                                Click="ServerPill_Click">
-                            <Button.Background>
-                                <lg:LiquidGlassBrush BlurAmount="2.05"
-                                                     BloomAmount="0.18"
-                                                     RefThickness="34"
-                                                     RefFactor="2.15"
-                                                     RefDispersion="4.5"
-                                                     GlareFactor="62"
-                                                     TintA="0.18"
-                                                     TintR="232"
-                                                     TintG="238"
-                                                     TintB="255"
-                                                     ShapeRadius="0.96"
-                                                     ShapeRoundness="3.9"/>
-                            </Button.Background>
-                            <StackPanel Orientation="Horizontal"
-                                        Spacing="10"
-                                        VerticalAlignment="Center">
-                                <Border Width="30"
-                                        Height="30"
-                                        CornerRadius="9"
-                                        Background="#44000000">
-                                    <TextBlock Text="A"
-                                               Foreground="White"
-                                               FontSize="13"
-                                               FontWeight="SemiBold"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"/>
-                                </Border>
-                                <TextBlock x:Name="ServerNameBlock"
-                                           Text="服务器"
-                                           Foreground="White"
-                                           FontSize="16"
-                                           FontWeight="SemiBold"
-                                           VerticalAlignment="Center"/>
-                                <TextBlock Text="⌄"
-                                           Foreground="#E6FFFFFF"
-                                           FontSize="14"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <Button Grid.Column="2"
-                                Width="58"
-                                Height="58"
-                                Padding="0"
-                                CornerRadius="29"
-                                BorderBrush="#55FFFFFF"
-                                BorderThickness="1"
-                                Click="Search_Click">
-                            <Button.Background>
-                                <lg:LiquidGlassBrush BlurAmount="2.05"
-                                                     BloomAmount="0.18"
-                                                     RefThickness="34"
-                                                     RefFactor="2.15"
-                                                     RefDispersion="4.5"
-                                                     GlareFactor="62"
-                                                     TintA="0.18"
-                                                     TintR="232"
-                                                     TintG="238"
-                                                     TintB="255"
-                                                     ShapeRadius="0.98"
-                                                     ShapeRoundness="4.0"/>
-                            </Button.Background>
-                            <FontIcon Glyph="&#xE721;"
-                                      Foreground="White"
-                                      FontSize="22"/>
-                        </Button>
-                    </Grid>
 
                     <!-- Hero copy -->
                     <StackPanel VerticalAlignment="Bottom"
@@ -284,6 +321,14 @@
                                     Click="HeroFavorite_Click"/>
                         </StackPanel>
                     </StackPanel>
+
+                    <StackPanel x:Name="HeroIndicatorPanel"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Bottom"
+                                Margin="0,0,0,118"
+                                Spacing="7"
+                                IsHitTestVisible="False"/>
                 </Grid>
 
                 <!-- Continue watching -->
@@ -427,17 +472,11 @@
                 <!-- My media -->
                 <StackPanel Spacing="16">
                     <Grid>
-                        <StackPanel Spacing="2"
-                                    VerticalAlignment="Center">
-                            <TextBlock Text="我的媒体"
-                                       Foreground="{ThemeResource AsterPrimaryTextBrush}"
-                                       FontSize="28"
-                                       FontWeight="SemiBold"/>
-                            <TextBlock Text="浏览你的媒体库"
-                                       Foreground="{ThemeResource AsterSecondaryTextBrush}"
-                                       FontSize="12"
-                                       Opacity="0.82"/>
-                        </StackPanel>
+                        <TextBlock Text="我的媒体"
+                                   Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                                   FontSize="28"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
                         <Button Content="更多  ›"
                                 Style="{StaticResource SectionMoreButtonStyle}"
                                 HorizontalAlignment="Right"
@@ -478,44 +517,9 @@
                                             <controls:CachedImage SourceUrl="{Binding BackdropUrl}"
                                                                   Stretch="UniformToFill"
                                                                   Opacity="0.88"/>
-                                            <Rectangle>
-                                                <Rectangle.Fill>
-                                                    <LinearGradientBrush StartPoint="0,0"
-                                                                         EndPoint="0,1">
-                                                        <GradientStop Color="#12000000" Offset="0"/>
-                                                        <GradientStop Color="#A6000000" Offset="1"/>
-                                                    </LinearGradientBrush>
-                                                </Rectangle.Fill>
-                                            </Rectangle>
-                                            <Border Width="30"
-                                                    Height="30"
-                                                    CornerRadius="15"
-                                                    HorizontalAlignment="Right"
-                                                    VerticalAlignment="Top"
-                                                    Margin="0,12,12,0"
-                                                    Background="#52000000"
-                                                    BorderBrush="#3FFFFFFF"
-                                                    BorderThickness="1">
-                                                <TextBlock Text="›"
-                                                           Foreground="White"
-                                                           FontSize="20"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"
-                                                           Margin="1,-2,0,0"/>
-                                            </Border>
-
-                                            <StackPanel VerticalAlignment="Bottom"
-                                                        Margin="18"
-                                                        Spacing="3">
-                                                <TextBlock Text="{Binding Name}"
-                                                           Foreground="White"
-                                                           FontSize="21"
-                                                           FontWeight="SemiBold"/>
-                                                <TextBlock Text="{Binding Subtitle}"
-                                                           Foreground="#E0E4EA"
-                                                           FontSize="12"
-                                                           Opacity="0.92"/>
-                                            </StackPanel>
+                                            <Border BorderBrush="#24FFFFFF"
+                                                    BorderThickness="1"
+                                                    CornerRadius="20"/>
                                         </Grid>
                                     </Border>
                                 </Button>
