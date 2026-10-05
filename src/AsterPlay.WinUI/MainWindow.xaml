@@ -11,10 +11,10 @@
           Loaded="RootGrid_Loaded">
         <Grid.Resources>
         <Style x:Key="DockButtonStyle" TargetType="Button">
-            <Setter Property="MinWidth" Value="104"/>
-            <Setter Property="Height" Value="54"/>
+            <Setter Property="MinWidth" Value="78"/>
+            <Setter Property="Height" Value="58"/>
             <Setter Property="Margin" Value="3"/>
-            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Padding" Value="10,6"/>
             <Setter Property="CornerRadius" Value="18"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{ThemeResource AsterSecondaryTextBrush}"/>
@@ -130,20 +130,52 @@
                             Spacing="2">
                     <Button x:Name="HomeButton"
                             Style="{StaticResource DockButtonStyle}"
-                            Content="⌂  首页"
-                            Click="Home_Click"/>
+                            Click="Home_Click">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="⌂"
+                                       FontSize="20"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="首页"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                     <Button x:Name="LibraryButton"
                             Style="{StaticResource DockButtonStyle}"
-                            Content="▦  媒体库"
-                            Click="Library_Click"/>
+                            Click="Library_Click">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="▦"
+                                       FontSize="19"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="媒体库"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                     <Button x:Name="ServersButton"
                             Style="{StaticResource DockButtonStyle}"
-                            Content="◫  服务器"
-                            Click="Servers_Click"/>
+                            Click="Servers_Click">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="◫"
+                                       FontSize="19"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="服务器"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                     <Button x:Name="SettingsButton"
                             Style="{StaticResource DockButtonStyle}"
-                            Content="⚙  设置"
-                            Click="Settings_Click"/>
+                            Click="Settings_Click">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="⚙"
+                                       FontSize="19"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="设置"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Border>
         </Grid>
