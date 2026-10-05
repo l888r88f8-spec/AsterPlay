@@ -20,6 +20,12 @@ public sealed class MpvPlaybackEndedEventArgs : EventArgs
     public bool IsError => Reason == 4 || Error < 0;
 }
 
+public enum MpvVideoOutputMode
+{
+    RenderApi,
+    D3D11Composition
+}
+
 public sealed class MpvClient : IDisposable
 {
     private const string DllName = "libmpv-2.dll";
@@ -29,9 +35,13 @@ public sealed class MpvClient : IDisposable
 
     public event EventHandler<MpvPlaybackEndedEventArgs>? PlaybackEnded;
 
-    public MpvClient()
+    public MpvClient(MpvVideoOutputMode videoOutputMode = MpvVideoOutputMode.RenderApi)
     {
-        PlaybackLog.Write("mpv", "Creating mpv for Render API");
+        PlaybackLog.Write(
+            "mpv",
+            videoOutputMode == MpvVideoOutputMode.D3D11Composition
+                ? "Creating mpv for WinUI D3D11 composition output"
+                : "Creating mpv for Render API");
         _handle = Native.mpv_create();
         if (_handle == IntPtr.Zero)
             throw new InvalidOperationException("mpv_create failed.");
@@ -39,8 +49,24 @@ public sealed class MpvClient : IDisposable
         SetOption("config", "no");
         SetOption("load-scripts", "no");
         SetOption("osc", "no");
-        SetOption("vo", "libmpv");
-        SetOption("hwdec", "auto-copy");
+
+        if (videoOutputMode == MpvVideoOutputMode.D3D11Composition)
+        {
+            // mpv 0.41+ can create a composition swap chain without creating
+            // its own HWND. WinUI attaches the resulting IDXGISwapChain to a
+            // SwapChainPanel through ISwapChainPanelNative.
+            SetOption("vo", "gpu-next");
+            SetOption("gpu-api", "d3d11");
+            SetOption("gpu-context", "d3d11");
+            SetOption("d3d11-output-mode", "composition");
+            SetOption("d3d11-composition-size", "1280x720");
+            SetOption("hwdec", "auto");
+        }
+        else
+        {
+            SetOption("vo", "libmpv");
+            SetOption("hwdec", "auto-copy");
+        }
 
         // Keep mpv's normal one-second network readahead, but do not delay the
         // first frame waiting for cache-pause's initial threshold. Once playback
@@ -111,6 +137,30 @@ public sealed class MpvClient : IDisposable
 
     public void SetSpeed(double speed) =>
         SetProperty("speed", Math.Clamp(speed, 0.25, 4.0).ToString("0.###", CultureInfo.InvariantCulture));
+
+    public void SetD3D11CompositionSize(int width, int height)
+    {
+        width = Math.Clamp(width, 1, 16384);
+        height = Math.Clamp(height, 1, 16384);
+        Command("set", "d3d11-composition-size", $"{width}x{height}");
+    }
+
+    public IntPtr GetDisplaySwapchain()
+    {
+        if (_handle == IntPtr.Zero)
+            return IntPtr.Zero;
+
+        long value = 0;
+        var result = Native.mpv_get_property(
+            _handle,
+            "display-swapchain",
+            MpvFormat.Int64,
+            ref value);
+
+        return result >= 0 && value != 0
+            ? new IntPtr(value)
+            : IntPtr.Zero;
+    }
 
     public IReadOnlyList<PlayerTrack> GetTracks()
     {
@@ -480,6 +530,16 @@ public sealed class MpvClient : IDisposable
         GC.SuppressFinalize(this);
     }
 
+    private enum MpvFormat
+    {
+        None = 0,
+        String = 1,
+        OsdString = 2,
+        Flag = 3,
+        Int64 = 4,
+        Double = 5
+    }
+
     private enum MpvEventId
     {
         None = 0,
@@ -559,6 +619,13 @@ public sealed class MpvClient : IDisposable
         internal static extern IntPtr mpv_get_property_string(
             IntPtr ctx,
             [MarshalAs(UnmanagedType.LPUTF8Str)] string name);
+
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int mpv_get_property(
+            IntPtr ctx,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string name,
+            MpvFormat format,
+            ref long data);
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         internal static extern void mpv_free(IntPtr data);
