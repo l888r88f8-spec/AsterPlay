@@ -180,30 +180,20 @@ public sealed partial class MainWindow : Window
         {
             PlaybackLog.Write(
                 "WinUISessionRestoreAuth",
-                "Cached home session was rejected by the server.");
+                "Home refresh session was rejected by the server.");
             AppStateStore.Clear();
             _client.Reset();
             _authenticated = false;
             ShowLogin("登录状态已失效，请重新登录。");
         };
-        view.InitialContentReady += (_, _) => CompleteStartup();
 
-        if (view.HasCachedSnapshot)
-        {
-            RoutedEventHandler? cachedHomeLoaded = null;
-            cachedHomeLoaded = (_, _) =>
-            {
-                view.Loaded -= cachedHomeLoaded;
-                StartupDiagnostics.Write(
-                    "ShowHome: cached HomeView loaded; dismissing startup coverage");
-                CompleteStartup();
-            };
-            view.Loaded += cachedHomeLoaded;
-        }
-
-        StartupDiagnostics.Write($"ShowHome: cachedSnapshot={view.HasCachedSnapshot}");
+        // HomeView construction is now intentionally data-free. Once the shell
+        // is attached to PageHost there is nothing left to wait for before
+        // showing the window. Cache hydration and Emby refresh happen after the
+        // HomeView Loaded event.
         PageHost.Content = view;
-        StartupDiagnostics.Write("ShowHome: PageHost.Content assigned");
+        StartupDiagnostics.Write("ShowHome: home shell assigned to PageHost");
+        CompleteStartup();
     }
 
     private void ShowLibrary()
