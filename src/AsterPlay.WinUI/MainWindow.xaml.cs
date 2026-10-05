@@ -36,7 +36,10 @@ public sealed partial class MainWindow : Window
         Closed += MainWindow_Closed;
         ApplySystemTheme();
 
-        StartupDiagnostics.Write("MainWindow constructor: title bar ready");
+        using (StartupDiagnostics.Measure("PrepareInitialContent"))
+            PrepareInitialContent();
+
+        StartupDiagnostics.Write("MainWindow constructor: title bar and initial content ready");
     }
 
     private void SystemColorValuesChanged(UISettings sender, object args)
@@ -77,61 +80,60 @@ public sealed partial class MainWindow : Window
         StartupDiagnostics.Write("Startup layer dismissed");
     }
 
-    private async void RootGrid_Loaded(object sender, RoutedEventArgs e)
+    private void RootGrid_Loaded(object sender, RoutedEventArgs e)
     {
-        StartupDiagnostics.Write("RootGrid.Loaded");
+        StartupDiagnostics.Write(
+            $"RootGrid.Loaded; initialized={_initialized}, section={_currentSection}");
+        _initialized = true;
+    }
 
+    private void PrepareInitialContent()
+    {
         if (_initialized)
             return;
 
-        _initialized = true;
-
-        using (StartupDiagnostics.Measure("InitializeSessionAsync"))
-            await InitializeSessionAsync();
-    }
-
-    private Task InitializeSessionAsync()
-    {
-        StartupDiagnostics.Write("InitializeSession: loading settings");
+        StartupDiagnostics.Write("PrepareInitialContent: loading settings");
         var settings = AppSettingsStore.Load();
         if (!settings.RestoreSessionOnStartup)
         {
+            StartupDiagnostics.Write("PrepareInitialContent: restore disabled -> login");
             ShowLogin();
-            return Task.CompletedTask;
+            _initialized = true;
+            return;
         }
 
-        StartupDiagnostics.Write("InitializeSession: loading session");
+        StartupDiagnostics.Write("PrepareInitialContent: loading session");
         var session = AppStateStore.Load();
-        StartupDiagnostics.Write($"InitializeSession: session={(session is null ? "miss" : "hit")}");
+        StartupDiagnostics.Write(
+            $"PrepareInitialContent: session={(session is null ? "miss" : "hit")}");
+
         if (session is null)
         {
             ShowLogin();
-            return Task.CompletedTask;
+            _initialized = true;
+            return;
         }
 
         try
         {
-            // Session restoration is local and synchronous. Mount HomeView
-            // immediately so its cached metadata + cached images can render on
-            // the first application frame. HomeView refreshes from Emby in the
-            // background and reports an authentication failure if the token is
-            // no longer valid.
-            StartupDiagnostics.Write("InitializeSession: restoring client");
+            StartupDiagnostics.Write("PrepareInitialContent: restoring client");
             _client.Restore(session);
             ServerProfileStore.AddOrUpdate(session.ServerUrl);
             _authenticated = true;
 
-            using (StartupDiagnostics.Measure("ShowHome"))
+            using (StartupDiagnostics.Measure("PrepareInitialContent.ShowHome"))
                 ShowHome();
+
+            _initialized = true;
         }
         catch (Exception ex)
         {
             PlaybackLog.Error("WinUISessionRestore", ex);
+            StartupDiagnostics.WriteException("PrepareInitialContent", ex);
             _client.Reset();
             ShowLogin(UserError.GetMessage(ex, "恢复登录"));
+            _initialized = true;
         }
-
-        return Task.CompletedTask;
     }
 
     private void ShowLogin(string? message = null)
