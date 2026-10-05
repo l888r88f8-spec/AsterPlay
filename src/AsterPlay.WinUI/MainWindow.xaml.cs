@@ -31,6 +31,7 @@ public sealed partial class MainWindow : Window
 
     private const uint WmMouseWheel = 0x020A;
     private const int WhMouseLl = 14;
+    private const int DwmwaExtendedFrameBounds = 9;
 
     public MainWindow()
     {
@@ -92,20 +93,24 @@ public sealed partial class MainWindow : Window
             var input = Marshal.PtrToStructure<LowLevelMouseInput>(lParam);
             var delta = unchecked((short)((input.MouseData >> 16) & 0xffff));
 
-            var windowPosition = _appWindow.Position;
-            var windowSize = _appWindow.Size;
+            var frameResult = DwmGetWindowAttribute(
+                _hwnd,
+                DwmwaExtendedFrameBounds,
+                out var frameBounds,
+                Marshal.SizeOf<NativeRect>());
+
             var insideWindow =
-                input.Point.X >= windowPosition.X &&
-                input.Point.X < windowPosition.X + windowSize.Width &&
-                input.Point.Y >= windowPosition.Y &&
-                input.Point.Y < windowPosition.Y + windowSize.Height;
+                frameResult == 0 &&
+                input.Point.X >= frameBounds.Left &&
+                input.Point.X < frameBounds.Right &&
+                input.Point.Y >= frameBounds.Top &&
+                input.Point.Y < frameBounds.Bottom;
 
             if (delta != 0 && insideWindow)
             {
-                // AppWindow exposes the window's actual screen position/size
-                // in the same WinUI windowing model that drives maximize and
-                // restore. This avoids DPI-virtualized Win32 rectangles and
-                // unstable composition-child HWND hit testing.
+                // DWMWA_EXTENDED_FRAME_BOUNDS is expressed in real screen
+                // coordinates and is not DPI-virtualized, so it can be
+                // compared directly with MSLLHOOKSTRUCT.pt.
                 homeView.HandleNativeMouseWheel(delta);
 
                 var now = DateTimeOffset.UtcNow;
@@ -115,10 +120,23 @@ public sealed partial class MainWindow : Window
                     PlaybackLog.Write(
                         "WinUINativeWheel",
                         $"low-level-wheel: delta={delta}, screen={input.Point.X},{input.Point.Y}, " +
-                        $"window={windowPosition.X},{windowPosition.Y},{windowSize.Width}x{windowSize.Height}");
+                        $"frame={frameBounds.Left},{frameBounds.Top}," +
+                        $"{frameBounds.Right - frameBounds.Left}x{frameBounds.Bottom - frameBounds.Top}");
                 }
 
                 return (IntPtr)1;
+            }
+
+            var missNow = DateTimeOffset.UtcNow;
+            if (delta != 0 &&
+                missNow - _lastNativeWheelDiagnosticAt >= TimeSpan.FromMilliseconds(500))
+            {
+                _lastNativeWheelDiagnosticAt = missNow;
+                PlaybackLog.Write(
+                    "WinUINativeWheel",
+                    $"wheel-outside-frame: delta={delta}, screen={input.Point.X},{input.Point.Y}, " +
+                    $"hr=0x{frameResult:X8}, frame={frameBounds.Left},{frameBounds.Top}," +
+                    $"{frameBounds.Right - frameBounds.Left}x{frameBounds.Bottom - frameBounds.Top}");
             }
         }
 
@@ -847,6 +865,15 @@ public sealed partial class MainWindow : Window
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     private struct LowLevelMouseInput
     {
         public NativePoint Point;
@@ -879,6 +906,13 @@ public sealed partial class MainWindow : Window
         int code,
         IntPtr wParam,
         IntPtr lParam);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmGetWindowAttribute(
+        IntPtr hWnd,
+        int attribute,
+        out NativeRect value,
+        int size);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr GetModuleHandle(string? moduleName);
