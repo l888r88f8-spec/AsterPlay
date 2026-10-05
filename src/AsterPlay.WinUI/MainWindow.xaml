@@ -94,7 +94,9 @@
                          Fill="#182F79A8"/>
             </Grid>
 
-            <ContentControl x:Name="PageHost"/>
+            <ContentControl x:Name="PageHost"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"/>
 
             <Border x:Name="NavigationDock"
                     HorizontalAlignment="Center"
