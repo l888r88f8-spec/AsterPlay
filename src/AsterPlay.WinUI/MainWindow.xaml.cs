@@ -703,10 +703,27 @@ public sealed partial class MainWindow : Window
 
     private void SetActiveNavigation(Button active)
     {
-        var inactive = new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
-        var selected = new SolidColorBrush(Windows.UI.Color.FromArgb(58, 80, 145, 214));
+        var inactiveBackground =
+            new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
+        var selectedBackground =
+            new SolidColorBrush(Windows.UI.Color.FromArgb(48, 76, 143, 234));
+        var inactiveForeground =
+            new SolidColorBrush(
+                RootGrid.RequestedTheme == ElementTheme.Dark
+                    ? Windows.UI.Color.FromArgb(255, 210, 216, 225)
+                    : Windows.UI.Color.FromArgb(255, 42, 47, 56));
+        var selectedForeground =
+            new SolidColorBrush(Windows.UI.Color.FromArgb(255, 49, 126, 242));
 
         foreach (var button in new[] { HomeButton, LibraryButton, ServersButton, SettingsButton })
-            button.Background = ReferenceEquals(button, active) ? selected : inactive;
+        {
+            var selected = ReferenceEquals(button, active);
+            button.Background = selected
+                ? selectedBackground
+                : inactiveBackground;
+            button.Foreground = selected
+                ? selectedForeground
+                : inactiveForeground;
+        }
     }
 }
