@@ -4,6 +4,7 @@ using AsterPlay.WinUI.Views;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Windowing;
 using Windows.UI.ViewManagement;
 
 namespace AsterPlay.WinUI;
@@ -12,6 +13,7 @@ public sealed partial class MainWindow : Window
 {
     private readonly EmbyClient _client = new();
     private readonly UISettings _uiSettings = new();
+    private readonly AppWindow _appWindow;
     private bool _initialized;
     private bool _authenticated;
     private string _currentSection = "login";
@@ -21,6 +23,10 @@ public sealed partial class MainWindow : Window
         StartupDiagnostics.Write("MainWindow constructor: entered");
         InitializeComponent();
         StartupDiagnostics.Write("MainWindow constructor: after InitializeComponent");
+
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
+        _appWindow = AppWindow.GetFromWindowId(windowId);
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -258,6 +264,11 @@ public sealed partial class MainWindow : Window
                     ShowHome();
             };
 
+            player.EpisodeRequested += async (_, episode) =>
+                await StartPlaybackAsync(episode, returnSection);
+            player.FullscreenRequested += (_, fullscreen) =>
+                SetPlayerFullscreen(fullscreen);
+
             _currentSection = "player";
             PageTitleBlock.Text = "播放器 POC";
             PageHost.Content = player;
@@ -284,6 +295,21 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void SetPlayerFullscreen(bool fullscreen)
+    {
+        try
+        {
+            _appWindow.SetPresenter(
+                fullscreen
+                    ? AppWindowPresenterKind.FullScreen
+                    : AppWindowPresenterKind.Default);
+        }
+        catch (Exception ex)
+        {
+            PlaybackLog.Error("WinUIFullscreen", ex);
+        }
+    }
+
     private void EnterPlayerChrome()
     {
         NavigationDock.Visibility = Visibility.Collapsed;
@@ -296,6 +322,9 @@ public sealed partial class MainWindow : Window
 
     private void ExitPlayerChrome()
     {
+        if (_appWindow.Presenter.Kind == AppWindowPresenterKind.FullScreen)
+            SetPlayerFullscreen(false);
+
         Grid.SetRow(ContentLayer, 1);
         Grid.SetRowSpan(ContentLayer, 1);
 
