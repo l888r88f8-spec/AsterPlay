@@ -41,11 +41,11 @@
             </Border>
 
             <TextBlock Text="你的媒体，保持安静。"
-                       Foreground="White"
+                       Foreground="{ThemeResource AsterPrimaryTextBrush}"
                        FontSize="46"
                        FontWeight="SemiBold"/>
             <TextBlock Text="连接 Emby，浏览、播放并同步你的私人媒体库。新的 WinUI 3 界面使用 Windows 原生 Composition 与液态玻璃材质。"
-                       Foreground="#A7AFBD"
+                       Foreground="{ThemeResource AsterSecondaryTextBrush}"
                        FontSize="17"
                        LineHeight="27"
                        TextWrapping="Wrap"/>
@@ -75,21 +75,21 @@
 
             <StackPanel Spacing="12">
                 <TextBlock Text="登录"
-                           Foreground="White"
+                           Foreground="{ThemeResource AsterPrimaryTextBrush}"
                            FontSize="30"
                            FontWeight="SemiBold"/>
                 <TextBlock Text="选择已保存服务器，或输入新的地址。"
-                           Foreground="#A8B0BE"
+                           Foreground="{ThemeResource AsterSecondaryTextBrush}"
                            Margin="0,0,0,10"/>
 
-                <TextBlock Text="已保存服务器" Foreground="#C9CFD8"/>
+                <TextBlock Text="已保存服务器" Foreground="{ThemeResource AsterSecondaryTextBrush}"/>
                 <ComboBox x:Name="SavedServerBox"
                           Height="42"
                           DisplayMemberPath="DisplayName"
                           SelectionChanged="SavedServerBox_SelectionChanged"/>
 
                 <TextBlock Text="服务器地址"
-                           Foreground="#C9CFD8"
+                           Foreground="{ThemeResource AsterSecondaryTextBrush}"
                            Margin="0,8,0,0"/>
                 <TextBox x:Name="ServerUrlBox"
                          Height="42"
@@ -104,12 +104,12 @@
                         Click="ManageServers_Click"/>
 
                 <TextBlock Text="用户名"
-                           Foreground="#C9CFD8"
+                           Foreground="{ThemeResource AsterSecondaryTextBrush}"
                            Margin="0,8,0,0"/>
                 <TextBox x:Name="UserNameBox" Height="42"/>
 
                 <TextBlock Text="密码"
-                           Foreground="#C9CFD8"
+                           Foreground="{ThemeResource AsterSecondaryTextBrush}"
                            Margin="0,8,0,0"/>
                 <PasswordBox x:Name="PasswordBox" Height="42"/>
 
