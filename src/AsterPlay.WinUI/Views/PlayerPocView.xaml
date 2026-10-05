@@ -282,7 +282,9 @@
                             Minimum="0"
                             Maximum="1"
                             VerticalAlignment="Center"
-                            ValueChanged="PositionSlider_ValueChanged"/>
+                            ValueChanged="PositionSlider_ValueChanged"
+                            PointerPressed="PositionSlider_PointerPressed"
+                            PointerReleased="PositionSlider_PointerReleased"/>
                 </Grid>
 
                 <Grid Grid.Row="2"
