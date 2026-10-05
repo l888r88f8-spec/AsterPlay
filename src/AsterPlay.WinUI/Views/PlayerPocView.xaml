@@ -200,6 +200,9 @@
                             Content="匹配"
                             Click="DanmakuMatch_Click"/>
                     <Button Style="{StaticResource PlayerPillButtonStyle}"
+                            Content="过滤"
+                            Click="DanmakuFilter_Click"/>
+                    <Button Style="{StaticResource PlayerPillButtonStyle}"
                             Content="详细信息"
                             Click="Diagnostics_Click"/>
                     <Button x:Name="FullscreenButton"
