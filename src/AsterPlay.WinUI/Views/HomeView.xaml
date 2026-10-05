@@ -55,8 +55,8 @@
                                                  EndPoint="0,1">
                                 <GradientStop Color="#18000000" Offset="0"/>
                                 <GradientStop Color="#26000000" Offset="0.34"/>
-                                <GradientStop Color="#B5080A0F" Offset="0.78"/>
-                                <GradientStop Color="#FF080A0F" Offset="1"/>
+                                <GradientStop Color="{ThemeResource AsterHeroFadeMidColor}" Offset="0.78"/>
+                                <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="1"/>
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
