@@ -21,7 +21,8 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         StartupDiagnostics.Write("MainWindow constructor: entered");
-        InitializeComponent();
+        using (StartupDiagnostics.Measure("MainWindow.InitializeComponent"))
+            InitializeComponent();
         StartupDiagnostics.Write("MainWindow constructor: after InitializeComponent");
 
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
@@ -65,6 +66,9 @@ public sealed partial class MainWindow : Window
 
     private void CompleteStartup()
     {
+        StartupDiagnostics.Write(
+            $"CompleteStartup requested; startupLayer={StartupLayer.Visibility}, section={_currentSection}");
+
         if (StartupLayer.Visibility != Visibility.Visible)
             return;
 
@@ -75,15 +79,20 @@ public sealed partial class MainWindow : Window
 
     private async void RootGrid_Loaded(object sender, RoutedEventArgs e)
     {
+        StartupDiagnostics.Write("RootGrid.Loaded");
+
         if (_initialized)
             return;
 
         _initialized = true;
-        await InitializeSessionAsync();
+
+        using (StartupDiagnostics.Measure("InitializeSessionAsync"))
+            await InitializeSessionAsync();
     }
 
     private Task InitializeSessionAsync()
     {
+        StartupDiagnostics.Write("InitializeSession: loading settings");
         var settings = AppSettingsStore.Load();
         if (!settings.RestoreSessionOnStartup)
         {
@@ -91,7 +100,9 @@ public sealed partial class MainWindow : Window
             return Task.CompletedTask;
         }
 
+        StartupDiagnostics.Write("InitializeSession: loading session");
         var session = AppStateStore.Load();
+        StartupDiagnostics.Write($"InitializeSession: session={(session is null ? "miss" : "hit")}");
         if (session is null)
         {
             ShowLogin();
@@ -105,10 +116,13 @@ public sealed partial class MainWindow : Window
             // the first application frame. HomeView refreshes from Emby in the
             // background and reports an authentication failure if the token is
             // no longer valid.
+            StartupDiagnostics.Write("InitializeSession: restoring client");
             _client.Restore(session);
             ServerProfileStore.AddOrUpdate(session.ServerUrl);
             _authenticated = true;
-            ShowHome();
+
+            using (StartupDiagnostics.Measure("ShowHome"))
+                ShowHome();
         }
         catch (Exception ex)
         {
@@ -172,7 +186,9 @@ public sealed partial class MainWindow : Window
         };
         view.InitialContentReady += (_, _) => CompleteStartup();
 
+        StartupDiagnostics.Write($"ShowHome: cachedSnapshot={view.HasCachedSnapshot}");
         PageHost.Content = view;
+        StartupDiagnostics.Write("ShowHome: PageHost.Content assigned");
 
         if (view.HasCachedSnapshot)
             CompleteStartup();
