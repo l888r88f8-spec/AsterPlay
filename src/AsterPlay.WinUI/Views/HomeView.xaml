@@ -99,8 +99,8 @@
                         Spacing="36">
 
                 <!-- Mobile-inspired immersive Hero, adapted for desktop width. -->
-                <Grid Height="540"
-                      Margin="-34,0,-34,-64">
+                <Grid Height="500"
+                      Margin="-34,0,-34,-52">
                     <controls:CachedImage x:Name="HeroImage"
                                           Stretch="UniformToFill"/>
 
@@ -110,24 +110,24 @@
                                                  EndPoint="0,1">
                                 <GradientStop Color="#16000000" Offset="0"/>
                                 <GradientStop Color="#08000000" Offset="0.42"/>
-                                <GradientStop Color="#5C000000" Offset="0.72"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayMidColor}" Offset="0.90"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}" Offset="1"/>
+                                <GradientStop Color="#44000000" Offset="0.72"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.90"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayMidColor}" Offset="1"/>
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
 
-                    <Rectangle Height="170"
+                    <Rectangle Height="142"
                                VerticalAlignment="Bottom"
-                               Opacity="0.72"
-                               Margin="0,0,0,-100"
+                               Opacity="0.46"
+                               Margin="0,0,0,-82"
                                IsHitTestVisible="False">
                         <Rectangle.Fill>
                             <LinearGradientBrush StartPoint="0,0"
                                                  EndPoint="0,1">
                                 <GradientStop Color="Transparent" Offset="0"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayMidColor}" Offset="0.52"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}" Offset="1"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.52"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayMidColor}" Offset="1"/>
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
@@ -222,7 +222,7 @@
                     <!-- Hero copy -->
                     <StackPanel VerticalAlignment="Bottom"
                                 HorizontalAlignment="Center"
-                                Margin="44,0,44,42"
+                                Margin="44,0,44,34"
                                 MaxWidth="860"
                                 Spacing="11">
                         <TextBlock x:Name="WelcomeBlock"
@@ -283,7 +283,7 @@
                     <Grid>
                         <TextBlock Text="继续播放"
                                    Foreground="{ThemeResource AsterPrimaryTextBrush}"
-                                   FontSize="30"
+                                   FontSize="28"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"/>
 
@@ -319,18 +319,18 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Button Width="352"
+                                    <Button Width="320"
                                             Margin="0,0,18,0"
                                             Padding="0"
                                             Background="Transparent"
                                             BorderThickness="0"
                                             Tag="{Binding}"
                                             Click="ResumeTile_Click">
-                                        <StackPanel Width="352"
+                                        <StackPanel Width="320"
                                                     Spacing="9">
-                                            <Border Width="352"
-                                                    Height="198"
-                                                    CornerRadius="24"
+                                            <Border Width="320"
+                                                    Height="180"
+                                                    CornerRadius="22"
                                                     Background="{ThemeResource AsterCardBackgroundBrush}"
                                                     BorderBrush="{ThemeResource AsterCardBorderBrush}"
                                                     BorderThickness="1">
@@ -375,13 +375,13 @@
 
                                             <TextBlock Text="{Binding ResumeTitle}"
                                                        Foreground="{ThemeResource AsterPrimaryTextBrush}"
-                                                       FontSize="18"
+                                                       FontSize="16"
                                                        FontWeight="SemiBold"
                                                        TextTrimming="CharacterEllipsis"/>
 
                                             <TextBlock Text="{Binding EpisodeText}"
                                                        Foreground="{ThemeResource AsterSecondaryTextBrush}"
-                                                       FontSize="13"
+                                                       FontSize="12"
                                                        TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
                                     </Button>
