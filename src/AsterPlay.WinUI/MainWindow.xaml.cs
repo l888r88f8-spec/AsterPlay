@@ -92,18 +92,20 @@ public sealed partial class MainWindow : Window
             var input = Marshal.PtrToStructure<LowLevelMouseInput>(lParam);
             var delta = unchecked((short)((input.MouseData >> 16) & 0xffff));
 
-            var hitWindow = WindowFromPoint(input.Point);
-            _ = GetWindowThreadProcessId(hitWindow, out var hitProcessId);
-            var currentProcessId = GetCurrentProcessId();
+            var windowPosition = _appWindow.Position;
+            var windowSize = _appWindow.Size;
+            var insideWindow =
+                input.Point.X >= windowPosition.X &&
+                input.Point.X < windowPosition.X + windowSize.Width &&
+                input.Point.Y >= windowPosition.Y &&
+                input.Point.Y < windowPosition.Y + windowSize.Height;
 
-            if (delta != 0 &&
-                hitWindow != IntPtr.Zero &&
-                hitProcessId == currentProcessId)
+            if (delta != 0 && insideWindow)
             {
-                // WinUI's XAML/composition host windows do not form a stable
-                // traditional child-HWND tree, but they do belong to this
-                // process. Process ownership gives us a DPI-independent input
-                // boundary without stealing wheel input outside AsterPlay.
+                // AppWindow exposes the window's actual screen position/size
+                // in the same WinUI windowing model that drives maximize and
+                // restore. This avoids DPI-virtualized Win32 rectangles and
+                // unstable composition-child HWND hit testing.
                 homeView.HandleNativeMouseWheel(delta);
 
                 var now = DateTimeOffset.UtcNow;
@@ -113,7 +115,7 @@ public sealed partial class MainWindow : Window
                     PlaybackLog.Write(
                         "WinUINativeWheel",
                         $"low-level-wheel: delta={delta}, screen={input.Point.X},{input.Point.Y}, " +
-                        $"hit=0x{hitWindow.ToInt64():X}, pid={hitProcessId}");
+                        $"window={windowPosition.X},{windowPosition.Y},{windowSize.Width}x{windowSize.Height}");
                 }
 
                 return (IntPtr)1;
@@ -884,16 +886,5 @@ public sealed partial class MainWindow : Window
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
 
-    [DllImport("user32.dll")]
-    private static extern IntPtr WindowFromPoint(
-        NativePoint point);
-
-    [DllImport("user32.dll")]
-    private static extern uint GetWindowThreadProcessId(
-        IntPtr hWnd,
-        out uint processId);
-
-    [DllImport("kernel32.dll")]
-    private static extern uint GetCurrentProcessId();
 
 }
