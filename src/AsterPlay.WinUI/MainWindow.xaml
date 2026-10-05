@@ -7,7 +7,7 @@
 
 
     <Grid x:Name="RootGrid"
-          Background="#080A0F"
+          Background="{ThemeResource AsterPageBackgroundBrush}"
           Loaded="RootGrid_Loaded">
         <Grid.Resources>
         <Style x:Key="DockButtonStyle" TargetType="Button">
@@ -17,7 +17,7 @@
             <Setter Property="Padding" Value="14,8"/>
             <Setter Property="CornerRadius" Value="18"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#C7CED8"/>
+            <Setter Property="Foreground" Value="{ThemeResource AsterSecondaryTextBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
         </Style>
         </Grid.Resources>
@@ -28,7 +28,7 @@
 
         <Grid x:Name="AppTitleBar"
               Grid.Row="0"
-              Background="#C90D1118">
+              Background="{ThemeResource AsterTitleBarBrush}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="220"/>
                 <ColumnDefinition Width="*"/>
@@ -63,7 +63,7 @@
                                FontWeight="SemiBold"/>
                 </Border>
                 <TextBlock Text="AsterPlay"
-                           Foreground="White"
+                           Foreground="{ThemeResource AsterPrimaryTextBrush}"
                            FontSize="14"
                            FontWeight="SemiBold"
                            VerticalAlignment="Center"/>
@@ -73,7 +73,7 @@
                        Grid.Column="1"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center"
-                       Foreground="#AEB6C4"
+                       Foreground="{ThemeResource AsterSecondaryTextBrush}"
                        FontSize="13"/>
         </Grid>
 
@@ -85,13 +85,13 @@
                          HorizontalAlignment="Left"
                          VerticalAlignment="Top"
                          Margin="-240,-300,0,0"
-                         Fill="#252F79CE"/>
+                         Fill="{ThemeResource AsterAmbientTopBrush}"/>
                 <Ellipse Width="620"
                          Height="460"
                          HorizontalAlignment="Right"
                          VerticalAlignment="Bottom"
                          Margin="0,0,-220,-260"
-                         Fill="#182F79A8"/>
+                         Fill="{ThemeResource AsterAmbientBottomBrush}"/>
             </Grid>
 
             <ContentControl x:Name="PageHost"
