@@ -5,6 +5,9 @@
     xmlns:lg="using:LiquidGlassWinUI"
     Title="AsterPlay">
 
+    <Window.SystemBackdrop>
+        <MicaBackdrop Kind="BaseAlt"/>
+    </Window.SystemBackdrop>
 
     <Grid x:Name="RootGrid"
           Background="{ThemeResource AsterPageBackgroundBrush}"
