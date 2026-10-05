@@ -104,16 +104,17 @@
             </Rectangle>
         </Grid>
 
-        <ScrollViewer x:Name="HomeScrollViewer"
-                      Visibility="Visible"
-                      Opacity="0"
-                      IsHitTestVisible="False"
-                      VerticalScrollMode="Enabled"
-                      VerticalScrollBarVisibility="Hidden"
-                      HorizontalScrollMode="Disabled"
-                      HorizontalScrollBarVisibility="Disabled"
-                      ZoomMode="Disabled"
-                      SizeChanged="HomeScrollViewer_SizeChanged">
+        <ScrollView x:Name="HomeScrollViewer"
+                    Visibility="Visible"
+                    Opacity="0"
+                    IsHitTestVisible="False"
+                    ContentOrientation="Vertical"
+                    VerticalScrollMode="Enabled"
+                    VerticalScrollBarVisibility="Hidden"
+                    HorizontalScrollMode="Disabled"
+                    HorizontalScrollBarVisibility="Disabled"
+                    ZoomMode="Disabled"
+                    SizeChanged="HomeScrollViewer_SizeChanged">
             <StackPanel x:Name="HomeContentStack"
                         Width="{Binding ElementName=HomeScrollViewer, Path=ViewportWidth}"
                         HorizontalAlignment="Stretch"
@@ -611,7 +612,7 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </StackPanel>
-        </ScrollViewer>
+        </ScrollView>
 
         <Grid x:Name="NoServerState"
               Visibility="Collapsed">
