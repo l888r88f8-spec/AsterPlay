@@ -3,6 +3,7 @@ using AsterPlay.Services;
 using AsterPlay.WinUI.Views;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Windowing;
@@ -21,6 +22,7 @@ public sealed partial class MainWindow : Window
     private bool _splashTransitionStarted;
     private bool _authenticated;
     private string _currentSection = "home-shell";
+    private DateTimeOffset _lastWheelDiagnosticAt = DateTimeOffset.MinValue;
 
     public MainWindow()
     {
@@ -39,10 +41,34 @@ public sealed partial class MainWindow : Window
         ConfigureNativeTitleBar(isLight: true);
 
         Closed += MainWindow_Closed;
+        RootGrid.AddHandler(
+            UIElement.PointerWheelChangedEvent,
+            new PointerEventHandler(RootGrid_PointerWheelChangedDiagnostic),
+            handledEventsToo: true);
         PageTitleBlock.Text = "首页";
         SetActiveNavigation(HomeButton);
 
         StartupDiagnostics.Write("MainWindow constructor: lightweight home shell ready");
+    }
+
+    private void RootGrid_PointerWheelChangedDiagnostic(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (now - _lastWheelDiagnosticAt < TimeSpan.FromMilliseconds(180))
+            return;
+
+        _lastWheelDiagnosticAt = now;
+        var point = e.GetCurrentPoint(RootGrid);
+
+        PlaybackLog.Write(
+            "WinUIInput",
+            $"wheel: delta={point.Properties.MouseWheelDelta}, handled={e.Handled}, " +
+            $"source={e.OriginalSource?.GetType().Name ?? "-"}, " +
+            $"section={_currentSection}, page={PageHost.Content?.GetType().Name ?? "-"}, " +
+            $"splashVisibility={SplashLayer.Visibility}, splashHitTest={SplashLayer.IsHitTestVisible}, " +
+            $"contentOpacity={ContentLayer.Opacity:0.00}, contentHitTest={ContentLayer.IsHitTestVisible}");
     }
 
     private void SystemColorValuesChanged(UISettings sender, object args)
