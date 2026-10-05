@@ -31,6 +31,7 @@ public sealed partial class MainWindow : Window
 
     private const uint WmMouseWheel = 0x020A;
     private const int WhMouseLl = 14;
+    private const uint GaRoot = 2;
 
     public MainWindow()
     {
@@ -92,16 +93,21 @@ public sealed partial class MainWindow : Window
             var input = Marshal.PtrToStructure<LowLevelMouseInput>(lParam);
             var delta = unchecked((short)((input.MouseData >> 16) & 0xffff));
 
+            var hitWindow = WindowFromPoint(input.Point);
+            var rootWindow = hitWindow == IntPtr.Zero
+                ? IntPtr.Zero
+                : GetAncestor(hitWindow, GaRoot);
+
             if (delta != 0 &&
-                GetWindowRect(_hwnd, out var windowRect) &&
-                input.Point.X >= windowRect.Left &&
-                input.Point.X < windowRect.Right &&
-                input.Point.Y >= windowRect.Top &&
-                input.Point.Y < windowRect.Bottom)
+                hitWindow != IntPtr.Zero &&
+                (hitWindow == _hwnd ||
+                 rootWindow == _hwnd ||
+                 IsChild(_hwnd, hitWindow)))
             {
-                // Do not let WinUI's unstable wheel routing participate at all.
-                // The low-level hook remains valid across maximize/restore and
-                // always drives the single vertical home scroller.
+                // WH_MOUSE_LL coordinates are physical screen pixels while
+                // WinUI/window rectangles can be DPI-virtualized. Determine
+                // ownership from the HWND under the pointer instead of mixing
+                // coordinate spaces.
                 homeView.HandleNativeMouseWheel(delta);
 
                 var now = DateTimeOffset.UtcNow;
@@ -110,7 +116,8 @@ public sealed partial class MainWindow : Window
                     _lastNativeWheelDiagnosticAt = now;
                     PlaybackLog.Write(
                         "WinUINativeWheel",
-                        $"low-level-wheel: delta={delta}, screen={input.Point.X},{input.Point.Y}");
+                        $"low-level-wheel: delta={delta}, screen={input.Point.X},{input.Point.Y}, " +
+                        $"hit=0x{hitWindow.ToInt64():X}, root=0x{rootWindow.ToInt64():X}");
                 }
 
                 return (IntPtr)1;
@@ -851,15 +858,6 @@ public sealed partial class MainWindow : Window
         public UIntPtr ExtraInfo;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativeRect
-    {
-        public int Left;
-        public int Top;
-        public int Right;
-        public int Bottom;
-    }
-
     private delegate IntPtr HookProc(
         int code,
         IntPtr wParam,
@@ -891,8 +889,17 @@ public sealed partial class MainWindow : Window
     private static extern IntPtr GetForegroundWindow();
 
     [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool GetWindowRect(
+    private static extern IntPtr WindowFromPoint(
+        NativePoint point);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetAncestor(
         IntPtr hWnd,
-        out NativeRect rect);
+        uint flags);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsChild(
+        IntPtr parent,
+        IntPtr child);
 }
