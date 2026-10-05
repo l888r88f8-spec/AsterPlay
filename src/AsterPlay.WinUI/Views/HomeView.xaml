@@ -41,8 +41,7 @@
                       VerticalScrollBarVisibility="Hidden"
                       HorizontalScrollMode="Disabled"
                       HorizontalScrollBarVisibility="Disabled"
-                      ZoomMode="Disabled"
-                      PointerWheelChanged="HomeScrollViewer_PointerWheelChanged">
+                      ZoomMode="Disabled">
             <StackPanel Padding="48,24,48,136"
                         Spacing="28">
                 <Grid Height="330">
@@ -135,12 +134,11 @@
                     </Grid>
 
                     <ScrollViewer x:Name="LibrariesScroller"
-                                  HorizontalScrollMode="Enabled"
+                                  HorizontalScrollMode="Disabled"
                                   HorizontalScrollBarVisibility="Hidden"
                                   VerticalScrollMode="Disabled"
                                   VerticalScrollBarVisibility="Disabled"
                                   ZoomMode="Disabled"
-                                  PointerWheelChanged="Rail_PointerWheelChanged"
                                   ViewChanged="Rail_ViewChanged"
                                   SizeChanged="Rail_SizeChanged">
                         <ItemsControl x:Name="LibrariesGrid">
@@ -216,12 +214,11 @@
                     </Grid>
 
                     <ScrollViewer x:Name="ResumeScroller"
-                                  HorizontalScrollMode="Enabled"
+                                  HorizontalScrollMode="Disabled"
                                   HorizontalScrollBarVisibility="Hidden"
                                   VerticalScrollMode="Disabled"
                                   VerticalScrollBarVisibility="Disabled"
                                   ZoomMode="Disabled"
-                                  PointerWheelChanged="Rail_PointerWheelChanged"
                                   ViewChanged="Rail_ViewChanged"
                                   SizeChanged="Rail_SizeChanged">
                         <ItemsControl x:Name="ResumeGrid">
@@ -315,12 +312,11 @@
                     </Grid>
 
                     <ScrollViewer x:Name="LatestScroller"
-                                  HorizontalScrollMode="Enabled"
+                                  HorizontalScrollMode="Disabled"
                                   HorizontalScrollBarVisibility="Hidden"
                                   VerticalScrollMode="Disabled"
                                   VerticalScrollBarVisibility="Disabled"
                                   ZoomMode="Disabled"
-                                  PointerWheelChanged="Rail_PointerWheelChanged"
                                   ViewChanged="Rail_ViewChanged"
                                   SizeChanged="Rail_SizeChanged">
                         <ItemsControl x:Name="LatestGrid">
