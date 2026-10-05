@@ -2,7 +2,6 @@
     x:Class="AsterPlay.WinUI.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:lg="using:LiquidGlassWinUI"
     Title="AsterPlay">
 
     <Window.SystemBackdrop>
@@ -44,21 +43,8 @@
                         Margin="18,0,0,0">
                 <Border Width="27"
                         Height="27"
-                        CornerRadius="9">
-                    <Border.Background>
-                        <lg:LiquidGlassBrush BlurAmount="1.2"
-                                             BloomAmount="0.20"
-                                             RefThickness="18"
-                                             RefFactor="1.7"
-                                             RefDispersion="3.5"
-                                             GlareFactor="58"
-                                             TintA="0.16"
-                                             TintR="70"
-                                             TintG="145"
-                                             TintB="255"
-                                             ShapeRadius="0.94"
-                                             ShapeRoundness="3.8"/>
-                    </Border.Background>
+                        CornerRadius="9"
+                        Background="{ThemeResource AsterCardBackgroundBrush}">
                     <TextBlock Text="A"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
@@ -82,6 +68,20 @@
 
         <Grid x:Name="ContentLayer"
               Grid.Row="1">
+            <Grid x:Name="InitialHomeShell">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="14">
+                    <ProgressRing Width="34"
+                                  Height="34"
+                                  IsActive="True"/>
+                    <TextBlock Text="正在加载"
+                               Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                               FontSize="14"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+
             <ContentControl x:Name="PageHost"
                             HorizontalContentAlignment="Stretch"
                             VerticalContentAlignment="Stretch"/>
@@ -92,28 +92,10 @@
                     Margin="0,0,0,18"
                     Padding="9"
                     CornerRadius="32"
-                    Visibility="Collapsed">
-                <Border.Background>
-                    <lg:LiquidGlassBrush BlurAmount="1.9"
-                                         BloomAmount="0.18"
-                                         Brightness="0.02"
-                                         Contrast="1.06"
-                                         Saturation="1.10"
-                                         RefThickness="42"
-                                         RefFactor="2.35"
-                                         RefDispersion="5"
-                                         DispersionRange="0.42"
-                                         RefFresnelFactor="26"
-                                         GlareAngle="-145"
-                                         GlareFactor="70"
-                                         GlareRange="38"
-                                         TintA="0.09"
-                                         TintR="185"
-                                         TintG="215"
-                                         TintB="255"
-                                         ShapeRadius="0.96"
-                                         ShapeRoundness="3.7"/>
-                </Border.Background>
+                    Background="{ThemeResource AsterCardBackgroundBrush}"
+                    BorderBrush="{ThemeResource AsterCardBorderBrush}"
+                    BorderThickness="1"
+                    Visibility="Visible">
                 <StackPanel Orientation="Horizontal"
                             Spacing="2">
                     <Button x:Name="HomeButton"
