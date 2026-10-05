@@ -43,7 +43,7 @@
               IsHitTestVisible="False">
             <controls:CachedImage x:Name="PageBackdropImage"
                                   Stretch="UniformToFill"
-                                  Opacity="0.72"
+                                  Opacity="0.82"
                                   RenderTransformOrigin="0.5,0.5">
                 <controls:CachedImage.RenderTransform>
                     <ScaleTransform ScaleX="1.10"
@@ -55,21 +55,21 @@
                 <Rectangle.Fill>
                     <AcrylicBrush
                                   TintColor="{ThemeResource AsterHeroFadeEndColor}"
-                                  TintOpacity="0.46"
-                                  TintLuminosityOpacity="0.68"
+                                  TintOpacity="0.26"
+                                  TintLuminosityOpacity="0.42"
                                   FallbackColor="{ThemeResource AsterHeroFadeEndColor}"/>
                 </Rectangle.Fill>
             </Rectangle>
 
-            <Rectangle Opacity="0.78">
+            <Rectangle Opacity="0.72">
                 <Rectangle.Fill>
                     <LinearGradientBrush StartPoint="0,0"
                                          EndPoint="0,1">
-                        <GradientStop Color="#22000000"
+                        <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}"
                                       Offset="0"/>
-                        <GradientStop Color="{ThemeResource AsterHeroFadeMidColor}"
-                                      Offset="0.52"/>
-                        <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}"
+                        <GradientStop Color="{ThemeResource AsterAmbientOverlayMidColor}"
+                                      Offset="0.56"/>
+                        <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}"
                                       Offset="1"/>
                     </LinearGradientBrush>
                 </Rectangle.Fill>
@@ -90,8 +90,8 @@
                         Spacing="30">
 
                 <!-- Immersive hero -->
-                <Grid Height="470"
-                      Margin="-38,0,-38,0">
+                <Grid Height="520"
+                      Margin="-38,0,-38,-50">
                     <controls:CachedImage x:Name="HeroImage"
                                           Stretch="UniformToFill"/>
 
@@ -101,8 +101,9 @@
                                                  EndPoint="0,1">
                                 <GradientStop Color="#18000000" Offset="0"/>
                                 <GradientStop Color="#26000000" Offset="0.34"/>
-                                <GradientStop Color="{ThemeResource AsterHeroFadeMidColor}" Offset="0.78"/>
-                                <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="1"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.68"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayMidColor}" Offset="0.86"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}" Offset="1"/>
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
@@ -114,6 +115,23 @@
                                 <GradientStop Color="#B6080A0F" Offset="0"/>
                                 <GradientStop Color="#4A080A0F" Offset="0.48"/>
                                 <GradientStop Color="#0A080A0F" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
+
+                    <Rectangle Height="170"
+                               VerticalAlignment="Bottom"
+                               Margin="0,0,0,-120"
+                               IsHitTestVisible="False">
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0,0"
+                                                 EndPoint="0,1">
+                                <GradientStop Color="Transparent"
+                                              Offset="0"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayMidColor}"
+                                              Offset="0.52"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}"
+                                              Offset="1"/>
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
