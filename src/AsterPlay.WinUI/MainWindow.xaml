@@ -2,6 +2,7 @@
     x:Class="AsterPlay.WinUI.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:lg="using:LiquidGlassWinUI"
     Title="AsterPlay">
 
     <Window.SystemBackdrop>
@@ -81,9 +82,16 @@
                     Margin="0,0,0,6"
                     Padding="5"
                     CornerRadius="29"
-                    BorderBrush="#66FFFFFF"
+                    BorderBrush="#46FFFFFF"
                     BorderThickness="1"
-                    Visibility="Visible">
+                    Visibility="Visible"
+                    RenderTransformOrigin="0.5,0.5"
+                    PointerEntered="NavigationDock_PointerEntered"
+                    PointerMoved="NavigationDock_PointerMoved"
+                    PointerExited="NavigationDock_PointerExited">
+                <Border.RenderTransform>
+                    <CompositeTransform x:Name="NavigationDockTransform"/>
+                </Border.RenderTransform>
                 <Border.Resources>
                     <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
                                      Color="#14000000"/>
@@ -95,13 +103,28 @@
                                      Color="Transparent"/>
                 </Border.Resources>
                 <Border.Background>
-                    <AcrylicBrush TintColor="{ThemeResource AsterHeroFadeEndColor}"
-                                  TintOpacity="0.07"
-                                  TintLuminosityOpacity="0.42"
-                                  FallbackColor="{ThemeResource AsterHeroFadeEndColor}"/>
+                    <lg:LiquidGlassBrush BlurAmount="3.85"
+                                         BloomAmount="0.11"
+                                         RefThickness="34"
+                                         RefFactor="2.35"
+                                         RefDispersion="5.2"
+                                         DispersionRange="0.38"
+                                         RefFresnelFactor="22"
+                                         GlareFactor="58"
+                                         TintA="0.035"
+                                         TintR="218"
+                                         TintG="230"
+                                         TintB="248"
+                                         ShapeRadius="0.98"
+                                         ShapeRoundness="4.0"/>
                 </Border.Background>
-                <StackPanel Orientation="Horizontal"
-                            Spacing="2">
+                <Grid>
+                    <Canvas x:Name="DockParticleCanvas"
+                            IsHitTestVisible="False"
+                            Canvas.ZIndex="0"/>
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="2"
+                                Canvas.ZIndex="1">
                     <Button x:Name="HomeButton"
                             Style="{StaticResource DockButtonStyle}"
                             Click="Home_Click">
@@ -154,53 +177,94 @@
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-                </StackPanel>
+                    </StackPanel>
+                </Grid>
             </Border>
         </Grid>
 
         <Grid x:Name="SplashLayer"
               Grid.Row="0"
               Grid.RowSpan="2"
-              Background="{ThemeResource AsterPageBackgroundBrush}"
+              Background="Transparent"
               IsHitTestVisible="True"
               Canvas.ZIndex="2000">
-            <StackPanel HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Spacing="16">
+            <Rectangle x:Name="SplashBackdropShade"
+                       Fill="{ThemeResource AsterPageBackgroundBrush}"/>
+
+            <!-- The startup mark is deliberately self-contained: initially only the
+                 circular AsterPlay symbol is visible. During reveal, this glass
+                 surface expands into the application while its sharp mark fades. -->
+            <Grid x:Name="SplashIconHost"
+                  Width="104"
+                  Height="104"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  RenderTransformOrigin="0.5,0.5">
+                <Grid.RenderTransform>
+                    <ScaleTransform x:Name="SplashCircleScale"
+                                    ScaleX="1"
+                                    ScaleY="1"/>
+                </Grid.RenderTransform>
+
                 <Border x:Name="SplashCircle"
-                        Width="96"
-                        Height="96"
-                        CornerRadius="48"
-                        RenderTransformOrigin="0.5,0.5">
+                        Width="104"
+                        Height="104"
+                        CornerRadius="52"
+                        BorderBrush="#78FFFFFF"
+                        BorderThickness="1">
                     <Border.Background>
-                        <LinearGradientBrush StartPoint="0,0"
-                                             EndPoint="1,1">
-                            <GradientStop Color="#4C8FEA"
-                                          Offset="0"/>
-                            <GradientStop Color="#6E5CE7"
-                                          Offset="1"/>
-                        </LinearGradientBrush>
+                        <lg:LiquidGlassBrush BlurAmount="2.7"
+                                             BloomAmount="0.24"
+                                             RefThickness="42"
+                                             RefFactor="2.55"
+                                             RefDispersion="5.4"
+                                             DispersionRange="0.45"
+                                             RefFresnelFactor="26"
+                                             GlareFactor="72"
+                                             TintA="0.22"
+                                             TintR="78"
+                                             TintG="140"
+                                             TintB="245"
+                                             ShapeRadius="0.99"
+                                             ShapeRoundness="4.0"/>
                     </Border.Background>
-                    <Border.RenderTransform>
-                        <ScaleTransform x:Name="SplashCircleScale"
-                                        ScaleX="1"
-                                        ScaleY="1"/>
-                    </Border.RenderTransform>
-                    <TextBlock Text="A"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Foreground="White"
-                               FontSize="42"
-                               FontWeight="SemiBold"/>
                 </Border>
 
-                <TextBlock x:Name="SplashWordmark"
-                           Text="AsterPlay"
-                           Foreground="{ThemeResource AsterPrimaryTextBrush}"
-                           FontSize="18"
-                           FontWeight="SemiBold"
-                           HorizontalAlignment="Center"/>
-            </StackPanel>
+                <Grid x:Name="SplashMark"
+                      Width="104"
+                      Height="104">
+                    <Ellipse Margin="10"
+                             Stroke="#38FFFFFF"
+                             StrokeThickness="1"/>
+                    <Path Data="M 29,68 L 51.5,31 L 75,68 M 38,55 L 66,55"
+                          Stroke="White"
+                          StrokeThickness="7"
+                          StrokeStartLineCap="Round"
+                          StrokeEndLineCap="Round"
+                          StrokeLineJoin="Round"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"/>
+                    <Ellipse Width="9"
+                             Height="9"
+                             Fill="#EFFFFFFF"
+                             HorizontalAlignment="Right"
+                             VerticalAlignment="Top"
+                             Margin="0,20,20,0"/>
+                </Grid>
+
+                <Border x:Name="SplashBlurVeil"
+                        Width="104"
+                        Height="104"
+                        CornerRadius="52"
+                        Opacity="0">
+                    <Border.Background>
+                        <AcrylicBrush TintColor="#8FA7D8"
+                                      TintOpacity="0.12"
+                                      TintLuminosityOpacity="0.58"
+                                      FallbackColor="#36506F9A"/>
+                    </Border.Background>
+                </Border>
+            </Grid>
         </Grid>
 
     </Grid>
