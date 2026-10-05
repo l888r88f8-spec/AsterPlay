@@ -97,6 +97,35 @@
                                          ShapeRadius="0.88"
                                          ShapeRoundness="3.8"/>
                 </Border.Background>
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Text="账户"
+                                   Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                                   FontSize="19"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Text="清除当前登录状态并返回登录页。"
+                                   Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                                   Margin="0,5,0,0"/>
+                    </StackPanel>
+                    <Button Content="退出登录"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Click="Logout_Click"/>
+                </Grid>
+            </Border>
+
+            <Border Padding="26" CornerRadius="28">
+                <Border.Background>
+                    <lg:LiquidGlassBrush BlurAmount="1.5"
+                                         BloomAmount="0.14"
+                                         RefThickness="30"
+                                         RefFactor="1.9"
+                                         RefDispersion="3.5"
+                                         GlareFactor="52"
+                                         TintA="0.07"
+                                         ShapeRadius="0.88"
+                                         ShapeRoundness="3.8"/>
+                </Border.Background>
                 <StackPanel Spacing="6">
                     <TextBlock Text="关于"
                                Foreground="{ThemeResource AsterPrimaryTextBrush}"
