@@ -397,6 +397,8 @@ public sealed partial class MainWindow : Window
         view.MediaRequested += (_, item) => ShowDetails(item, "home");
         view.PlayRequested += async (_, item) =>
             await StartPlaybackAsync(item, "home");
+        view.RestartRequested += async (_, item) =>
+            await StartPlaybackAsync(item, "home", restart: true);
         view.AuthenticationFailed += (_, _) =>
         {
             PlaybackLog.Write(
