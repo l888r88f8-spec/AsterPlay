@@ -80,6 +80,7 @@ public sealed partial class HomeView : UserControl
             Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
             async () =>
             {
+                await RefreshServerDisplayNameAsync();
                 await LoadCachedSnapshotAsync();
                 InitialVisualReady?.Invoke(this, EventArgs.Empty);
                 StartupDiagnostics.Write(
@@ -266,6 +267,27 @@ public sealed partial class HomeView : UserControl
 
     private void Search_Click(object sender, RoutedEventArgs e) =>
         SearchRequested?.Invoke(this, EventArgs.Empty);
+
+    private async Task RefreshServerDisplayNameAsync()
+    {
+        if (_noServerMode || !_client.IsAuthenticated)
+            return;
+
+        try
+        {
+            var serverName = await _client.GetServerNameAsync();
+            if (string.IsNullOrWhiteSpace(serverName))
+                return;
+
+            ServerProfileStore.AddOrUpdate(_client.ServerUrl, serverName);
+            ServerNameBlock.Text = serverName;
+            StartupDiagnostics.Write($"HomeView: server name refreshed to '{serverName}'");
+        }
+        catch (Exception ex)
+        {
+            PlaybackLog.Error("ServerNameLookup", ex);
+        }
+    }
 
     private string ResolveServerDisplayName()
     {
