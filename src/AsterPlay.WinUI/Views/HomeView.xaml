@@ -10,7 +10,8 @@
                       VerticalScrollBarVisibility="Hidden"
                       HorizontalScrollMode="Disabled"
                       HorizontalScrollBarVisibility="Disabled"
-                      ZoomMode="Disabled">
+                      ZoomMode="Disabled"
+                      PointerWheelChanged="HomeScrollViewer_PointerWheelChanged">
             <StackPanel Padding="48,24,48,136"
                         Spacing="28">
                 <Grid Height="330">
