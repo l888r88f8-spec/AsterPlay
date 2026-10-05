@@ -42,7 +42,7 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Background" Value="#4A11151D"/>
+            <Setter Property="Background" Value="#3811151D"/>
         </Style>
     </UserControl.Resources>
 
@@ -151,15 +151,15 @@
                                 BorderThickness="1"
                                 Click="ServerPill_Click">
                             <Button.Background>
-                                <lg:LiquidGlassBrush BlurAmount="1.8"
+                                <lg:LiquidGlassBrush BlurAmount="2.05"
                                                      BloomAmount="0.18"
                                                      RefThickness="34"
                                                      RefFactor="2.15"
                                                      RefDispersion="4.5"
                                                      GlareFactor="62"
-                                                     TintA="0.12"
-                                                     TintR="220"
-                                                     TintG="232"
+                                                     TintA="0.18"
+                                                     TintR="232"
+                                                     TintG="238"
                                                      TintB="255"
                                                      ShapeRadius="0.96"
                                                      ShapeRoundness="3.9"/>
@@ -200,15 +200,15 @@
                                 BorderThickness="1"
                                 Click="Search_Click">
                             <Button.Background>
-                                <lg:LiquidGlassBrush BlurAmount="1.8"
+                                <lg:LiquidGlassBrush BlurAmount="2.05"
                                                      BloomAmount="0.18"
                                                      RefThickness="34"
                                                      RefFactor="2.15"
                                                      RefDispersion="4.5"
                                                      GlareFactor="62"
-                                                     TintA="0.12"
-                                                     TintR="220"
-                                                     TintG="232"
+                                                     TintA="0.18"
+                                                     TintR="232"
+                                                     TintG="238"
                                                      TintB="255"
                                                      ShapeRadius="0.98"
                                                      ShapeRoundness="4.0"/>
@@ -222,7 +222,7 @@
                     <!-- Hero copy -->
                     <StackPanel VerticalAlignment="Bottom"
                                 HorizontalAlignment="Center"
-                                Margin="44,0,44,66"
+                                Margin="44,0,44,42"
                                 MaxWidth="860"
                                 Spacing="11">
                         <TextBlock x:Name="WelcomeBlock"
