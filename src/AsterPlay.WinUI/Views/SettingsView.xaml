@@ -11,11 +11,11 @@
                     Spacing="18">
             <StackPanel>
                 <TextBlock Text="设置"
-                           Foreground="White"
+                           Foreground="{ThemeResource AsterPrimaryTextBrush}"
                            FontSize="36"
                            FontWeight="SemiBold"/>
                 <TextBlock Text="应用与播放偏好"
-                           Foreground="#9FA8B6"
+                           Foreground="{ThemeResource AsterSecondaryTextBrush}"
                            Margin="0,6,0,0"/>
             </StackPanel>
 
@@ -33,7 +33,7 @@
                 </Border.Background>
                 <StackPanel Spacing="14">
                     <TextBlock Text="常规"
-                               Foreground="White"
+                               Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                FontSize="19"
                                FontWeight="SemiBold"/>
                     <CheckBox x:Name="RestoreSessionCheckBox"
@@ -41,7 +41,7 @@
                               Checked="SettingChanged"
                               Unchecked="SettingChanged"/>
                     <TextBlock Text="Access Token 继续使用当前 Windows 用户的 DPAPI 保护。"
-                               Foreground="#8993A3"
+                               Foreground="{ThemeResource AsterSecondaryTextBrush}"
                                TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
@@ -65,13 +65,13 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Spacing="5">
                         <TextBlock Text="播放器"
-                                   Foreground="White"
+                                   Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                    FontSize="19"
                                    FontWeight="SemiBold"/>
                         <TextBlock Text="控制栏自动隐藏"
-                                   Foreground="#E9EDF3"/>
+                                   Foreground="{ThemeResource AsterPrimaryTextBrush}"/>
                         <TextBlock Text="鼠标静止后隐藏播放控制层。"
-                                   Foreground="#8993A3"/>
+                                   Foreground="{ThemeResource AsterSecondaryTextBrush}"/>
                     </StackPanel>
                     <ComboBox x:Name="AutoHideComboBox"
                               Grid.Column="1"
@@ -99,13 +99,13 @@
                 </Border.Background>
                 <StackPanel Spacing="6">
                     <TextBlock Text="关于"
-                               Foreground="White"
+                               Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                FontSize="19"
                                FontWeight="SemiBold"/>
                     <TextBlock Text="AsterPlay · WinUI 3 · .NET 8"
-                               Foreground="#E9EDF3"/>
+                               Foreground="{ThemeResource AsterPrimaryTextBrush}"/>
                     <TextBlock Text="Windows App SDK 2.2.0 · LiquidGlassWinUI 1.0.3"
-                               Foreground="#8993A3"/>
+                               Foreground="{ThemeResource AsterSecondaryTextBrush}"/>
                 </StackPanel>
             </Border>
         </StackPanel>
