@@ -14,7 +14,8 @@ public partial class App : Application
         StartupDiagnostics.Write("App constructor: before InitializeComponent");
         RequestedTheme = ResolveStartupTheme();
         StartupDiagnostics.Write($"App constructor: startup theme={RequestedTheme}");
-        InitializeComponent();
+        using (StartupDiagnostics.Measure("App.InitializeComponent"))
+            InitializeComponent();
         StartupDiagnostics.Write("App constructor: after InitializeComponent");
     }
 
@@ -47,9 +48,13 @@ public partial class App : Application
         try
         {
             StartupDiagnostics.Write("OnLaunched: before MainWindow constructor");
-            _window = new MainWindow();
+            using (StartupDiagnostics.Measure("MainWindow constructor"))
+                _window = new MainWindow();
             StartupDiagnostics.Write("OnLaunched: after MainWindow constructor");
-            _window.Activate();
+
+            using (StartupDiagnostics.Measure("Window.Activate"))
+                _window.Activate();
+
             StartupDiagnostics.Write("OnLaunched: after Window.Activate");
         }
         catch (Exception ex)
