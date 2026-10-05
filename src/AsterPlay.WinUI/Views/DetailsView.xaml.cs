@@ -34,6 +34,7 @@ public sealed partial class DetailsView : UserControl
     private async Task LoadDetailsAsync()
     {
         SetLoading(true);
+        var loadTimer = System.Diagnostics.Stopwatch.StartNew();
 
         try
         {
@@ -66,6 +67,14 @@ public sealed partial class DetailsView : UserControl
         finally
         {
             SetLoading(false);
+
+            loadTimer.Stop();
+            PlaybackLog.Write(
+                "Performance",
+                $"WinUI details load: {loadTimer.Elapsed.TotalMilliseconds:0} ms, " +
+                $"itemId={_item.Id}, type={_item.Type}, " +
+                $"workingSet={Environment.WorkingSet / 1024d / 1024d:0.0} MB, " +
+                $"managed={GC.GetTotalMemory(false) / 1024d / 1024d:0.0} MB");
         }
     }
 
