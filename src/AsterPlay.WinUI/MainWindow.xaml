@@ -13,11 +13,11 @@
           Loaded="RootGrid_Loaded">
         <Grid.Resources>
         <Style x:Key="DockButtonStyle" TargetType="Button">
-            <Setter Property="MinWidth" Value="84"/>
-            <Setter Property="Height" Value="56"/>
+            <Setter Property="MinWidth" Value="80"/>
+            <Setter Property="Height" Value="50"/>
             <Setter Property="Margin" Value="2"/>
-            <Setter Property="Padding" Value="9,4"/>
-            <Setter Property="CornerRadius" Value="19"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="CornerRadius" Value="17"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{ThemeResource AsterSecondaryTextBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -78,16 +78,16 @@
             <Border x:Name="NavigationDock"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Bottom"
-                    Margin="0,0,0,12"
-                    Padding="6"
-                    CornerRadius="32"
+                    Margin="0,0,0,6"
+                    Padding="5"
+                    CornerRadius="29"
                     BorderBrush="#66FFFFFF"
                     BorderThickness="1"
                     Visibility="Visible">
                 <Border.Background>
                     <AcrylicBrush TintColor="{ThemeResource AsterHeroFadeEndColor}"
-                                  TintOpacity="0.10"
-                                  TintLuminosityOpacity="0.50"
+                                  TintOpacity="0.07"
+                                  TintLuminosityOpacity="0.42"
                                   FallbackColor="{ThemeResource AsterHeroFadeEndColor}"/>
                 </Border.Background>
                 <StackPanel Orientation="Horizontal"
