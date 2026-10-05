@@ -25,13 +25,14 @@ public sealed partial class MainWindow : Window
     private string _currentSection = "home-shell";
     private DateTimeOffset _lastWheelDiagnosticAt = DateTimeOffset.MinValue;
     private readonly IntPtr _hwnd;
-    private readonly HookProc _callWndProcHookProc;
-    private IntPtr _callWndProcHook;
+    private readonly HookProc _getMessageHookProc;
+    private IntPtr _getMessageHook;
     private long _xamlWheelSequence;
 
     private const uint WmMouseWheel = 0x020A;
     private const uint WmPointerWheel = 0x024E;
-    private const int WhCallWndProc = 4;
+    private const int WhGetMessage = 3;
+    private const int PmRemove = 1;
 
     public MainWindow()
     {
@@ -41,15 +42,15 @@ public sealed partial class MainWindow : Window
         StartupDiagnostics.Write("MainWindow constructor: after InitializeComponent");
 
         _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-        _callWndProcHookProc = CallWndProcHook;
+        _getMessageHookProc = GetMessageHook;
 
-        _callWndProcHook = SetWindowsHookEx(
-            WhCallWndProc,
-            _callWndProcHookProc,
+        _getMessageHook = SetWindowsHookEx(
+            WhGetMessage,
+            _getMessageHookProc,
             IntPtr.Zero,
             GetCurrentThreadId());
 
-        if (_callWndProcHook == IntPtr.Zero)
+        if (_getMessageHook == IntPtr.Zero)
         {
             PlaybackLog.Write(
                 "WinUINativeWheel",
@@ -59,7 +60,7 @@ public sealed partial class MainWindow : Window
         {
             PlaybackLog.Write(
                 "WinUINativeWheel",
-                "UI-thread WM_MOUSEWHEEL hook installed.");
+                "UI-thread wheel message-queue hook installed.");
         }
 
         var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(_hwnd);
@@ -81,17 +82,18 @@ public sealed partial class MainWindow : Window
         StartupDiagnostics.Write("MainWindow constructor: lightweight home shell ready");
     }
 
-    private IntPtr CallWndProcHook(
+    private IntPtr GetMessageHook(
         int code,
         IntPtr wParam,
         IntPtr lParam)
     {
-        if (code >= 0)
+        if (code >= 0 &&
+            wParam == (IntPtr)PmRemove &&
+            PageHost.Content is HomeView)
         {
-            var message = Marshal.PtrToStructure<CallWndProcMessage>(lParam);
-            if ((message.Message == WmMouseWheel ||
-                 message.Message == WmPointerWheel) &&
-                PageHost.Content is HomeView)
+            var message = Marshal.PtrToStructure<NativeMessage>(lParam);
+            if (message.Message == WmMouseWheel ||
+                message.Message == WmPointerWheel)
             {
                 var raw = unchecked((long)message.WParam);
                 var delta = unchecked((short)((raw >> 16) & 0xffff));
@@ -105,15 +107,15 @@ public sealed partial class MainWindow : Window
 
                     PlaybackLog.Write(
                         "WinUINativeWheel",
-                        $"thread-wheel: kind={messageKind}, hwnd=0x{message.Hwnd.ToInt64():X}, delta={delta}");
+                        $"queue-wheel: kind={messageKind}, hwnd=0x{message.Hwnd.ToInt64():X}, delta={delta}");
 
                     DispatcherQueue.TryEnqueue(
                         Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
                         () =>
                         {
-                            // Native input is observed before WinUI routes the
-                            // corresponding PointerWheelChanged event. Only
-                            // apply the fallback if XAML did not route it.
+                            // The queue hook sees wheel input before WinUI
+                            // converts it to PointerWheelChanged. Apply the
+                            // fallback only when XAML did not route this wheel.
                             if (_xamlWheelSequence != xamlSequenceBefore)
                                 return;
 
@@ -125,7 +127,7 @@ public sealed partial class MainWindow : Window
         }
 
         return CallNextHookEx(
-            _callWndProcHook,
+            _getMessageHook,
             code,
             wParam,
             lParam);
@@ -210,10 +212,10 @@ public sealed partial class MainWindow : Window
 
     private void MainWindow_Closed(object sender, WindowEventArgs args)
     {
-        if (_callWndProcHook != IntPtr.Zero)
+        if (_getMessageHook != IntPtr.Zero)
         {
-            UnhookWindowsHookEx(_callWndProcHook);
-            _callWndProcHook = IntPtr.Zero;
+            UnhookWindowsHookEx(_getMessageHook);
+            _getMessageHook = IntPtr.Zero;
         }
 
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= FirstFrame_Rendering;
@@ -847,12 +849,22 @@ public sealed partial class MainWindow : Window
 
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct CallWndProcMessage
+    private struct NativePoint
     {
-        public IntPtr LParam;
-        public IntPtr WParam;
-        public uint Message;
+        public int X;
+        public int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeMessage
+    {
         public IntPtr Hwnd;
+        public uint Message;
+        public UIntPtr WParam;
+        public IntPtr LParam;
+        public uint Time;
+        public NativePoint Point;
+        public uint Private;
     }
 
     private delegate IntPtr HookProc(
