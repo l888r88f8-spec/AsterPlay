@@ -26,6 +26,7 @@ public sealed partial class HomeView : UserControl
     public event EventHandler<EmbyItem>? PlayRequested;
     public event EventHandler? AuthenticationFailed;
     public event EventHandler? ServerRequested;
+    public event EventHandler? SearchRequested;
     public event EventHandler? InitialVisualReady;
 
     public HomeView(EmbyClient client, bool noServerMode = false)
@@ -46,6 +47,8 @@ public sealed partial class HomeView : UserControl
         WelcomeBlock.Text = string.IsNullOrWhiteSpace(_client.UserName)
             ? "欢迎回来"
             : $"欢迎回来，{_client.UserName}";
+
+        ServerNameBlock.Text = ResolveServerDisplayName();
 
         if (_noServerMode)
         {
@@ -238,6 +241,39 @@ public sealed partial class HomeView : UserControl
 
     private void GoToServers_Click(object sender, RoutedEventArgs e) =>
         ServerRequested?.Invoke(this, EventArgs.Empty);
+
+    private void ServerPill_Click(object sender, RoutedEventArgs e) =>
+        ServerRequested?.Invoke(this, EventArgs.Empty);
+
+    private void Search_Click(object sender, RoutedEventArgs e) =>
+        SearchRequested?.Invoke(this, EventArgs.Empty);
+
+    private string ResolveServerDisplayName()
+    {
+        if (_noServerMode)
+            return "添加服务器";
+
+        var serverUrl = (_client.ServerUrl ?? "").Trim().TrimEnd('/');
+        var profile = ServerProfileStore.Load()
+            .FirstOrDefault(item =>
+                string.Equals(
+                    item.Url.Trim().TrimEnd('/'),
+                    serverUrl,
+                    StringComparison.OrdinalIgnoreCase));
+
+        if (profile is not null &&
+            !string.IsNullOrWhiteSpace(profile.DisplayName))
+        {
+            return profile.DisplayName;
+        }
+
+        if (Uri.TryCreate(serverUrl, UriKind.Absolute, out var uri))
+            return uri.IsDefaultPort ? uri.Host : $"{uri.Host}:{uri.Port}";
+
+        return string.IsNullOrWhiteSpace(serverUrl)
+            ? "服务器"
+            : serverUrl;
+    }
 
     private void ApplySnapshot(HomeSnapshot snapshot)
     {
