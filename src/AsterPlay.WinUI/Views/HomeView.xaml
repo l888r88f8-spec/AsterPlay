@@ -325,17 +325,8 @@
                                             Background="Transparent"
                                             BorderThickness="0"
                                             Tag="{Binding}"
-                                            Click="ResumeTile_Click">
-                                        <Button.ContextFlyout>
-                                            <MenuFlyout>
-                                                <MenuFlyoutItem Text="详情"
-                                                                Tag="{Binding}"
-                                                                Click="ResumeDetails_Click"/>
-                                                <MenuFlyoutItem Text="从头播放"
-                                                                Tag="{Binding}"
-                                                                Click="ResumeRestart_Click"/>
-                                            </MenuFlyout>
-                                        </Button.ContextFlyout>
+                                            Click="ResumeTile_Click"
+                                            RightTapped="ResumeTile_RightTapped">
                                         <StackPanel Width="320"
                                                     Spacing="9">
                                             <Border Width="320"
