@@ -6,6 +6,7 @@
     Loaded="PlayerPocView_Loaded"
     Unloaded="PlayerPocView_Unloaded"
     IsTabStop="True"
+    RequestedTheme="Dark"
     KeyDown="PlayerPocView_KeyDown">
 
     <Grid x:Name="PlayerRoot" Background="Black">
