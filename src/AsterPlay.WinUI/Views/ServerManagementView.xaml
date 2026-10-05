@@ -13,11 +13,11 @@
 
         <StackPanel>
             <TextBlock Text="服务器"
-                       Foreground="White"
+                       Foreground="{ThemeResource AsterPrimaryTextBrush}"
                        FontSize="36"
                        FontWeight="SemiBold"/>
             <TextBlock Text="管理可以登录的 Emby 服务器。AsterPlay 不保存密码。"
-                       Foreground="#9FA8B6"
+                       Foreground="{ThemeResource AsterSecondaryTextBrush}"
                        Margin="0,6,0,0"/>
         </StackPanel>
 
@@ -47,7 +47,7 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <TextBlock Text="已保存服务器"
-                               Foreground="White"
+                               Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                FontSize="19"
                                FontWeight="SemiBold"/>
                     <ListView x:Name="ServerList"
@@ -57,10 +57,10 @@
                             <DataTemplate>
                                 <StackPanel Padding="6" Spacing="4">
                                     <TextBlock Text="{Binding DisplayName}"
-                                               Foreground="White"
+                                               Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                                FontWeight="SemiBold"/>
                                     <TextBlock Text="{Binding Url}"
-                                               Foreground="#929CAB"
+                                               Foreground="{ThemeResource AsterSecondaryTextBrush}"
                                                FontSize="12"/>
                                 </StackPanel>
                             </DataTemplate>
@@ -86,15 +86,15 @@
 
                 <StackPanel Spacing="10">
                     <TextBlock Text="添加 / 编辑"
-                               Foreground="White"
+                               Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                FontSize="19"
                                FontWeight="SemiBold"/>
                     <TextBlock Text="名称"
-                               Foreground="#C4CBD5"
+                               Foreground="{ThemeResource AsterSecondaryTextBrush}"
                                Margin="0,8,0,0"/>
                     <TextBox x:Name="NameBox" Height="40"/>
                     <TextBlock Text="服务器地址"
-                               Foreground="#C4CBD5"
+                               Foreground="{ThemeResource AsterSecondaryTextBrush}"
                                Margin="0,8,0,0"/>
                     <TextBox x:Name="UrlBox"
                              Height="40"
