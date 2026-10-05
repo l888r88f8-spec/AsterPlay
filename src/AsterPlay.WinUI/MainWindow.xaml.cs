@@ -107,7 +107,7 @@ public sealed partial class MainWindow : Window
 
         var view = new HomeView(_client);
         view.LibraryRequested += (_, _) => ShowLibrary();
-        view.MediaRequested += async (_, item) => await ShowMediaPendingAsync(item);
+        view.MediaRequested += async (_, item) => await StartPlaybackAsync(item, "home");
         PageHost.Content = view;
     }
 
@@ -125,7 +125,7 @@ public sealed partial class MainWindow : Window
         SetActiveNavigation(LibraryButton);
 
         var view = new LibraryView(_client);
-        view.MediaRequested += async (_, item) => await ShowMediaPendingAsync(item);
+        view.MediaRequested += async (_, item) => await StartPlaybackAsync(item, "library");
         PageHost.Content = view;
     }
 
@@ -167,18 +167,53 @@ public sealed partial class MainWindow : Window
         PageHost.Content = new SettingsView();
     }
 
-    private async Task ShowMediaPendingAsync(EmbyItem item)
+    private async Task StartPlaybackAsync(EmbyItem item, string returnSection)
     {
-        var dialog = new ContentDialog
+        if (!_client.IsAuthenticated)
         {
-            XamlRoot = RootGrid.XamlRoot,
-            Title = item.Name,
-            Content = "详情页与播放器将在下一迁移阶段接入。当前媒体数据已经来自真实 Emby 服务器。",
-            CloseButtonText = "关闭",
-            DefaultButton = ContentDialogButton.Close
-        };
+            ShowLogin();
+            return;
+        }
 
-        await dialog.ShowAsync();
+        try
+        {
+            PageTitleBlock.Text = "正在准备播放…";
+            NavigationDock.Visibility = Visibility.Collapsed;
+
+            var launch = await _client.GetPlayableStreamAsync(item);
+            var player = new PlayerPocView(_client, launch);
+            player.BackRequested += (_, _) =>
+            {
+                if (string.Equals(returnSection, "library", StringComparison.Ordinal))
+                    ShowLibrary();
+                else
+                    ShowHome();
+            };
+
+            _currentSection = "player";
+            PageTitleBlock.Text = "播放器 POC";
+            PageHost.Content = player;
+        }
+        catch (Exception ex)
+        {
+            PlaybackLog.Error("WinUIPlaybackLaunch", ex);
+
+            var dialog = new ContentDialog
+            {
+                XamlRoot = RootGrid.XamlRoot,
+                Title = "无法播放",
+                Content = UserError.GetMessage(ex, "播放"),
+                CloseButtonText = "关闭",
+                DefaultButton = ContentDialogButton.Close
+            };
+
+            await dialog.ShowAsync();
+
+            if (string.Equals(returnSection, "library", StringComparison.Ordinal))
+                ShowLibrary();
+            else
+                ShowHome();
+        }
     }
 
     private void Home_Click(object sender, RoutedEventArgs e) => ShowHome();
