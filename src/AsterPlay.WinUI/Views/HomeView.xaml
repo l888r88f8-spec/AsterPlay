@@ -64,8 +64,8 @@
             <Rectangle>
                 <Rectangle.Fill>
                     <AcrylicBrush TintColor="{ThemeResource AsterHeroFadeEndColor}"
-                                  TintOpacity="0.22"
-                                  TintLuminosityOpacity="0.38"
+                                  TintOpacity="0.14"
+                                  TintLuminosityOpacity="0.26"
                                   FallbackColor="{ThemeResource AsterHeroFadeEndColor}"/>
                 </Rectangle.Fill>
             </Rectangle>
@@ -99,8 +99,8 @@
                         Spacing="36">
 
                 <!-- Mobile-inspired immersive Hero, adapted for desktop width. -->
-                <Grid Height="690"
-                      Margin="-34,0,-34,-96">
+                <Grid Height="620"
+                      Margin="-34,0,-34,-72">
                     <controls:CachedImage x:Name="HeroImage"
                                           Stretch="UniformToFill"/>
 
@@ -117,9 +117,10 @@
                         </Rectangle.Fill>
                     </Rectangle>
 
-                    <Rectangle Height="220"
+                    <Rectangle Height="190"
                                VerticalAlignment="Bottom"
-                               Margin="0,0,0,-145"
+                               Opacity="0.72"
+                               Margin="0,0,0,-118"
                                IsHitTestVisible="False">
                         <Rectangle.Fill>
                             <LinearGradientBrush StartPoint="0,0"
@@ -132,7 +133,7 @@
                     </Rectangle>
 
                     <!-- Floating top controls -->
-                    <Grid Margin="42,62,42,0"
+                    <Grid Margin="42,34,42,0"
                           VerticalAlignment="Top">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -221,8 +222,8 @@
                     <!-- Hero copy -->
                     <StackPanel VerticalAlignment="Bottom"
                                 HorizontalAlignment="Center"
-                                Margin="44,0,44,118"
-                                MaxWidth="820"
+                                Margin="44,0,44,92"
+                                MaxWidth="860"
                                 Spacing="11">
                         <TextBlock x:Name="WelcomeBlock"
                                    Foreground="#DDEBFA"
@@ -233,7 +234,7 @@
                         <TextBlock x:Name="HeroTitleBlock"
                                    Text="AsterPlay"
                                    Foreground="White"
-                                   FontSize="56"
+                                   FontSize="50"
                                    FontWeight="SemiBold"
                                    TextAlignment="Center"
                                    HorizontalAlignment="Center"
@@ -249,7 +250,7 @@
                                    Foreground="#E0E3E8"
                                    FontSize="16"
                                    LineHeight="25"
-                                   MaxWidth="780"
+                                   MaxWidth="820"
                                    MaxHeight="76"
                                    TextAlignment="Center"
                                    HorizontalAlignment="Center"
