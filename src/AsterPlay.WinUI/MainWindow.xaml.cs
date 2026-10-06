@@ -903,7 +903,7 @@ public sealed partial class MainWindow : Window
         var inactiveBackground =
             new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
         var selectedBackground =
-            new SolidColorBrush(Windows.UI.Color.FromArgb(26, 255, 255, 255));
+            new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
         var inactiveForeground =
             new SolidColorBrush(Windows.UI.Color.FromArgb(255, 16, 18, 23));
         var selectedForeground =
