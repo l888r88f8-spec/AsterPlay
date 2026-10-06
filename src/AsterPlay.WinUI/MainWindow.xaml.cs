@@ -1,4 +1,3 @@
-using System.Numerics;
 using System.Runtime.InteropServices;
 using AsterPlay.Models;
 using AsterPlay.Services;
@@ -22,17 +21,6 @@ public sealed partial class MainWindow : Window
     private bool _startupResolutionCompleted;
     private bool _startupRevealScheduled;
     private bool _startupVisualReadyRaised;
-    private bool _startupCoverLogoReady;
-    private bool _startupFirstFrameObserved;
-    private bool _startupNativeReleaseScheduled;
-    private int _startupNativeReleaseFramesRemaining;
-    private bool _nativeStartupPaintActive = true;
-    private readonly SubclassProc _startupSubclassProc;
-    private IntPtr _nativeStartupBrush;
-    private IntPtr _nativeStartupPng;
-    private UIntPtr _gdiplusToken;
-    private bool _startupSubclassInstalled;
-    private RectInt32 _startupTargetBounds;
     private bool _authenticated;
     private string _currentSection = "home-shell";
     private readonly IntPtr _hwnd;
@@ -42,13 +30,9 @@ public sealed partial class MainWindow : Window
     private const uint WmMouseWheel = 0x020A;
     private const int WhMouseLl = 14;
     private const int DwmwaExtendedFrameBounds = 9;
-    private const uint WmPaint = 0x000F;
-    private const uint WmEraseBkgnd = 0x0014;
-    private const uint WmSetCursor = 0x0020;
-    private static readonly IntPtr IdcArrow = new(32512);
 
 
-    public MainWindow()
+    public MainWindow(RectInt32 startupBounds)
     {
         StartupDiagnostics.Write("MainWindow constructor: entered");
         using (StartupDiagnostics.Measure("MainWindow.InitializeComponent"))
@@ -56,13 +40,6 @@ public sealed partial class MainWindow : Window
         StartupDiagnostics.Write("MainWindow constructor: after InitializeComponent");
 
         _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-
-        // Window.Activate() can expose the native HWND before WinUI has produced
-        // its first XAML/DirectComposition frame. Paint that short gap natively
-        // on the SAME top-level window so Windows never gets a chance to show
-        // its default white client surface.
-        _startupSubclassProc = StartupWindowSubclassProc;
-        InitializeNativeStartupSurface();
 
         _lowLevelMouseHookProc = LowLevelMouseHook;
 
@@ -102,7 +79,7 @@ public sealed partial class MainWindow : Window
             StartupDiagnostics.WriteException("SetWindowIcon", ex);
         }
 
-        PrepareStartupWindow();
+        PrepareStartupWindow(startupBounds);
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -113,6 +90,23 @@ public sealed partial class MainWindow : Window
         SetActiveNavigation(HomeButton);
 
         StartupDiagnostics.Write("MainWindow constructor: lightweight home shell ready");
+    }
+
+    internal IntPtr NativeHandle => _hwnd;
+
+    internal RectInt32 CurrentBounds
+    {
+        get
+        {
+            var position = _appWindow.Position;
+            var size = _appWindow.Size;
+
+            return new RectInt32(
+                position.X,
+                position.Y,
+                size.Width,
+                size.Height);
+        }
     }
 
     private IntPtr LowLevelMouseHook(
@@ -220,10 +214,7 @@ public sealed partial class MainWindow : Window
         }
 
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= FirstFrame_Rendering;
-        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= StartupNativeRelease_Rendering;
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= StartupReveal_Rendering;
-
-        ReleaseNativeStartupSurface();
 
         if (_uiSettings is not null)
             _uiSettings.ColorValuesChanged -= SystemColorValuesChanged;
@@ -239,94 +230,22 @@ public sealed partial class MainWindow : Window
 
         _startupResolutionScheduled = true;
 
-        // Wait for the first composition frame before touching disk, DPAPI,
-        // UISettings, EmbyClient, or page XAML. The native painter covers this
-        // short gap on the same HWND until the XAML startup cover is confirmed.
+        // The native top-level splash is already visible before MainWindow is
+        // activated. Start noncritical startup work after WinUI reaches its
+        // first XAML composition frame.
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += FirstFrame_Rendering;
     }
 
     private void FirstFrame_Rendering(object? sender, object e)
     {
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= FirstFrame_Rendering;
-        _startupFirstFrameObserved = true;
 
         StartupDiagnostics.Write(
-            $"First MainWindow XAML frame composed; logoReady={_startupCoverLogoReady}, nativePainter={_nativeStartupPaintActive}");
-
-        TryScheduleNativeStartupRelease();
+            "First MainWindow XAML frame composed behind native splash");
 
         DispatcherQueue.TryEnqueue(
             Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
             async () => await ResolveStartupStateAsync());
-    }
-
-    private void StartupCoverLogoImage_ImageOpened(
-        object sender,
-        RoutedEventArgs e)
-    {
-        _startupCoverLogoReady = true;
-        StartupDiagnostics.Write(
-            $"Startup cover PNG decoded; firstFrameObserved={_startupFirstFrameObserved}");
-
-        TryScheduleNativeStartupRelease();
-    }
-
-    private void StartupCoverLogoImage_ImageFailed(
-        object sender,
-        ExceptionRoutedEventArgs e)
-    {
-        // A broken logo must never leave the application permanently invisible.
-        _startupCoverLogoReady = true;
-        StartupDiagnostics.Write(
-            $"Startup cover PNG decode failed; continuing with background only: {e.ErrorMessage}");
-
-        TryScheduleNativeStartupRelease();
-    }
-
-    private void TryScheduleNativeStartupRelease()
-    {
-        if (!_nativeStartupPaintActive ||
-            !_startupFirstFrameObserved ||
-            !_startupCoverLogoReady ||
-            _startupNativeReleaseScheduled)
-        {
-            return;
-        }
-
-        _startupNativeReleaseScheduled = true;
-        _startupNativeReleaseFramesRemaining = 3;
-        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering +=
-            StartupNativeRelease_Rendering;
-
-        StartupDiagnostics.Write(
-            "XAML startup cover ready; holding native painter for 3 stable compositor frames");
-    }
-
-    private void StartupNativeRelease_Rendering(object? sender, object e)
-    {
-        if (_startupNativeReleaseFramesRemaining > 1)
-        {
-            _startupNativeReleaseFramesRemaining--;
-            return;
-        }
-
-        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -=
-            StartupNativeRelease_Rendering;
-        _startupNativeReleaseScheduled = false;
-        _startupNativeReleaseFramesRemaining = 0;
-
-        var flushBefore = DwmFlush();
-        StartupDiagnostics.Write(
-            $"XAML startup cover stable for 3 frames; pre-native-release DwmFlush={flushBefore}");
-
-        ReleaseNativeStartupSurface();
-
-        // Do not force a synchronous WM_PAINT here. The exact same PNG has
-        // already been present in XAML for several compositor frames, so the
-        // handoff should no longer expose a one-frame icon blink.
-        var flushAfter = DwmFlush();
-        StartupDiagnostics.Write(
-            $"Native startup painter released after stable XAML handoff; DwmFlush={flushAfter}");
     }
 
     private async Task ResolveStartupStateAsync()
@@ -407,48 +326,18 @@ public sealed partial class MainWindow : Window
 
     internal event EventHandler? StartupVisualReady;
 
-    private void PrepareStartupWindow()
+    private void PrepareStartupWindow(
+        RectInt32 startupBounds)
     {
         try
         {
-            var windowId =
-                Microsoft.UI.Win32Interop.GetWindowIdFromWindow(_hwnd);
-            var workArea = DisplayArea.GetFromWindowId(
-                    windowId,
-                    DisplayAreaFallback.Primary)
-                .WorkArea;
-
-            var currentSize = _appWindow.Size;
-            var width = currentSize.Width >= 640
-                ? currentSize.Width
-                : 1280;
-            var height = currentSize.Height >= 420
-                ? currentSize.Height
-                : 800;
-
-            width = Math.Min(
-                width,
-                Math.Max(640, workArea.Width - 80));
-            height = Math.Min(
-                height,
-                Math.Max(420, workArea.Height - 80));
-
-            _startupTargetBounds = new RectInt32(
-                workArea.X + ((workArea.Width - width) / 2),
-                workArea.Y + ((workArea.Height - height) / 2),
-                width,
-                height);
-
-            // Keep MainWindow at its final real screen coordinates from the
-            // very beginning. Its own startup cover is already part of the
-            // XAML tree before Activate(), so HomeView can measure, arrange and
-            // compose at the exact DPI/monitor/position used after reveal.
-            _appWindow.MoveAndResize(_startupTargetBounds);
+            _appWindow.MoveAndResize(
+                startupBounds);
 
             StartupDiagnostics.Write(
-                $"MainWindow prepared at final bounds with startup cover; target=" +
-                $"{_startupTargetBounds.X},{_startupTargetBounds.Y}," +
-                $"{_startupTargetBounds.Width}x{_startupTargetBounds.Height}");
+                $"MainWindow applied shared startup bounds; target=" +
+                $"{startupBounds.X},{startupBounds.Y}," +
+                $"{startupBounds.Width}x{startupBounds.Height}");
         }
         catch (Exception ex)
         {
@@ -456,343 +345,6 @@ public sealed partial class MainWindow : Window
                 "PrepareStartupWindow",
                 ex);
         }
-    }
-
-    internal async Task DismissStartupCoverAsync()
-    {
-        if (StartupCoverLayer.Visibility != Visibility.Visible)
-            return;
-
-        // HomeView and its first viewport are already ready at this point.
-        // Give it two real composition frames underneath the cover, then fade
-        // only the cover on the compositor thread. This avoids a layout pass
-        // during the transition and keeps the reveal smooth.
-        await WaitForRenderingFramesAsync(2);
-
-        var readyDwmResult = DwmFlush();
-        StartupDiagnostics.Write(
-            $"DismissStartupCoverAsync: home ready under cover; DwmFlush={readyDwmResult}");
-
-        StartupCoverLayer.IsHitTestVisible = false;
-
-        var visual =
-            Microsoft.UI.Xaml.Hosting.ElementCompositionPreview
-                .GetElementVisual(StartupCoverLayer);
-        var compositor = visual.Compositor;
-
-        var easing = compositor.CreateCubicBezierEasingFunction(
-            new Vector2(0.22f, 1.0f),
-            new Vector2(0.36f, 1.0f));
-
-        var fade = compositor.CreateScalarKeyFrameAnimation();
-        fade.InsertKeyFrame(0.0f, 1.0f);
-        fade.InsertKeyFrame(1.0f, 0.0f, easing);
-        fade.Duration = TimeSpan.FromMilliseconds(640);
-
-        var completion = new TaskCompletionSource<bool>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-
-        var batch = compositor.CreateScopedBatch(
-            Microsoft.UI.Composition.CompositionBatchTypes.Animation);
-        batch.Completed += (_, _) => completion.TrySetResult(true);
-
-        visual.StartAnimation("Opacity", fade);
-        batch.End();
-
-        StartupDiagnostics.Write(
-            "DismissStartupCoverAsync: 640 ms compositor fade started");
-
-        await completion.Task;
-
-        visual.StopAnimation("Opacity");
-        StartupCoverLayer.Opacity = 0;
-        StartupCoverLayer.Visibility = Visibility.Collapsed;
-
-        var homeDwmResult = DwmFlush();
-        StartupDiagnostics.Write(
-            $"DismissStartupCoverAsync: fade completed; home owns window; DwmFlush={homeDwmResult}");
-
-        DispatcherQueue.TryEnqueue(
-            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
-            () => StartupDiagnostics.Write(
-                "DismissStartupCoverAsync: post-reveal dispatcher responsive"));
-    }
-
-    private void InitializeNativeStartupSurface()
-    {
-        var isLight =
-            Application.Current.RequestedTheme == ApplicationTheme.Light;
-        var background = isLight
-            ? Windows.UI.Color.FromArgb(255, 244, 246, 249)
-            : Windows.UI.Color.FromArgb(255, 8, 10, 15);
-
-        _nativeStartupBrush = CreateSolidBrush(
-            ToColorRef(background.R, background.G, background.B));
-
-        try
-        {
-            var gdiplusInput = new GdiplusStartupInput
-            {
-                GdiplusVersion = 1
-            };
-
-            var startupStatus = GdiplusStartup(
-                out _gdiplusToken,
-                ref gdiplusInput,
-                IntPtr.Zero);
-
-            if (startupStatus == 0)
-            {
-                var pngPath = Path.Combine(
-                    AppContext.BaseDirectory,
-                    "Assets",
-                    "AsterPlay.AppIcon.png");
-
-                if (File.Exists(pngPath))
-                {
-                    var loadStatus = GdipLoadImageFromFile(
-                        pngPath,
-                        out _nativeStartupPng);
-
-                    if (loadStatus != 0)
-                        _nativeStartupPng = IntPtr.Zero;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            StartupDiagnostics.WriteException(
-                "InitializeNativeStartupSurface PNG",
-                ex);
-        }
-
-        _startupSubclassInstalled = SetWindowSubclass(
-            _hwnd,
-            _startupSubclassProc,
-            UIntPtr.Zero,
-            UIntPtr.Zero);
-
-        StartupDiagnostics.Write(
-            $"Native startup painter installed={_startupSubclassInstalled}; " +
-            $"brush={_nativeStartupBrush != IntPtr.Zero}, png={_nativeStartupPng != IntPtr.Zero}");
-    }
-
-    private IntPtr StartupWindowSubclassProc(
-        IntPtr hWnd,
-        uint message,
-        IntPtr wParam,
-        IntPtr lParam,
-        UIntPtr subclassId,
-        UIntPtr referenceData)
-    {
-        if (!_nativeStartupPaintActive)
-        {
-            return DefSubclassProc(
-                hWnd,
-                message,
-                wParam,
-                lParam);
-        }
-
-        switch (message)
-        {
-            case WmEraseBkgnd:
-                PaintNativeStartupSurface(wParam);
-                return (IntPtr)1;
-
-            case WmPaint:
-            {
-                // Let WinUI/the default window procedure process WM_PAINT first
-                // so DirectComposition/XAML initialization is never blocked.
-                var result = DefSubclassProc(
-                    hWnd,
-                    message,
-                    wParam,
-                    lParam);
-
-                var hdc = GetDC(hWnd);
-                if (hdc != IntPtr.Zero)
-                {
-                    try
-                    {
-                        PaintNativeStartupSurface(hdc);
-                    }
-                    finally
-                    {
-                        ReleaseDC(
-                            hWnd,
-                            hdc);
-                    }
-                }
-
-                return result;
-            }
-
-            case WmSetCursor:
-            {
-                var arrow = LoadCursor(
-                    IntPtr.Zero,
-                    IdcArrow);
-                if (arrow != IntPtr.Zero)
-                    SetCursor(arrow);
-
-                return (IntPtr)1;
-            }
-        }
-
-        return DefSubclassProc(
-            hWnd,
-            message,
-            wParam,
-            lParam);
-    }
-
-    private void PaintNativeStartupSurface(IntPtr hdc)
-    {
-        if (hdc == IntPtr.Zero)
-            return;
-
-        if (GetClientRect(
-                _hwnd,
-                out var clientRect) &&
-            _nativeStartupBrush != IntPtr.Zero)
-        {
-            FillRect(
-                hdc,
-                ref clientRect,
-                _nativeStartupBrush);
-        }
-
-        if (_nativeStartupPng == IntPtr.Zero)
-            return;
-
-        var width = clientRect.Right - clientRect.Left;
-        var height = clientRect.Bottom - clientRect.Top;
-        var dpi = GetDpiForWindow(_hwnd);
-        if (dpi == 0)
-            dpi = 96;
-
-        // XAML's Width/Height=144 are device-independent pixels. Match that
-        // exact physical size here so the native PNG does not jump when XAML
-        // takes over on 125%/150%/200% display scaling.
-        var iconSize = Math.Max(
-            1,
-            (int)Math.Round(144.0 * dpi / 96.0));
-        var x = Math.Max(0, (width - iconSize) / 2);
-        var y = Math.Max(0, (height - iconSize) / 2);
-
-        if (GdipCreateFromHDC(
-                hdc,
-                out var graphics) != 0 ||
-            graphics == IntPtr.Zero)
-        {
-            return;
-        }
-
-        try
-        {
-            // High-quality bicubic interpolation matches the XAML PNG much
-            // more closely than scaling an ICO with DrawIconEx.
-            GdipSetInterpolationMode(
-                graphics,
-                InterpolationModeHighQualityBicubic);
-
-            GdipDrawImageRectI(
-                graphics,
-                _nativeStartupPng,
-                x,
-                y,
-                iconSize,
-                iconSize);
-        }
-        finally
-        {
-            GdipDeleteGraphics(graphics);
-        }
-    }
-
-    private void ReleaseNativeStartupSurface()
-    {
-        if (!_nativeStartupPaintActive &&
-            !_startupSubclassInstalled &&
-            _nativeStartupBrush == IntPtr.Zero &&
-            _nativeStartupPng == IntPtr.Zero &&
-            _gdiplusToken == UIntPtr.Zero)
-        {
-            return;
-        }
-
-        _nativeStartupPaintActive = false;
-
-        if (_startupSubclassInstalled)
-        {
-            RemoveWindowSubclass(
-                _hwnd,
-                _startupSubclassProc,
-                UIntPtr.Zero);
-            _startupSubclassInstalled = false;
-        }
-
-        if (_nativeStartupBrush != IntPtr.Zero)
-        {
-            DeleteObject(_nativeStartupBrush);
-            _nativeStartupBrush = IntPtr.Zero;
-        }
-
-        if (_nativeStartupPng != IntPtr.Zero)
-        {
-            GdipDisposeImage(_nativeStartupPng);
-            _nativeStartupPng = IntPtr.Zero;
-        }
-
-        if (_gdiplusToken != UIntPtr.Zero)
-        {
-            GdiplusShutdown(_gdiplusToken);
-            _gdiplusToken = UIntPtr.Zero;
-        }
-
-        StartupDiagnostics.Write(
-            "Native startup painter released");
-    }
-
-    private static uint ToColorRef(
-        byte red,
-        byte green,
-        byte blue) =>
-        (uint)(red | (green << 8) | (blue << 16));
-
-    internal void ForceDismissStartupCover()
-    {
-        StartupCoverLayer.IsHitTestVisible = false;
-        StartupCoverLayer.Opacity = 0;
-        StartupCoverLayer.Visibility = Visibility.Collapsed;
-
-        StartupDiagnostics.Write(
-            "ForceDismissStartupCover: startup cover collapsed");
-    }
-
-    private static Task WaitForRenderingFramesAsync(int frameCount)
-    {
-        if (frameCount <= 0)
-            return Task.CompletedTask;
-
-        var completion = new TaskCompletionSource<bool>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-
-        var remaining = frameCount;
-        EventHandler<object>? handler = null;
-        handler = (_, _) =>
-        {
-            remaining--;
-            if (remaining > 0)
-                return;
-
-            Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= handler;
-            completion.TrySetResult(true);
-        };
-
-        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += handler;
-        return completion.Task;
     }
 
     private void ScheduleStartupReveal()
@@ -1264,19 +816,6 @@ public sealed partial class MainWindow : Window
     }
 
 
-    private const int InterpolationModeHighQualityBicubic = 7;
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct GdiplusStartupInput
-    {
-        public uint GdiplusVersion;
-        public IntPtr DebugEventCallback;
-        [MarshalAs(UnmanagedType.Bool)]
-        public bool SuppressBackgroundThread;
-        [MarshalAs(UnmanagedType.Bool)]
-        public bool SuppressExternalCodecs;
-    }
-
     [StructLayout(LayoutKind.Sequential)]
     private struct NativePoint
     {
@@ -1302,14 +841,6 @@ public sealed partial class MainWindow : Window
         public uint Time;
         public UIntPtr ExtraInfo;
     }
-
-    private delegate IntPtr SubclassProc(
-        IntPtr hWnd,
-        uint message,
-        IntPtr wParam,
-        IntPtr lParam,
-        UIntPtr subclassId,
-        UIntPtr referenceData);
 
     private delegate IntPtr HookProc(
         int code,
@@ -1342,118 +873,8 @@ public sealed partial class MainWindow : Window
         out NativeRect value,
         int size);
 
-    [DllImport("dwmapi.dll")]
-    private static extern int DwmFlush();
-
-    [DllImport("comctl32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetWindowSubclass(
-        IntPtr hWnd,
-        SubclassProc callback,
-        UIntPtr subclassId,
-        UIntPtr referenceData);
-
-    [DllImport("comctl32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool RemoveWindowSubclass(
-        IntPtr hWnd,
-        SubclassProc callback,
-        UIntPtr subclassId);
-
-    [DllImport("comctl32.dll")]
-    private static extern IntPtr DefSubclassProc(
-        IntPtr hWnd,
-        uint message,
-        IntPtr wParam,
-        IntPtr lParam);
-
-    [DllImport("gdi32.dll")]
-    private static extern IntPtr CreateSolidBrush(
-        uint colorRef);
-
-    [DllImport("gdi32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool DeleteObject(
-        IntPtr obj);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr LoadCursor(
-        IntPtr instance,
-        IntPtr cursorName);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr SetCursor(
-        IntPtr cursor);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetDC(
-        IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    private static extern int ReleaseDC(
-        IntPtr hWnd,
-        IntPtr hdc);
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool GetClientRect(
-        IntPtr hWnd,
-        out NativeRect rect);
-
-    [DllImport("user32.dll")]
-    private static extern int FillRect(
-        IntPtr hdc,
-        ref NativeRect rect,
-        IntPtr brush);
-
-    [DllImport("gdiplus.dll", ExactSpelling = true)]
-    private static extern int GdiplusStartup(
-        out UIntPtr token,
-        ref GdiplusStartupInput input,
-        IntPtr output);
-
-    [DllImport("gdiplus.dll", ExactSpelling = true)]
-    private static extern void GdiplusShutdown(
-        UIntPtr token);
-
-    [DllImport("gdiplus.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
-    private static extern int GdipLoadImageFromFile(
-        string filename,
-        out IntPtr image);
-
-    [DllImport("gdiplus.dll", ExactSpelling = true)]
-    private static extern int GdipDisposeImage(
-        IntPtr image);
-
-    [DllImport("gdiplus.dll", ExactSpelling = true)]
-    private static extern int GdipCreateFromHDC(
-        IntPtr hdc,
-        out IntPtr graphics);
-
-    [DllImport("gdiplus.dll", ExactSpelling = true)]
-    private static extern int GdipDeleteGraphics(
-        IntPtr graphics);
-
-    [DllImport("gdiplus.dll", ExactSpelling = true)]
-    private static extern int GdipSetInterpolationMode(
-        IntPtr graphics,
-        int interpolationMode);
-
-    [DllImport("gdiplus.dll", ExactSpelling = true)]
-    private static extern int GdipDrawImageRectI(
-        IntPtr graphics,
-        IntPtr image,
-        int x,
-        int y,
-        int width,
-        int height);
-
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr GetModuleHandle(string? moduleName);
-
-    [DllImport("user32.dll")]
-    private static extern uint GetDpiForWindow(
-        IntPtr hWnd);
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
