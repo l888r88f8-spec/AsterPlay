@@ -95,16 +95,16 @@ public partial class App : Application
             _window.StartupVisualReady +=
                 MainWindow_StartupVisualReady;
 
-            // MainWindow is positioned off-screen before activation, so it can
-            // run Loaded/Rendering and resolve startup state without flashing
-            // a white client area on the user's desktop.
+            // MainWindow stays at its final screen bounds from the beginning.
+            // The always-on-top external splash plus MainWindow's own startup
+            // cover hide all startup work without relocating the WinUI HWND.
             using (StartupDiagnostics.Measure("MainWindow.Activate"))
                 _window.Activate();
 
             _splashWindow?.Activate();
 
             StartupDiagnostics.Write(
-                "OnLaunched: off-screen MainWindow activated behind splash");
+                "OnLaunched: covered MainWindow activated at final bounds behind splash");
         }
         catch (Exception ex)
         {
@@ -136,6 +136,7 @@ public partial class App : Application
         if (_splashWindow is null)
         {
             _window.CompleteStartupWindowReveal();
+            await _window.DismissStartupCoverAsync();
             return;
         }
 
@@ -152,7 +153,16 @@ public partial class App : Application
                 ex);
 
             _window.CompleteStartupWindowReveal();
-            splash.Close();
+
+            try
+            {
+                splash.Close();
+            }
+            catch
+            {
+            }
+
+            await _window.DismissStartupCoverAsync();
         }
         finally
         {
