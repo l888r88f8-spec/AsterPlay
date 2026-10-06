@@ -180,7 +180,6 @@
 
         <Grid x:Name="StartupCoverLayer"
               Grid.RowSpan="2"
-              Panel.ZIndex="10000"
               Background="{ThemeResource AsterPageBackgroundBrush}"
               Visibility="Visible">
             <Image Source="ms-appx:///Assets/AsterPlay.AppIcon.png"
