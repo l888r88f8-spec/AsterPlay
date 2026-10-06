@@ -2,7 +2,6 @@
     x:Class="AsterPlay.WinUI.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:lg="using:LiquidGlassWinUI"
     Title="AsterPlay">
 
     <Grid x:Name="RootGrid"
@@ -92,20 +91,10 @@
                                      Color="Transparent"/>
                 </Border.Resources>
                 <Border.Background>
-                    <lg:LiquidGlassBrush BlurAmount="3.4"
-                                         BloomAmount="0.10"
-                                         RefThickness="38"
-                                         RefFactor="2.24"
-                                         RefDispersion="3.8"
-                                         DispersionRange="0.30"
-                                         RefFresnelFactor="22"
-                                         GlareFactor="60"
-                                         TintA="0.44"
-                                         TintR="239"
-                                         TintG="239"
-                                         TintB="244"
-                                         ShapeRadius="0.99"
-                                         ShapeRoundness="4.0"/>
+                    <AcrylicBrush TintColor="#EFEFF4"
+                                  TintOpacity="0.440"
+                                  TintLuminosityOpacity="0.62"
+                                  FallbackColor="#F0EFEFF4"/>
                 </Border.Background>
                 <StackPanel Orientation="Horizontal"
                             Spacing="2">
