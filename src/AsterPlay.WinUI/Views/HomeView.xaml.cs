@@ -35,6 +35,7 @@ public sealed partial class HomeView : UserControl
     private bool _serverChooserClosing;
     private readonly bool _noServerMode;
     private bool _hasCachedSnapshot;
+    private bool _initialVisualReadyRaised;
 
     public event EventHandler? LibraryRequested;
     public event EventHandler<EmbyItem>? MediaRequested;
@@ -187,13 +188,38 @@ public sealed partial class HomeView : UserControl
             Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
             async () =>
             {
-                await RefreshServerDisplayNameAsync();
+                // Server-name refresh is not a prerequisite for first paint.
+                // Let it run independently so a slow server cannot hold the
+                // startup splash open.
+                _ = RefreshServerDisplayNameAsync();
+
                 await LoadCachedSnapshotAsync();
-                InitialVisualReady?.Invoke(this, EventArgs.Empty);
-                StartupDiagnostics.Write(
-                    $"HomeView: initial visual ready; cachedSnapshot={_hasCachedSnapshot}");
+
+                if (_hasCachedSnapshot)
+                {
+                    RaiseInitialVisualReady();
+                    await LoadAsync();
+                    return;
+                }
+
+                // With no cache, keep the splash visible until the first real
+                // network result (or visible error state) has been applied.
                 await LoadAsync();
+
+                if (IsLoaded)
+                    RaiseInitialVisualReady();
             });
+    }
+
+    private void RaiseInitialVisualReady()
+    {
+        if (_initialVisualReadyRaised)
+            return;
+
+        _initialVisualReadyRaised = true;
+        InitialVisualReady?.Invoke(this, EventArgs.Empty);
+        StartupDiagnostics.Write(
+            $"HomeView: initial visual ready; cachedSnapshot={_hasCachedSnapshot}");
     }
 
     private Task LoadCachedSnapshotAsync()
