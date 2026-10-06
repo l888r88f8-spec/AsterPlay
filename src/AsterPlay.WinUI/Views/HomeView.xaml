@@ -71,7 +71,7 @@
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Background">
                 <Setter.Value>
-                    <lg:LiquidGlassBrush BlurAmount="3.6"
+                    <lg:LiquidGlassBrush BlurAmount="2.8"
                                          BloomAmount="0.08"
                                          RefThickness="24"
                                          RefFactor="1.75"
@@ -188,15 +188,15 @@
                     Template="{StaticResource FlatButtonTemplate}"
                     Click="ServerPill_Click">
                 <Button.Background>
-                    <lg:LiquidGlassBrush BlurAmount="4.6"
-                                         BloomAmount="0.12"
+                    <lg:LiquidGlassBrush BlurAmount="3.0"
+                                         BloomAmount="0.10"
                                          RefThickness="34"
-                                         RefFactor="2.10"
-                                         RefDispersion="4.2"
-                                         DispersionRange="0.32"
-                                         RefFresnelFactor="18"
-                                         GlareFactor="55"
-                                         TintA="0.28"
+                                         RefFactor="2.18"
+                                         RefDispersion="3.7"
+                                         DispersionRange="0.30"
+                                         RefFresnelFactor="20"
+                                         GlareFactor="58"
+                                         TintA="0.40"
                                          TintR="238"
                                          TintG="240"
                                          TintB="246"
@@ -231,7 +231,7 @@
                                Grid.Column="1"
                                Margin="11,0,4,0"
                                Text="服务器"
-                               Foreground="#EA101217"
+                               Foreground="#FF101217"
                                FontSize="16"
                                FontWeight="SemiBold"
                                TextTrimming="CharacterEllipsis"
@@ -251,15 +251,15 @@
                     Template="{StaticResource FlatButtonTemplate}"
                     Click="Search_Click">
                 <Button.Background>
-                    <lg:LiquidGlassBrush BlurAmount="4.6"
-                                         BloomAmount="0.12"
+                    <lg:LiquidGlassBrush BlurAmount="3.0"
+                                         BloomAmount="0.10"
                                          RefThickness="34"
-                                         RefFactor="2.10"
-                                         RefDispersion="4.2"
-                                         DispersionRange="0.32"
-                                         RefFresnelFactor="18"
-                                         GlareFactor="55"
-                                         TintA="0.28"
+                                         RefFactor="2.18"
+                                         RefDispersion="3.7"
+                                         DispersionRange="0.30"
+                                         RefFresnelFactor="20"
+                                         GlareFactor="58"
+                                         TintA="0.40"
                                          TintR="238"
                                          TintG="240"
                                          TintB="246"
@@ -267,7 +267,7 @@
                                          ShapeRoundness="4.0"/>
                 </Button.Background>
                 <FontIcon Glyph="&#xE721;"
-                          Foreground="#EF101217"
+                          Foreground="#FF101217"
                           FontSize="22"/>
             </Button>
         </Grid>
@@ -293,15 +293,15 @@
                 Visibility="Collapsed"
                 Canvas.ZIndex="90">
             <Border.Background>
-                <lg:LiquidGlassBrush BlurAmount="6.2"
-                                     BloomAmount="0.12"
+                <lg:LiquidGlassBrush BlurAmount="3.5"
+                                     BloomAmount="0.10"
                                      RefThickness="42"
-                                     RefFactor="2.18"
-                                     RefDispersion="4.5"
-                                     DispersionRange="0.34"
-                                     RefFresnelFactor="20"
-                                     GlareFactor="58"
-                                     TintA="0.42"
+                                     RefFactor="2.22"
+                                     RefDispersion="3.8"
+                                     DispersionRange="0.30"
+                                     RefFresnelFactor="22"
+                                     GlareFactor="60"
+                                     TintA="0.52"
                                      TintR="239"
                                      TintG="242"
                                      TintB="247"
@@ -357,7 +357,7 @@
                                     <TextBlock Grid.Column="1"
                                                Margin="12,0,8,0"
                                                Text="{Binding DisplayName}"
-                                               Foreground="#F015171C"
+                                               Foreground="#FF15171C"
                                                FontSize="20"
                                                FontWeight="SemiBold"
                                                TextTrimming="CharacterEllipsis"
@@ -365,7 +365,7 @@
 
                                     <TextBlock Grid.Column="2"
                                                Text="{Binding CurrentMark}"
-                                               Foreground="#D915171C"
+                                               Foreground="#FF15171C"
                                                FontSize="22"
                                                FontWeight="SemiBold"
                                                HorizontalAlignment="Center"
