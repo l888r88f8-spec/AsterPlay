@@ -47,7 +47,6 @@ public sealed class ImageCacheService
         if (_memory.TryGetValue(key, out var weak) &&
             weak.TryGetTarget(out var cached))
         {
-            PlaybackLog.Write("WinUIImageCache", $"memory hit: {key[..12]}");
             return cached;
         }
 
@@ -146,7 +145,6 @@ public sealed class ImageCacheService
         if (diskBytes is not null)
         {
             Touch(cachePath);
-            PlaybackLog.Write("WinUIImageCache", $"disk hit: {key[..12]}");
             return diskBytes;
         }
 
@@ -160,8 +158,6 @@ public sealed class ImageCacheService
                 Touch(cachePath);
                 return diskBytes;
             }
-
-            PlaybackLog.Write("WinUIImageCache", $"download: {key[..12]}");
 
             using var response = await _http.GetAsync(
                 url,
@@ -315,9 +311,6 @@ public sealed class ImageCacheService
                 retainedBytes += file.Length;
             }
 
-            PlaybackLog.Write(
-                "WinUIImageCache",
-                $"cleanup complete: retained={retainedBytes / (1024d * 1024d):0.0} MB");
         }
         catch (Exception ex)
         {
@@ -331,7 +324,12 @@ public sealed class ImageCacheService
     {
         try
         {
-            File.SetLastWriteTimeUtc(path, DateTime.UtcNow);
+            // Cache reads can happen dozens of times while a page is populated.
+            // Updating the file timestamp for every hit turns cache reads into
+            // synchronous disk writes. Refresh recency only occasionally.
+            var info = new FileInfo(path);
+            if (DateTime.UtcNow - info.LastWriteTimeUtc > TimeSpan.FromHours(6))
+                File.SetLastWriteTimeUtc(path, DateTime.UtcNow);
         }
         catch
         {
