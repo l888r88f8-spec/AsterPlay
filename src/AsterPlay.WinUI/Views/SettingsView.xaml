@@ -112,7 +112,7 @@
                                FontWeight="SemiBold"/>
                     <TextBlock Text="AsterPlay · WinUI 3 · .NET 8"
                                Foreground="{ThemeResource AsterPrimaryTextBrush}"/>
-                    <TextBlock Text="Windows App SDK 2.5.1 · WinUI Acrylic"
+                    <TextBlock Text="Windows App SDK 2.5.1 · LiquidGlass"
                                Foreground="{ThemeResource AsterSecondaryTextBrush}"/>
                 </StackPanel>
             </Border>
