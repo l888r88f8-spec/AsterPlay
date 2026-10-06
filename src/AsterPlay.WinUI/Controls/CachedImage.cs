@@ -43,6 +43,7 @@ public sealed class CachedImage : UserControl
     };
 
     private CancellationTokenSource? _loadCts;
+    private TaskCompletionSource<bool>? _loadCompletion;
     private readonly List<ScrollViewer> _scrollViewers = [];
     private readonly List<ScrollView> _scrollViews = [];
     private bool _loading;
@@ -73,6 +74,43 @@ public sealed class CachedImage : UserControl
     {
         get => (bool)GetValue(LazyLoadingEnabledProperty);
         set => SetValue(LazyLoadingEnabledProperty, value);
+    }
+
+    public async Task<bool> EnsureLoadedAsync(
+        CancellationToken cancellationToken = default)
+    {
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var url = SourceUrl;
+            if (string.IsNullOrWhiteSpace(url))
+                return true;
+
+            if (string.Equals(_loadedUrl, url, StringComparison.Ordinal))
+                return _image.Source is not null;
+
+            if (_loading)
+            {
+                var activeLoad = _loadCompletion?.Task;
+                if (activeLoad is null)
+                {
+                    await Task.Yield();
+                    continue;
+                }
+
+                await activeLoad.WaitAsync(cancellationToken);
+                continue;
+            }
+
+            await LoadAsync(url).WaitAsync(cancellationToken);
+
+            if (string.Equals(SourceUrl, url, StringComparison.Ordinal) &&
+                string.Equals(_loadedUrl, url, StringComparison.Ordinal))
+            {
+                return _image.Source is not null;
+            }
+        }
     }
 
     private static void OnStretchChanged(
@@ -220,7 +258,12 @@ public sealed class CachedImage : UserControl
 
     private async Task LoadAsync(string url)
     {
+        var loadCompletion = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        _loadCompletion = loadCompletion;
         _loading = true;
+
         var loadCts = new CancellationTokenSource();
         _loadCts = loadCts;
         var token = loadCts.Token;
@@ -294,6 +337,19 @@ public sealed class CachedImage : UserControl
             {
                 _loadCts = null;
                 _loading = false;
+            }
+
+            if (ReferenceEquals(_loadCompletion, loadCompletion))
+                _loadCompletion = null;
+
+            loadCompletion.TrySetResult(true);
+
+            // If the source changed while the previous decode was in flight,
+            // make sure the new source gets another chance to start.
+            if (IsLoaded &&
+                !string.Equals(_loadedUrl, SourceUrl, StringComparison.Ordinal))
+            {
+                ScheduleViewportCheck();
             }
         }
     }
