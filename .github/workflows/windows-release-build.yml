@@ -71,22 +71,6 @@ jobs:
             throw "LiquidGlass native compatibility runtime output is missing."
           }
 
-      - name: Build LiquidGlass native runtime for SDK 2.5.1
-        shell: pwsh
-        run: |
-          $project = Join-Path $PWD "third_party\LiquidGlassWinUI.Native\CustomEffectRuntime.Native.vcxproj"
-          $msbuild = (Get-Command msbuild.exe -ErrorAction Stop).Source
-          & $msbuild $project /restore /m /p:Configuration=Release /p:Platform=x64
-          if ($LASTEXITCODE -ne 0) {
-            throw "LiquidGlass native runtime build failed."
-          }
-
-          $native = Join-Path $PWD "third_party\LiquidGlassWinUI.Native\Output\x64\Release\CustomEffectRuntimeNative.dll"
-          if (-not (Test-Path $native)) {
-            throw "LiquidGlass native runtime output missing: $native"
-          }
-          Write-Host "LiquidGlass native runtime built: $native"
-
       - name: Build self-contained Windows x64 package
         shell: pwsh
         run: .\build-windows.ps1
