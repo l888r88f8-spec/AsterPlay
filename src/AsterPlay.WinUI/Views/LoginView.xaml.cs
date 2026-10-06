@@ -87,7 +87,15 @@ public sealed partial class LoginView : UserControl
                 PlaybackLog.Error("ServerNameLookup", ex);
             }
 
-            ServerProfileStore.AddOrUpdate(serverUrl, serverName);
+            if (!string.IsNullOrWhiteSpace(serverName))
+                ServerProfileStore.UpdateServerName(serverUrl, serverName);
+            else if (!ServerProfileStore.Load().Any(profile =>
+                         string.Equals(
+                             profile.Url.Trim().TrimEnd('/'),
+                             serverUrl.Trim().TrimEnd('/'),
+                             StringComparison.OrdinalIgnoreCase)))
+                ServerProfileStore.AddOrUpdate(serverUrl, "");
+
             LoginSucceeded?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
