@@ -44,9 +44,9 @@
             <Setter Property="Background">
                 <Setter.Value>
                     <AcrylicBrush TintColor="#CDE1FF"
-                                  TintOpacity="0.055"
-                                  TintLuminosityOpacity="0.42"
-                                  FallbackColor="#D9CDE1FF"/>
+                                  TintOpacity="0.040"
+                                  TintLuminosityOpacity="0.30"
+                                  FallbackColor="#B9CDE1FF"/>
                 </Setter.Value>
             </Setter>
         </Style>
@@ -63,9 +63,9 @@
             <Setter Property="Background">
                 <Setter.Value>
                     <AcrylicBrush TintColor="#ECEFF6"
-                                  TintOpacity="0.170"
-                                  TintLuminosityOpacity="0.52"
-                                  FallbackColor="#E6ECEFF6"/>
+                                  TintOpacity="0.110"
+                                  TintLuminosityOpacity="0.36"
+                                  FallbackColor="#C6ECEFF6"/>
                 </Setter.Value>
             </Setter>
         </Style>
@@ -83,9 +83,9 @@
             <Setter Property="Background">
                 <Setter.Value>
                     <AcrylicBrush TintColor="#DCE6F8"
-                                  TintOpacity="0.100"
-                                  TintLuminosityOpacity="0.52"
-                                  FallbackColor="#D9DCE6F8"/>
+                                  TintOpacity="0.065"
+                                  TintLuminosityOpacity="0.34"
+                                  FallbackColor="#B9DCE6F8"/>
                 </Setter.Value>
             </Setter>
         </Style>
@@ -152,9 +152,9 @@
                     Click="ServerPill_Click">
                 <Button.Background>
                     <AcrylicBrush TintColor="#EEF0F6"
-                                  TintOpacity="0.400"
-                                  TintLuminosityOpacity="0.62"
-                                  FallbackColor="#F0EEF0F6"/>
+                                  TintOpacity="0.220"
+                                  TintLuminosityOpacity="0.40"
+                                  FallbackColor="#D0EEF0F6"/>
                 </Button.Background>
                 <Grid VerticalAlignment="Center">
                     <Grid.ColumnDefinitions>
@@ -205,9 +205,9 @@
                     Click="Search_Click">
                 <Button.Background>
                     <AcrylicBrush TintColor="#EEF0F6"
-                                  TintOpacity="0.400"
-                                  TintLuminosityOpacity="0.62"
-                                  FallbackColor="#F0EEF0F6"/>
+                                  TintOpacity="0.220"
+                                  TintLuminosityOpacity="0.40"
+                                  FallbackColor="#D0EEF0F6"/>
                 </Button.Background>
                 <FontIcon Glyph="&#xE721;"
                           Foreground="#FF101217"
@@ -245,9 +245,9 @@
             </Border.RenderTransform>
             <Border.Background>
                 <AcrylicBrush TintColor="#EFF2F7"
-                                  TintOpacity="0.520"
-                                  TintLuminosityOpacity="0.62"
-                                  FallbackColor="#F0EFF2F7"/>
+                                  TintOpacity="0.300"
+                                  TintLuminosityOpacity="0.42"
+                                  FallbackColor="#D0EFF2F7"/>
             </Border.Background>
 
             <ScrollViewer VerticalScrollMode="Auto"
