@@ -36,16 +36,33 @@ AsterPlay is a native Windows desktop client for Emby built with **C# / .NET 8 /
 - Build: local Windows build, no Qt/CMake/MSYS2 required
 
 
-## Build
+## Development build
 
-Run:
+For normal code/XAML iteration, use the incremental developer build:
+
+~~~bat
+bootstrap-dotnet.cmd
+build-dev.cmd
+~~~
+
+After the first build, `build-dev.cmd` keeps `bin/obj`, skips NuGet restore when project/package metadata has not changed, and lets MSBuild reuse unchanged C# projects and targets. It builds Debug without ReadyToRun or the self-contained Windows App SDK payload, so repeated builds are substantially faster than a release publish.
+
+If package references or project metadata were changed and you want to force a restore:
+
+~~~bat
+build-dev.cmd -ForceRestore
+~~~
+
+## Release build
+
+Only use the full release build when you need a distributable self-contained package:
 
 ~~~bat
 bootstrap-dotnet.cmd
 build-windows.cmd
 ~~~
 
-The portable bootstrap installs the pinned .NET SDK 8.0.425 when needed. The release build publishes the WinUI 3 application, includes the Windows App SDK runtime, LiquidGlass native runtime and the pinned Windows x64 LGPL libmpv package.
+The portable bootstrap installs the pinned .NET SDK 8.0.425 only when it is missing. The release build publishes the WinUI 3 application, includes the Windows App SDK runtime, LiquidGlass native runtime and the pinned Windows x64 LGPL libmpv package.
 
 Output:
 
