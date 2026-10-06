@@ -19,9 +19,9 @@
                     CornerRadius="22">
                 <Border.Background>
                     <AcrylicBrush TintColor="#509BFF"
-                                  TintOpacity="0.160"
-                                  TintLuminosityOpacity="0.52"
-                                  FallbackColor="#E6509BFF"/>
+                                  TintOpacity="0.100"
+                                  TintLuminosityOpacity="0.36"
+                                  FallbackColor="#C6509BFF"/>
                 </Border.Background>
                 <TextBlock Text="A"
                            Foreground="White"
@@ -48,9 +48,9 @@
                 VerticalAlignment="Center">
             <Border.Background>
                 <AcrylicBrush TintColor="#C3DCFF"
-                                  TintOpacity="0.090"
-                                  TintLuminosityOpacity="0.52"
-                                  FallbackColor="#D9C3DCFF"/>
+                                  TintOpacity="0.060"
+                                  TintLuminosityOpacity="0.34"
+                                  FallbackColor="#B9C3DCFF"/>
             </Border.Background>
 
             <StackPanel Spacing="12">
