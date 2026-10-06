@@ -44,9 +44,24 @@
                     <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#F7F8FB"/>
                     <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#F7F8FB"/>
                     <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#7C8797"/>
-                    <SolidColorBrush x:Key="ButtonBorderBrush" Color="#38FFFFFF"/>
-                    <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#58FFFFFF"/>
-                    <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#58FFFFFF"/>
+                    <LinearGradientBrush x:Key="ButtonBorderBrush" StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#B8FFFFFF" Offset="0"/>
+                        <GradientStop Color="#54FFFFFF" Offset="0.22"/>
+                        <GradientStop Color="#16000000" Offset="0.72"/>
+                        <GradientStop Color="#4C000000" Offset="1"/>
+                    </LinearGradientBrush>
+                    <LinearGradientBrush x:Key="ButtonBorderBrushPointerOver" StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#F0FFFFFF" Offset="0"/>
+                        <GradientStop Color="#82FFFFFF" Offset="0.22"/>
+                        <GradientStop Color="#20000000" Offset="0.72"/>
+                        <GradientStop Color="#5C000000" Offset="1"/>
+                    </LinearGradientBrush>
+                    <LinearGradientBrush x:Key="ButtonBorderBrushPressed" StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#A8FFFFFF" Offset="0"/>
+                        <GradientStop Color="#4AFFFFFF" Offset="0.20"/>
+                        <GradientStop Color="#30000000" Offset="0.72"/>
+                        <GradientStop Color="#70000000" Offset="1"/>
+                    </LinearGradientBrush>
 
                     <SolidColorBrush x:Key="TextControlBackground" Color="#1A202B"/>
                     <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#222A37"/>
@@ -131,9 +146,24 @@
                     <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#151820"/>
                     <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#151820"/>
                     <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#7A8492"/>
-                    <SolidColorBrush x:Key="ButtonBorderBrush" Color="#26000000"/>
-                    <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#3A000000"/>
-                    <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#3A000000"/>
+                    <LinearGradientBrush x:Key="ButtonBorderBrush" StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#D8FFFFFF" Offset="0"/>
+                        <GradientStop Color="#78FFFFFF" Offset="0.20"/>
+                        <GradientStop Color="#18000000" Offset="0.70"/>
+                        <GradientStop Color="#48000000" Offset="1"/>
+                    </LinearGradientBrush>
+                    <LinearGradientBrush x:Key="ButtonBorderBrushPointerOver" StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#F8FFFFFF" Offset="0"/>
+                        <GradientStop Color="#98FFFFFF" Offset="0.20"/>
+                        <GradientStop Color="#24000000" Offset="0.70"/>
+                        <GradientStop Color="#5A000000" Offset="1"/>
+                    </LinearGradientBrush>
+                    <LinearGradientBrush x:Key="ButtonBorderBrushPressed" StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#C8FFFFFF" Offset="0"/>
+                        <GradientStop Color="#66FFFFFF" Offset="0.18"/>
+                        <GradientStop Color="#32000000" Offset="0.72"/>
+                        <GradientStop Color="#6A000000" Offset="1"/>
+                    </LinearGradientBrush>
 
                     <SolidColorBrush x:Key="TextControlBackground" Color="#F8FAFC"/>
                     <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#F3F6FA"/>
@@ -221,6 +251,29 @@
                  elements first; ordinary resource items must follow them. -->
             <FontFamily x:Key="AsterUiFontFamily">Microsoft YaHei UI</FontFamily>
             <FontFamily x:Key="ContentControlThemeFontFamily">Microsoft YaHei UI</FontFamily>
+
+            <!-- Glass edge refraction: bright upper-left edge, darker lower-right
+                 edge, plus a softer reverse inner edge. These brushes are used
+                 only on glass surfaces so Acrylic transparency stays unchanged. -->
+            <LinearGradientBrush x:Key="AsterGlassEdgeBrush"
+                                 StartPoint="0,0"
+                                 EndPoint="1,1">
+                <GradientStop Color="#D8FFFFFF" Offset="0"/>
+                <GradientStop Color="#74FFFFFF" Offset="0.18"/>
+                <GradientStop Color="#26FFFFFF" Offset="0.42"/>
+                <GradientStop Color="#18000000" Offset="0.68"/>
+                <GradientStop Color="#50000000" Offset="0.88"/>
+                <GradientStop Color="#72FFFFFF" Offset="1"/>
+            </LinearGradientBrush>
+
+            <LinearGradientBrush x:Key="AsterGlassInnerEdgeBrush"
+                                 StartPoint="1,1"
+                                 EndPoint="0,0">
+                <GradientStop Color="#58FFFFFF" Offset="0"/>
+                <GradientStop Color="#18FFFFFF" Offset="0.28"/>
+                <GradientStop Color="#10000000" Offset="0.68"/>
+                <GradientStop Color="#44FFFFFF" Offset="1"/>
+            </LinearGradientBrush>
 
             <Style TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="{StaticResource AsterUiFontFamily}"/>
