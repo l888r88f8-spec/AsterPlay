@@ -49,7 +49,7 @@ public static class ServerProfileStore
         }
     }
 
-    public static void AddOrUpdate(string url, string? name = null)
+    public static void AddOrUpdate(string url, string? name)
     {
         url = NormalizeUrl(url);
         if (string.IsNullOrWhiteSpace(url))
@@ -75,6 +75,26 @@ public static class ServerProfileStore
         else
             profiles.Add(profile);
 
+        Save(profiles);
+    }
+
+    public static void EnsureExists(string url)
+    {
+        url = NormalizeUrl(url);
+        if (string.IsNullOrWhiteSpace(url))
+            return;
+
+        var profiles = Load().ToList();
+        if (profiles.Any(x =>
+                string.Equals(
+                    NormalizeUrl(x.Url),
+                    url,
+                    StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        profiles.Add(new ServerProfile("", url));
         Save(profiles);
     }
 
