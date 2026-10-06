@@ -389,6 +389,75 @@ public sealed partial class MainWindow : Window
             "CompleteStartupWindowReveal: Activate returned");
     }
 
+    internal async Task CompleteStartupWindowRevealAsync()
+    {
+        CompleteStartupWindowReveal();
+
+        // Moving an already-rendered HWND from off-screen into the work area
+        // does not mean DWM has presented its surface on the physical display.
+        // Keep the splash above it while WinUI drains queued startup work and
+        // produces fresh composition frames at the real window position.
+        await WaitForDispatcherIdleAsync();
+
+        StartupDiagnostics.Write(
+            "CompleteStartupWindowRevealAsync: dispatcher reached low-priority idle");
+
+        await WaitForRenderingFramesAsync(2);
+
+        StartupDiagnostics.Write(
+            "CompleteStartupWindowRevealAsync: two on-screen composition frames observed");
+
+        var dwmResult = DwmFlush();
+        StartupDiagnostics.Write(
+            $"CompleteStartupWindowRevealAsync: DwmFlush returned {dwmResult}");
+
+        // One final frame after DWM synchronization prevents the splash from
+        // uncovering a transient blank client surface on slower GPUs/drivers.
+        await WaitForRenderingFramesAsync(1);
+
+        StartupDiagnostics.Write(
+            "CompleteStartupWindowRevealAsync: visible MainWindow handoff ready");
+    }
+
+    private Task WaitForDispatcherIdleAsync()
+    {
+        var completion = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        if (!DispatcherQueue.TryEnqueue(
+                Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+                () => completion.TrySetResult(true)))
+        {
+            completion.TrySetResult(true);
+        }
+
+        return completion.Task;
+    }
+
+    private static Task WaitForRenderingFramesAsync(int frameCount)
+    {
+        if (frameCount <= 0)
+            return Task.CompletedTask;
+
+        var completion = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var remaining = frameCount;
+        EventHandler<object>? handler = null;
+        handler = (_, _) =>
+        {
+            remaining--;
+            if (remaining > 0)
+                return;
+
+            Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= handler;
+            completion.TrySetResult(true);
+        };
+
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += handler;
+        return completion.Task;
+    }
+
     private void ScheduleStartupReveal()
     {
         if (_startupVisualReadyRaised || _startupRevealScheduled)
@@ -914,6 +983,9 @@ public sealed partial class MainWindow : Window
         int attribute,
         out NativeRect value,
         int size);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmFlush();
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr GetModuleHandle(string? moduleName);
