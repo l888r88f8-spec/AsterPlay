@@ -63,7 +63,7 @@ internal sealed class StartupSplashWindow : Window
         }
 
         // Keep the splash out of Alt+Tab. It is only the visual front page of
-        // the real AsterPlay window that is loading off-screen.
+        // the real AsterPlay window that is loading underneath it.
         var style = GetWindowLongPtr(
             hwnd,
             GwlExStyle).ToInt64();
@@ -145,18 +145,26 @@ internal sealed class StartupSplashWindow : Window
 
     internal async Task CompleteAsync(MainWindow mainWindow)
     {
-        // Keep the splash top-most while the real window moves on-screen,
-        // activates, drains pending UI work and completes a DWM-presented frame.
+        // MainWindow is already at its final on-screen bounds and contains an
+        // identical in-window startup cover. First make sure that covered HWND
+        // has completed presentation, then close this external splash. The user
+        // continues seeing the same static cover inside MainWindow until Home
+        // itself is exposed in the same compositor tree.
         StartupDiagnostics.Write(
-            "StartupSplashWindow.CompleteAsync: revealing MainWindow behind splash");
+            "StartupSplashWindow.CompleteAsync: synchronizing covered MainWindow");
 
         await mainWindow.CompleteStartupWindowRevealAsync();
 
         StartupDiagnostics.Write(
-            "StartupSplashWindow.CompleteAsync: visible MainWindow ready; closing splash");
+            "StartupSplashWindow.CompleteAsync: covered MainWindow ready; closing external splash");
         Close();
         StartupDiagnostics.Write(
-            "StartupSplashWindow.CompleteAsync: splash Close returned");
+            "StartupSplashWindow.CompleteAsync: external splash Close returned");
+
+        await mainWindow.DismissStartupCoverAsync();
+
+        StartupDiagnostics.Write(
+            "StartupSplashWindow.CompleteAsync: in-window startup cover dismissed");
     }
 
     [DllImport(
