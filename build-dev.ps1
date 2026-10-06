@@ -35,14 +35,21 @@ $assetFiles = @(
 )
 
 $restoreInputs = @(
-    (Get-ChildItem -Path $Root -Recurse -File -Include *.csproj,*.props,*.targets -ErrorAction SilentlyContinue)
+    (Get-ChildItem -Path (Join-Path $Root "src") -Recurse -File -Filter *.csproj -ErrorAction SilentlyContinue)
 )
 
-$globalJson = Join-Path $Root "global.json"
-if (Test-Path $globalJson) { $restoreInputs += Get-Item $globalJson }
-
-$nugetConfig = Join-Path $Root "NuGet.Config"
-if (Test-Path $nugetConfig) { $restoreInputs += Get-Item $nugetConfig }
+foreach ($metadataName in @(
+    "Directory.Build.props",
+    "Directory.Build.targets",
+    "Directory.Packages.props",
+    "global.json",
+    "NuGet.Config"
+)) {
+    $metadataPath = Join-Path $Root $metadataName
+    if (Test-Path $metadataPath) {
+        $restoreInputs += Get-Item $metadataPath
+    }
+}
 
 $needsRestore = $ForceRestore
 if (-not $needsRestore) {
