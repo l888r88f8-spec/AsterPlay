@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Windowing;
 using Windows.UI.ViewManagement;
+using Windows.Graphics;
 
 namespace AsterPlay.WinUI;
 
@@ -20,8 +21,8 @@ public sealed partial class MainWindow : Window
     private bool _startupResolutionCompleted;
     private bool _startupRevealScheduled;
     private bool _startupVisualReadyRaised;
-    private bool _startupOpacityActive;
-    private IntPtr _originalExtendedStyle;
+    private bool _startupOffscreenActive;
+    private RectInt32 _startupTargetBounds;
     private bool _authenticated;
     private string _currentSection = "home-shell";
     private readonly IntPtr _hwnd;
@@ -31,14 +32,7 @@ public sealed partial class MainWindow : Window
     private const uint WmMouseWheel = 0x020A;
     private const int WhMouseLl = 14;
     private const int DwmwaExtendedFrameBounds = 9;
-    private const int GwlExStyle = -20;
-    private const long WsExLayered = 0x00080000L;
-    private const uint LwaAlpha = 0x00000002;
-    private const uint SwpNoSize = 0x0001;
-    private const uint SwpNoMove = 0x0002;
-    private const uint SwpNoZOrder = 0x0004;
-    private const uint SwpNoActivate = 0x0010;
-    private const uint SwpFrameChanged = 0x0020;
+
 
     public MainWindow()
     {
@@ -86,7 +80,7 @@ public sealed partial class MainWindow : Window
             StartupDiagnostics.WriteException("SetWindowIcon", ex);
         }
 
-        PrepareStartupHiddenWindow();
+        PrepareStartupOffscreenWindow();
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -314,83 +308,76 @@ public sealed partial class MainWindow : Window
 
     internal event EventHandler? StartupVisualReady;
 
-    private void PrepareStartupHiddenWindow()
+    private void PrepareStartupOffscreenWindow()
     {
         try
         {
-            _originalExtendedStyle = GetWindowLongPtr(
-                _hwnd,
-                GwlExStyle);
+            var windowId =
+                Microsoft.UI.Win32Interop.GetWindowIdFromWindow(_hwnd);
+            var workArea = DisplayArea.GetFromWindowId(
+                    windowId,
+                    DisplayAreaFallback.Primary)
+                .WorkArea;
 
-            var style = _originalExtendedStyle.ToInt64() | WsExLayered;
-            SetWindowLongPtr(
-                _hwnd,
-                GwlExStyle,
-                new IntPtr(style));
+            var currentSize = _appWindow.Size;
+            var width = currentSize.Width >= 640
+                ? currentSize.Width
+                : 1280;
+            var height = currentSize.Height >= 420
+                ? currentSize.Height
+                : 800;
 
-            if (!SetLayeredWindowAttributes(
-                    _hwnd,
-                    0,
-                    0,
-                    LwaAlpha))
-            {
-                throw new InvalidOperationException(
-                    $"SetLayeredWindowAttributes failed: {Marshal.GetLastWin32Error()}");
-            }
+            width = Math.Min(
+                width,
+                Math.Max(640, workArea.Width - 80));
+            height = Math.Min(
+                height,
+                Math.Max(420, workArea.Height - 80));
 
-            _startupOpacityActive = true;
+            _startupTargetBounds = new RectInt32(
+                workArea.X + ((workArea.Width - width) / 2),
+                workArea.Y + ((workArea.Height - height) / 2),
+                width,
+                height);
+
+            // Move far enough beyond the work area that DWM cannot expose any
+            // part of the WinUI window while it is loading.
+            _appWindow.MoveAndResize(
+                new RectInt32(
+                    workArea.X + workArea.Width + 2048,
+                    workArea.Y + workArea.Height + 2048,
+                    width,
+                    height));
+
+            _startupOffscreenActive = true;
+            StartupDiagnostics.Write(
+                $"MainWindow prepared off-screen; target={_startupTargetBounds.X},{_startupTargetBounds.Y}," +
+                $"{_startupTargetBounds.Width}x{_startupTargetBounds.Height}");
         }
         catch (Exception ex)
         {
             StartupDiagnostics.WriteException(
-                "PrepareStartupHiddenWindow",
+                "PrepareStartupOffscreenWindow",
                 ex);
-            _startupOpacityActive = false;
+            _startupOffscreenActive = false;
         }
     }
 
-    internal void SetStartupWindowOpacity(byte alpha)
+    internal void ShowStartupWindowBehindSplash()
     {
-        if (!_startupOpacityActive)
-            return;
+        if (_startupOffscreenActive)
+        {
+            _appWindow.MoveAndResize(
+                _startupTargetBounds);
+            _startupOffscreenActive = false;
+        }
 
-        SetLayeredWindowAttributes(
-            _hwnd,
-            0,
-            alpha,
-            LwaAlpha);
+        Activate();
     }
 
     internal void CompleteStartupWindowReveal()
     {
-        if (!_startupOpacityActive)
-            return;
-
-        SetLayeredWindowAttributes(
-            _hwnd,
-            0,
-            255,
-            LwaAlpha);
-
-        SetWindowLongPtr(
-            _hwnd,
-            GwlExStyle,
-            _originalExtendedStyle);
-
-        SetWindowPos(
-            _hwnd,
-            IntPtr.Zero,
-            0,
-            0,
-            0,
-            0,
-            SwpNoMove |
-            SwpNoSize |
-            SwpNoZOrder |
-            SwpNoActivate |
-            SwpFrameChanged);
-
-        _startupOpacityActive = false;
+        ShowStartupWindowBehindSplash();
     }
 
     private void ScheduleStartupReveal()
@@ -924,36 +911,6 @@ public sealed partial class MainWindow : Window
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
-    private static extern IntPtr GetWindowLongPtr(
-        IntPtr hWnd,
-        int index);
-
-    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
-    private static extern IntPtr SetWindowLongPtr(
-        IntPtr hWnd,
-        int index,
-        IntPtr value);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetLayeredWindowAttributes(
-        IntPtr hWnd,
-        uint colorKey,
-        byte alpha,
-        uint flags);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetWindowPos(
-        IntPtr hWnd,
-        IntPtr hWndInsertAfter,
-        int x,
-        int y,
-        int cx,
-        int cy,
-        uint flags);
 
 
 }
