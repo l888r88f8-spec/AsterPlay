@@ -6,7 +6,6 @@ namespace AsterPlay.WinUI;
 public partial class App : Application
 {
     private MainWindow? _window;
-    private StartupSplashWindow? _splashWindow;
 
     public App()
     {
@@ -44,49 +43,9 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        StartupDiagnostics.Write("OnLaunched: entered");
-
-        try
-        {
-            _splashWindow = new StartupSplashWindow();
-            _splashWindow.VisualReady +=
-                SplashWindow_VisualReady;
-            _splashWindow.Activate();
-
-            StartupDiagnostics.Write(
-                "OnLaunched: splash activated; waiting for decoded icon pixels");
-        }
-        catch (Exception ex)
-        {
-            StartupDiagnostics.WriteException("OnLaunched", ex);
-            _splashWindow?.Close();
-            _splashWindow = null;
-            throw;
-        }
-    }
-
-    private void SplashWindow_VisualReady(
-        object? sender,
-        EventArgs e)
-    {
-        if (_splashWindow is null)
-            return;
-
-        _splashWindow.VisualReady -=
-            SplashWindow_VisualReady;
-
         StartupDiagnostics.Write(
-            "Static startup page rendered; creating MainWindow");
+            "OnLaunched: creating single MainWindow with in-window startup cover");
 
-        Microsoft.UI.Dispatching.DispatcherQueue
-            .GetForCurrentThread()
-            .TryEnqueue(
-                Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
-                InitializeMainWindow);
-    }
-
-    private void InitializeMainWindow()
-    {
         try
         {
             using (StartupDiagnostics.Measure("MainWindow constructor"))
@@ -95,30 +54,15 @@ public partial class App : Application
             _window.StartupVisualReady +=
                 MainWindow_StartupVisualReady;
 
-            // MainWindow stays at its final screen bounds from the beginning.
-            // The always-on-top external splash plus MainWindow's own startup
-            // cover hide all startup work without relocating the WinUI HWND.
             using (StartupDiagnostics.Measure("MainWindow.Activate"))
                 _window.Activate();
 
-            _splashWindow?.Activate();
-
             StartupDiagnostics.Write(
-                "OnLaunched: covered MainWindow activated at final bounds behind splash");
+                "OnLaunched: MainWindow activated; startup cover is visible");
         }
         catch (Exception ex)
         {
-            StartupDiagnostics.WriteException("InitializeMainWindow", ex);
-
-            _splashWindow?.Close();
-            _splashWindow = null;
-
-            if (_window is not null)
-            {
-                _window.CompleteStartupWindowReveal();
-                _window.Activate();
-            }
-
+            StartupDiagnostics.WriteException("OnLaunched", ex);
             throw;
         }
     }
@@ -133,46 +77,33 @@ public partial class App : Application
         _window.StartupVisualReady -=
             MainWindow_StartupVisualReady;
 
-        if (_splashWindow is null)
-        {
-            _window.CompleteStartupWindowReveal();
-            await _window.DismissStartupCoverAsync();
-            return;
-        }
-
-        var splash = _splashWindow;
-
         try
         {
-            await splash.CompleteAsync(_window);
+            StartupDiagnostics.Write(
+                "MainWindow startup visual ready; dismissing in-window cover");
+
+            await _window.DismissStartupCoverAsync();
+
+            StartupDiagnostics.Write(
+                "Single-window startup handoff completed");
         }
         catch (Exception ex)
         {
             StartupDiagnostics.WriteException(
-                "MainWindow_StartupVisualReady handoff",
+                "MainWindow_StartupVisualReady",
                 ex);
 
-            _window.CompleteStartupWindowReveal();
-
-            try
-            {
-                splash.Close();
-            }
-            catch
-            {
-            }
-
-            await _window.DismissStartupCoverAsync();
-        }
-        finally
-        {
-            if (ReferenceEquals(_splashWindow, splash))
-                _splashWindow = null;
+            // Never leave the startup cover permanently blocking the app.
+            _window.ForceDismissStartupCover();
         }
     }
 
-    private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+    private void App_UnhandledException(
+        object sender,
+        Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
     {
-        StartupDiagnostics.WriteException("Application.UnhandledException", e.Exception);
+        StartupDiagnostics.WriteException(
+            "Application.UnhandledException",
+            e.Exception);
     }
 }
