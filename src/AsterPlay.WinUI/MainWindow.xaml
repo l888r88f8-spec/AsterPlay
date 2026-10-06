@@ -17,8 +17,7 @@
             <Setter Property="CornerRadius" Value="19"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#FF101217"/>
-            <Setter Property="BorderBrush" Value="{ThemeResource ButtonBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderThickness" Value="0"/>
         </Style>
         </Grid.Resources>
         <Grid.RowDefinitions>
@@ -79,8 +78,8 @@
                     Margin="0,0,0,14"
                     Padding="6"
                     CornerRadius="34"
-                    BorderBrush="{StaticResource AsterGlassEdgeBrush}"
-                    BorderThickness="1.25"
+                    BorderBrush="#78FFFFFF"
+                    BorderThickness="1"
                     Visibility="Visible">
                 <Border.Resources>
                     <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
@@ -94,16 +93,8 @@
                                   TintLuminosityOpacity="0.42"
                                   FallbackColor="#D0EFEFF4"/>
                 </Border.Background>
-                <Grid>
-                    <Border Margin="1"
-                            CornerRadius="33"
-                            BorderBrush="{StaticResource AsterGlassInnerEdgeBrush}"
-                            BorderThickness="1"
-                            Opacity="0.72"
-                            IsHitTestVisible="False"/>
-
-                    <StackPanel Orientation="Horizontal"
-                                Spacing="2">
+                <StackPanel Orientation="Horizontal"
+                            Spacing="2">
                     <Button x:Name="HomeButton"
                             Style="{StaticResource DockButtonStyle}"
                             Click="Home_Click">
@@ -168,8 +159,7 @@
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-                    </StackPanel>
-                </Grid>
+                </StackPanel>
             </Border>
         </Grid>
 
