@@ -21,6 +21,7 @@ public sealed partial class MainWindow : Window
     private bool _startupResolutionCompleted;
     private bool _splashRevealScheduled;
     private bool _splashTransitionStarted;
+    private Storyboard? _splashPulseStoryboard;
     private bool _authenticated;
     private string _currentSection = "home-shell";
     private readonly IntPtr _hwnd;
@@ -62,6 +63,22 @@ public sealed partial class MainWindow : Window
 
         var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(_hwnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
+
+        try
+        {
+            var iconPath = Path.Combine(
+                AppContext.BaseDirectory,
+                "Assets",
+                "AsterPlay.ico");
+            if (File.Exists(iconPath))
+                _appWindow.SetIcon(iconPath);
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.WriteException("SetWindowIcon", ex);
+        }
+
+        StartSplashPulse();
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -180,6 +197,8 @@ public sealed partial class MainWindow : Window
 
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= FirstFrame_Rendering;
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= SplashReveal_Rendering;
+        _splashPulseStoryboard?.Stop();
+        _splashPulseStoryboard = null;
 
         if (_uiSettings is not null)
             _uiSettings.ColorValuesChanged -= SystemColorValuesChanged;
@@ -287,6 +306,48 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void StartSplashPulse()
+    {
+        _splashPulseStoryboard?.Stop();
+
+        var easing = new SineEase
+        {
+            EasingMode = EasingMode.EaseInOut
+        };
+
+        var storyboard = new Storyboard
+        {
+            RepeatBehavior = RepeatBehavior.Forever
+        };
+
+        var scaleX = new DoubleAnimation
+        {
+            From = 0.96,
+            To = 1.08,
+            Duration = TimeSpan.FromMilliseconds(920),
+            AutoReverse = true,
+            EasingFunction = easing
+        };
+        Storyboard.SetTarget(scaleX, SplashLogoScale);
+        Storyboard.SetTargetProperty(scaleX, "ScaleX");
+        storyboard.Children.Add(scaleX);
+
+        var scaleY = new DoubleAnimation
+        {
+            From = 0.96,
+            To = 1.08,
+            Duration = TimeSpan.FromMilliseconds(920),
+            AutoReverse = true,
+            EasingFunction = easing
+        };
+        Storyboard.SetTarget(scaleY, SplashLogoScale);
+        Storyboard.SetTargetProperty(scaleY, "ScaleY");
+        storyboard.Children.Add(scaleY);
+
+        _splashPulseStoryboard = storyboard;
+        storyboard.Begin();
+    }
+
     private void ScheduleSplashReveal()
     {
         if (_splashTransitionStarted || _splashRevealScheduled)
@@ -311,71 +372,80 @@ public sealed partial class MainWindow : Window
 
         _splashTransitionStarted = true;
 
+        var currentScale = Math.Max(
+            0.96,
+            Math.Max(
+                SplashLogoScale.ScaleX,
+                SplashLogoScale.ScaleY));
+
+        _splashPulseStoryboard?.Stop();
+        _splashPulseStoryboard = null;
+
+        SplashLogoScale.ScaleX = currentScale;
+        SplashLogoScale.ScaleY = currentScale;
+
         var width = Math.Max(1, RootGrid.ActualWidth);
         var height = Math.Max(1, RootGrid.ActualHeight);
         var diagonal = Math.Sqrt((width * width) + (height * height));
-        var targetScale = Math.Max(14.0, diagonal / 104.0 * 1.08);
+        var targetScale = Math.Max(
+            12.0,
+            diagonal / Math.Max(1, SplashLogo.ActualWidth) * 1.12);
 
-        static CubicEase Ease() => new()
+        static CubicEase ExpandEase() => new()
         {
             EasingMode = EasingMode.EaseInOut
+        };
+
+        static CubicEase RevealEase() => new()
+        {
+            EasingMode = EasingMode.EaseOut
         };
 
         var storyboard = new Storyboard();
 
         var scaleX = new DoubleAnimation
         {
-            From = 1,
+            From = currentScale,
             To = targetScale,
-            Duration = TimeSpan.FromMilliseconds(1780),
-            EasingFunction = Ease()
+            Duration = TimeSpan.FromMilliseconds(1420),
+            EasingFunction = ExpandEase()
         };
-        Storyboard.SetTarget(scaleX, SplashCircleScale);
+        Storyboard.SetTarget(scaleX, SplashLogoScale);
         Storyboard.SetTargetProperty(scaleX, "ScaleX");
         storyboard.Children.Add(scaleX);
 
         var scaleY = new DoubleAnimation
         {
-            From = 1,
+            From = currentScale,
             To = targetScale,
-            Duration = TimeSpan.FromMilliseconds(1780),
-            EasingFunction = Ease()
+            Duration = TimeSpan.FromMilliseconds(1420),
+            EasingFunction = ExpandEase()
         };
-        Storyboard.SetTarget(scaleY, SplashCircleScale);
+        Storyboard.SetTarget(scaleY, SplashLogoScale);
         Storyboard.SetTargetProperty(scaleY, "ScaleY");
         storyboard.Children.Add(scaleY);
 
-        var markFade = new DoubleAnimation
+        // Keep the icon solid at the start of the expansion, then let the page
+        // emerge through it during the second half.
+        var logoFade = new DoubleAnimation
         {
             From = 1,
             To = 0,
-            BeginTime = TimeSpan.FromMilliseconds(260),
-            Duration = TimeSpan.FromMilliseconds(820),
-            EasingFunction = Ease()
+            BeginTime = TimeSpan.FromMilliseconds(560),
+            Duration = TimeSpan.FromMilliseconds(780),
+            EasingFunction = RevealEase()
         };
-        Storyboard.SetTarget(markFade, SplashMark);
-        Storyboard.SetTargetProperty(markFade, "Opacity");
-        storyboard.Children.Add(markFade);
-
-        var blurVeilFade = new DoubleAnimation
-        {
-            From = 0,
-            To = 0.92,
-            BeginTime = TimeSpan.FromMilliseconds(220),
-            Duration = TimeSpan.FromMilliseconds(980),
-            EasingFunction = Ease()
-        };
-        Storyboard.SetTarget(blurVeilFade, SplashBlurVeil);
-        Storyboard.SetTargetProperty(blurVeilFade, "Opacity");
-        storyboard.Children.Add(blurVeilFade);
+        Storyboard.SetTarget(logoFade, SplashLogo);
+        Storyboard.SetTargetProperty(logoFade, "Opacity");
+        storyboard.Children.Add(logoFade);
 
         var chromeFade = new DoubleAnimation
         {
             From = 0,
             To = 1,
-            BeginTime = TimeSpan.FromMilliseconds(360),
-            Duration = TimeSpan.FromMilliseconds(1120),
-            EasingFunction = Ease()
+            BeginTime = TimeSpan.FromMilliseconds(420),
+            Duration = TimeSpan.FromMilliseconds(860),
+            EasingFunction = RevealEase()
         };
         Storyboard.SetTarget(chromeFade, AppTitleBar);
         Storyboard.SetTargetProperty(chromeFade, "Opacity");
@@ -385,49 +455,26 @@ public sealed partial class MainWindow : Window
         {
             From = 0,
             To = 1,
-            BeginTime = TimeSpan.FromMilliseconds(340),
-            Duration = TimeSpan.FromMilliseconds(1160),
-            EasingFunction = Ease()
+            BeginTime = TimeSpan.FromMilliseconds(360),
+            Duration = TimeSpan.FromMilliseconds(940),
+            EasingFunction = RevealEase()
         };
         Storyboard.SetTarget(contentFade, ContentLayer);
         Storyboard.SetTargetProperty(contentFade, "Opacity");
         storyboard.Children.Add(contentFade);
 
-        var shadeFade = new DoubleAnimation
-        {
-            From = 1,
-            To = 0,
-            BeginTime = TimeSpan.FromMilliseconds(430),
-            Duration = TimeSpan.FromMilliseconds(1160),
-            EasingFunction = Ease()
-        };
-        Storyboard.SetTarget(shadeFade, SplashBackdropShade);
-        Storyboard.SetTargetProperty(shadeFade, "Opacity");
-        storyboard.Children.Add(shadeFade);
-
-        var splashFade = new DoubleAnimation
-        {
-            From = 1,
-            To = 0,
-            BeginTime = TimeSpan.FromMilliseconds(1320),
-            Duration = TimeSpan.FromMilliseconds(460),
-            EasingFunction = Ease()
-        };
-        Storyboard.SetTarget(splashFade, SplashLayer);
-        Storyboard.SetTargetProperty(splashFade, "Opacity");
-        storyboard.Children.Add(splashFade);
-
         storyboard.Completed += (_, _) =>
         {
             AppTitleBar.Opacity = 1;
             ContentLayer.Opacity = 1;
+            SplashLogo.Opacity = 0;
             SplashLayer.IsHitTestVisible = false;
             SplashLayer.Visibility = Visibility.Collapsed;
             StartupDiagnostics.Write("Splash transition completed");
         };
 
         StartupDiagnostics.Write(
-            $"Splash transition started; targetScale={targetScale:0.0}");
+            $"Splash transition started; icon-only targetScale={targetScale:0.0}");
         storyboard.Begin();
     }
 
