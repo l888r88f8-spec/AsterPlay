@@ -17,9 +17,9 @@
                 BorderThickness="1">
             <Border.Background>
                 <AcrylicBrush TintColor="#DCE8FA"
-                                  TintOpacity="0.055"
-                                  TintLuminosityOpacity="0.42"
-                                  FallbackColor="#D9DCE8FA"/>
+                                  TintOpacity="0.040"
+                                  TintLuminosityOpacity="0.30"
+                                  FallbackColor="#B9DCE8FA"/>
             </Border.Background>
 
             <Grid>
