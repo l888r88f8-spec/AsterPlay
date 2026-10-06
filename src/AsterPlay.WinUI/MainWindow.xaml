@@ -92,9 +92,9 @@
                 </Border.Resources>
                 <Border.Background>
                     <AcrylicBrush TintColor="#EFEFF4"
-                                  TintOpacity="0.440"
-                                  TintLuminosityOpacity="0.62"
-                                  FallbackColor="#F0EFEFF4"/>
+                                  TintOpacity="0.240"
+                                  TintLuminosityOpacity="0.42"
+                                  FallbackColor="#D0EFEFF4"/>
                 </Border.Background>
                 <StackPanel Orientation="Horizontal"
                             Spacing="2">
