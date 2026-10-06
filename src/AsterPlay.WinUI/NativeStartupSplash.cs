@@ -595,7 +595,10 @@ internal sealed class NativeStartupSplash : IDisposable
         IntPtr hWnd,
         int command);
 
-    [DllImport("user32.dll")]
+    [DllImport(
+        "user32.dll",
+        EntryPoint = "SetWindowLongPtrW",
+        CharSet = CharSet.Unicode)]
     private static extern IntPtr SetWindowLongPtr(
         IntPtr hWnd,
         int index,
