@@ -7,7 +7,6 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
-using Microsoft.UI.Xaml.Shapes;
 using Microsoft.UI.Windowing;
 using Windows.UI.ViewManagement;
 
@@ -29,8 +28,6 @@ public sealed partial class MainWindow : Window
     private readonly HookProc _lowLevelMouseHookProc;
     private IntPtr _lowLevelMouseHook;
     private DateTimeOffset _lastNativeWheelDiagnosticAt = DateTimeOffset.MinValue;
-    private DateTimeOffset _lastDockParticleAt = DateTimeOffset.MinValue;
-    private int _dockParticleSequence;
 
     private const uint WmMouseWheel = 0x020A;
     private const int WhMouseLl = 14;
@@ -896,166 +893,6 @@ public sealed partial class MainWindow : Window
             return;
 
         ShowSettings();
-    }
-
-    private void NavigationDock_PointerEntered(
-        object sender,
-        PointerRoutedEventArgs e)
-    {
-        NavigationDockTransform.ScaleX = 1.012;
-        NavigationDockTransform.ScaleY = 0.996;
-    }
-
-    private void NavigationDock_PointerMoved(
-        object sender,
-        PointerRoutedEventArgs e)
-    {
-        var point = e.GetCurrentPoint(NavigationDock).Position;
-        var width = Math.Max(1, NavigationDock.ActualWidth);
-        var normalizedX = Math.Clamp((point.X / width * 2.0) - 1.0, -1.0, 1.0);
-        var centerWeight = 1.0 - Math.Abs(normalizedX);
-
-        NavigationDockTransform.ScaleX = 1.012 + (centerWeight * 0.018);
-        NavigationDockTransform.ScaleY = 0.996 - (centerWeight * 0.010);
-        NavigationDockTransform.SkewX = normalizedX * 1.35;
-        NavigationDockTransform.TranslateX = normalizedX * 2.4;
-
-        var now = DateTimeOffset.UtcNow;
-        if (now - _lastDockParticleAt < TimeSpan.FromMilliseconds(34))
-            return;
-
-        _lastDockParticleAt = now;
-        SpawnDockParticle(point.X, point.Y);
-    }
-
-    private void NavigationDock_PointerExited(
-        object sender,
-        PointerRoutedEventArgs e)
-    {
-        var easing = new CubicEase
-        {
-            EasingMode = EasingMode.EaseOut
-        };
-        var storyboard = new Storyboard();
-
-        AddDockTransformAnimation(storyboard, "ScaleX", 1, 260, easing);
-        AddDockTransformAnimation(storyboard, "ScaleY", 1, 260, easing);
-        AddDockTransformAnimation(storyboard, "SkewX", 0, 260, easing);
-        AddDockTransformAnimation(storyboard, "TranslateX", 0, 260, easing);
-        storyboard.Begin();
-    }
-
-    private void AddDockTransformAnimation(
-        Storyboard storyboard,
-        string property,
-        double to,
-        int durationMs,
-        EasingFunctionBase easing)
-    {
-        var animation = new DoubleAnimation
-        {
-            To = to,
-            Duration = TimeSpan.FromMilliseconds(durationMs),
-            EasingFunction = easing
-        };
-        Storyboard.SetTarget(animation, NavigationDockTransform);
-        Storyboard.SetTargetProperty(animation, property);
-        storyboard.Children.Add(animation);
-    }
-
-    private void SpawnDockParticle(double x, double y)
-    {
-        var sequence = ++_dockParticleSequence;
-        var size = 3d + (sequence % 3);
-        var particle = new Ellipse
-        {
-            Width = size,
-            Height = size,
-            Opacity = 0.62,
-            IsHitTestVisible = false,
-            Fill = new SolidColorBrush(
-                Windows.UI.Color.FromArgb(210, 232, 244, 255)),
-            RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5)
-        };
-
-        var transform = new CompositeTransform();
-        particle.RenderTransform = transform;
-
-        Canvas.SetLeft(
-            particle,
-            x - (size / 2) + (((sequence % 5) - 2) * 1.4));
-        Canvas.SetTop(
-            particle,
-            y - (size / 2) + (((sequence % 3) - 1) * 1.3));
-
-        DockParticleCanvas.Children.Add(particle);
-
-        var easing = new CubicEase
-        {
-            EasingMode = EasingMode.EaseOut
-        };
-        var storyboard = new Storyboard();
-
-        var opacity = new DoubleAnimation
-        {
-            From = 0.62,
-            To = 0,
-            Duration = TimeSpan.FromMilliseconds(520),
-            EasingFunction = easing
-        };
-        Storyboard.SetTarget(opacity, particle);
-        Storyboard.SetTargetProperty(opacity, "Opacity");
-        storyboard.Children.Add(opacity);
-
-        var rise = new DoubleAnimation
-        {
-            From = 0,
-            To = -10 - (sequence % 3) * 2,
-            Duration = TimeSpan.FromMilliseconds(520),
-            EasingFunction = easing
-        };
-        Storyboard.SetTarget(rise, transform);
-        Storyboard.SetTargetProperty(rise, "TranslateY");
-        storyboard.Children.Add(rise);
-
-        var drift = new DoubleAnimation
-        {
-            From = 0,
-            To = ((sequence % 7) - 3) * 2.1,
-            Duration = TimeSpan.FromMilliseconds(520),
-            EasingFunction = easing
-        };
-        Storyboard.SetTarget(drift, transform);
-        Storyboard.SetTargetProperty(drift, "TranslateX");
-        storyboard.Children.Add(drift);
-
-        var shrinkX = new DoubleAnimation
-        {
-            From = 1,
-            To = 0.18,
-            Duration = TimeSpan.FromMilliseconds(520),
-            EasingFunction = easing
-        };
-        Storyboard.SetTarget(shrinkX, transform);
-        Storyboard.SetTargetProperty(shrinkX, "ScaleX");
-        storyboard.Children.Add(shrinkX);
-
-        var shrinkY = new DoubleAnimation
-        {
-            From = 1,
-            To = 0.18,
-            Duration = TimeSpan.FromMilliseconds(520),
-            EasingFunction = easing
-        };
-        Storyboard.SetTarget(shrinkY, transform);
-        Storyboard.SetTargetProperty(shrinkY, "ScaleY");
-        storyboard.Children.Add(shrinkY);
-
-        storyboard.Completed += (_, _) =>
-        {
-            DockParticleCanvas.Children.Remove(particle);
-        };
-        storyboard.Begin();
     }
 
     private void SetActiveNavigation(Button active)
