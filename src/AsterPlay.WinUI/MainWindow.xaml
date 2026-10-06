@@ -14,13 +14,13 @@
           Loaded="RootGrid_Loaded">
         <Grid.Resources>
         <Style x:Key="DockButtonStyle" TargetType="Button">
-            <Setter Property="MinWidth" Value="80"/>
-            <Setter Property="Height" Value="50"/>
+            <Setter Property="MinWidth" Value="86"/>
+            <Setter Property="Height" Value="56"/>
             <Setter Property="Margin" Value="2"/>
-            <Setter Property="Padding" Value="8,3"/>
-            <Setter Property="CornerRadius" Value="17"/>
+            <Setter Property="Padding" Value="9,4"/>
+            <Setter Property="CornerRadius" Value="19"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#F2FFFFFF"/>
+            <Setter Property="Foreground" Value="#E8101217"/>
             <Setter Property="BorderThickness" Value="0"/>
         </Style>
         </Grid.Resources>
@@ -79,36 +79,36 @@
             <Border x:Name="NavigationDock"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Bottom"
-                    Margin="0,0,0,6"
-                    Padding="5"
-                    CornerRadius="29"
-                    BorderBrush="#46FFFFFF"
+                    Margin="0,0,0,14"
+                    Padding="6"
+                    CornerRadius="34"
+                    BorderBrush="#78FFFFFF"
                     BorderThickness="1"
                     Visibility="Visible">
                 <Border.Resources>
                     <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
-                                     Color="#20FFFFFF"/>
+                                     Color="#34FFFFFF"/>
                     <SolidColorBrush x:Key="ButtonBackgroundPressed"
-                                     Color="#30FFFFFF"/>
+                                     Color="#52FFFFFF"/>
                     <SolidColorBrush x:Key="ButtonBorderBrushPointerOver"
                                      Color="Transparent"/>
                     <SolidColorBrush x:Key="ButtonBorderBrushPressed"
                                      Color="Transparent"/>
                 </Border.Resources>
                 <Border.Background>
-                    <lg:LiquidGlassBrush BlurAmount="4.25"
-                                         BloomAmount="0.10"
-                                         RefThickness="34"
-                                         RefFactor="2.30"
-                                         RefDispersion="4.8"
-                                         DispersionRange="0.34"
-                                         RefFresnelFactor="22"
-                                         GlareFactor="54"
-                                         TintA="0.13"
-                                         TintR="18"
-                                         TintG="22"
-                                         TintB="30"
-                                         ShapeRadius="0.98"
+                    <lg:LiquidGlassBrush BlurAmount="5.15"
+                                         BloomAmount="0.12"
+                                         RefThickness="38"
+                                         RefFactor="2.20"
+                                         RefDispersion="4.4"
+                                         DispersionRange="0.32"
+                                         RefFresnelFactor="20"
+                                         GlareFactor="58"
+                                         TintA="0.30"
+                                         TintR="239"
+                                         TintG="239"
+                                         TintB="244"
+                                         ShapeRadius="0.99"
                                          ShapeRoundness="4.0"/>
                 </Border.Background>
                 <StackPanel Orientation="Horizontal"
