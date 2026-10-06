@@ -363,21 +363,20 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    internal void ShowStartupWindowBehindSplash()
+    internal void PositionStartupWindowBehindSplash()
     {
-        if (_startupOffscreenActive)
-        {
-            _appWindow.MoveAndResize(
-                _startupTargetBounds);
-            _startupOffscreenActive = false;
-        }
+        if (!_startupOffscreenActive)
+            return;
 
-        Activate();
+        _appWindow.MoveAndResize(
+            _startupTargetBounds);
+        _startupOffscreenActive = false;
     }
 
     internal void CompleteStartupWindowReveal()
     {
-        ShowStartupWindowBehindSplash();
+        PositionStartupWindowBehindSplash();
+        Activate();
     }
 
     private void ScheduleStartupReveal()
