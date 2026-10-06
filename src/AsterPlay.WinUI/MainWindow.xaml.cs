@@ -660,7 +660,16 @@ public sealed partial class MainWindow : Window
 
         var width = clientRect.Right - clientRect.Left;
         var height = clientRect.Bottom - clientRect.Top;
-        const int iconSize = 144;
+        var dpi = GetDpiForWindow(_hwnd);
+        if (dpi == 0)
+            dpi = 96;
+
+        // XAML's Width/Height=144 are device-independent pixels. Match that
+        // exact physical size here so the native PNG does not jump when XAML
+        // takes over on 125%/150%/200% display scaling.
+        var iconSize = Math.Max(
+            1,
+            (int)Math.Round(144.0 * dpi / 96.0));
         var x = Math.Max(0, (width - iconSize) / 2);
         var y = Math.Max(0, (height - iconSize) / 2);
 
@@ -1433,6 +1442,10 @@ public sealed partial class MainWindow : Window
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr GetModuleHandle(string? moduleName);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(
+        IntPtr hWnd);
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
