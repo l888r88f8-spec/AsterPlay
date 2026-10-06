@@ -100,11 +100,12 @@ public sealed partial class MainWindow : Window
         }
 
         PrepareStartupWindow();
-        InitializeNativeStartupOverlay();
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         ConfigureNativeTitleBar(isLight: true);
+
+        InitializeNativeStartupOverlay();
 
         Closed += MainWindow_Closed;
         PageTitleBlock.Text = "首页";
