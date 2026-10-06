@@ -102,17 +102,24 @@ public sealed class EmbyClient
         UserName = UserName
     };
 
-    public async Task<string> GetServerNameAsync()
-    {
-        using var request = CreateRequest(
-            HttpMethod.Get,
-            "/System/Info/Public",
-            includeToken: false);
+    public Task<string> GetServerNameAsync() =>
+        GetServerNameAsync(ServerUrl);
 
-        using var response = await _http.SendAsync(request);
+    public async Task<string> GetServerNameAsync(
+        string serverUrl,
+        CancellationToken cancellationToken = default)
+    {
+        var normalized = NormalizeServerUrl(serverUrl);
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            normalized + "/System/Info/Public");
+
+        using var response = await _http.SendAsync(request, cancellationToken);
         await EnsureSuccess(response, "Server info request failed");
 
-        var info = await response.Content.ReadFromJsonAsync<EmbyPublicSystemInfo>(_json);
+        var info = await response.Content.ReadFromJsonAsync<EmbyPublicSystemInfo>(
+            _json,
+            cancellationToken);
         return info?.ServerName?.Trim() ?? "";
     }
 
@@ -308,6 +315,11 @@ public sealed class EmbyClient
         string.IsNullOrWhiteSpace(person.Id)
             ? ""
             : WithToken($"/Items/{Esc(person.Id)}/Images/Primary?maxWidth={maxWidth}&quality=90");
+
+    public string BuildCurrentUserPrimaryUrl(int maxWidth = 160) =>
+        string.IsNullOrWhiteSpace(UserId)
+            ? ""
+            : WithToken($"/Users/{Esc(UserId)}/Images/Primary?maxWidth={maxWidth}&quality=90");
 
     public async Task<PlaybackLaunch> GetPlayableStreamAsync(
         EmbyItem source,
