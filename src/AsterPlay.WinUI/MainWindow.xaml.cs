@@ -243,9 +243,8 @@ public sealed partial class MainWindow : Window
         _startupResolutionScheduled = true;
 
         // Wait for the first composition frame before touching disk, DPAPI,
-        // UISettings, EmbyClient, or page XAML. MainWindow is still DWM-cloaked
-        // here, so this first frame can be prepared without exposing the native
-        // blank HWND surface.
+        // UISettings, EmbyClient, or page XAML. The native painter covers this
+        // short gap on the same HWND until the XAML startup cover is confirmed.
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += FirstFrame_Rendering;
     }
 
@@ -567,21 +566,30 @@ public sealed partial class MainWindow : Window
 
             case WmPaint:
             {
-                var hdc = BeginPaint(
+                // Let WinUI/the default window procedure process WM_PAINT first
+                // so DirectComposition/XAML initialization is never blocked.
+                var result = DefSubclassProc(
                     hWnd,
-                    out var paint);
-                try
+                    message,
+                    wParam,
+                    lParam);
+
+                var hdc = GetDC(hWnd);
+                if (hdc != IntPtr.Zero)
                 {
-                    PaintNativeStartupSurface(hdc);
-                }
-                finally
-                {
-                    EndPaint(
-                        hWnd,
-                        ref paint);
+                    try
+                    {
+                        PaintNativeStartupSurface(hdc);
+                    }
+                    finally
+                    {
+                        ReleaseDC(
+                            hWnd,
+                            hdc);
+                    }
                 }
 
-                return IntPtr.Zero;
+                return result;
             }
 
             case WmSetCursor:
@@ -1220,21 +1228,6 @@ public sealed partial class MainWindow : Window
         UIntPtr subclassId,
         UIntPtr referenceData);
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct PaintStruct
-    {
-        public IntPtr Hdc;
-        [MarshalAs(UnmanagedType.Bool)]
-        public bool Erase;
-        public NativeRect Paint;
-        [MarshalAs(UnmanagedType.Bool)]
-        public bool Restore;
-        [MarshalAs(UnmanagedType.Bool)]
-        public bool IncUpdate;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
-        public byte[] RgbReserved;
-    }
-
     private delegate IntPtr HookProc(
         int code,
         IntPtr wParam,
@@ -1319,15 +1312,13 @@ public sealed partial class MainWindow : Window
         IntPtr cursor);
 
     [DllImport("user32.dll")]
-    private static extern IntPtr BeginPaint(
-        IntPtr hWnd,
-        out PaintStruct paint);
+    private static extern IntPtr GetDC(
+        IntPtr hWnd);
 
     [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool EndPaint(
+    private static extern int ReleaseDC(
         IntPtr hWnd,
-        ref PaintStruct paint);
+        IntPtr hdc);
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
