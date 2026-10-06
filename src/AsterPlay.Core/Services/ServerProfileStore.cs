@@ -5,7 +5,17 @@ namespace AsterPlay.Services;
 
 public sealed record ServerProfile(string Name, string Url)
 {
-    public string DisplayName => string.IsNullOrWhiteSpace(Name) ? Url : Name;
+    // Name is the label explicitly entered by the user. ServerName is the
+    // name discovered from Emby's public system info. Never overwrite Name
+    // during login or background server-name refresh.
+    public string ServerName { get; init; } = "";
+
+    public string DisplayName =>
+        !string.IsNullOrWhiteSpace(Name)
+            ? Name
+            : !string.IsNullOrWhiteSpace(ServerName)
+                ? ServerName
+                : Url;
 }
 
 public static class ServerProfileStore
@@ -49,14 +59,54 @@ public static class ServerProfileStore
         var index = profiles.FindIndex(x =>
             string.Equals(NormalizeUrl(x.Url), url, StringComparison.OrdinalIgnoreCase));
 
+        var existingServerName = index >= 0
+            ? profiles[index].ServerName
+            : "";
+
         var profile = new ServerProfile(
-            string.IsNullOrWhiteSpace(name) ? GetDefaultName(url) : name.Trim(),
-            url);
+            (name ?? "").Trim(),
+            url)
+        {
+            ServerName = existingServerName
+        };
 
         if (index >= 0)
             profiles[index] = profile;
         else
             profiles.Add(profile);
+
+        Save(profiles);
+    }
+
+    public static void UpdateServerName(string url, string? serverName)
+    {
+        url = NormalizeUrl(url);
+        serverName = (serverName ?? "").Trim();
+
+        if (string.IsNullOrWhiteSpace(url) ||
+            string.IsNullOrWhiteSpace(serverName))
+        {
+            return;
+        }
+
+        var profiles = Load().ToList();
+        var index = profiles.FindIndex(x =>
+            string.Equals(NormalizeUrl(x.Url), url, StringComparison.OrdinalIgnoreCase));
+
+        if (index >= 0)
+        {
+            profiles[index] = profiles[index] with
+            {
+                ServerName = serverName
+            };
+        }
+        else
+        {
+            profiles.Add(new ServerProfile("", url)
+            {
+                ServerName = serverName
+            });
+        }
 
         Save(profiles);
     }
@@ -92,11 +142,4 @@ public static class ServerProfileStore
     private static string NormalizeUrl(string? url) =>
         (url ?? "").Trim().TrimEnd('/');
 
-    private static string GetDefaultName(string url)
-    {
-        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            return uri.IsDefaultPort ? uri.Host : $"{uri.Host}:{uri.Port}";
-
-        return url;
-    }
 }
