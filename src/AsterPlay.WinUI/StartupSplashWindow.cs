@@ -11,7 +11,7 @@ namespace AsterPlay.WinUI;
 
 internal sealed class StartupSplashWindow : Window
 {
-    private const int BaseSize = 152;
+    private const int WindowSize = 176;
     private const int GwlExStyle = -20;
     private const long WsExLayered = 0x00080000L;
     private const long WsExToolWindow = 0x00000080L;
@@ -19,17 +19,15 @@ internal sealed class StartupSplashWindow : Window
 
     private readonly IntPtr _hwnd;
     private readonly AppWindow _appWindow;
-    private readonly DispatcherTimer _timer;
-    private readonly Stopwatch _clock = new();
     private readonly Image _logoImage;
-    private bool _visualReadyRaised;
-    private bool _pngFallbackTried;
+    private readonly ScaleTransform _logoScale;
+    private readonly Stopwatch _clock = new();
 
-    private RectInt32 _workArea;
-    private int _currentSize = BaseSize;
-    private int _revealStartSize = BaseSize;
+    private bool _visualReadyRaised;
+    private bool _renderSubscribed;
     private bool _revealing;
-    private bool _mainWindowShown;
+    private double _currentScale = 1.0;
+    private double _revealStartScale = 1.0;
     private MainWindow? _mainWindow;
     private Action? _completed;
 
@@ -37,27 +35,36 @@ internal sealed class StartupSplashWindow : Window
     {
         Title = "AsterPlay";
 
-        var root = new Grid
+        _logoScale = new ScaleTransform
         {
-            Background = new SolidColorBrush(
-                Windows.UI.Color.FromArgb(255, 8, 10, 14))
+            ScaleX = 1,
+            ScaleY = 1
         };
 
         _logoImage = new Image
         {
-            // Use the exact resource that Windows uses for the executable icon.
-            // ICO decoding is handled by WIC. PNG remains a fallback below.
+            // Startup animation always uses the PNG directly. The executable
+            // ICO is only for Windows/taskbar icon metadata.
             Source = new BitmapImage(
                 new Uri(
-                    "ms-appx:///Assets/AsterPlay.ico")),
+                    "ms-appx:///Assets/AsterPlay.AppIcon.png")),
             Stretch = Stretch.UniformToFill,
             HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch
+            VerticalAlignment = VerticalAlignment.Stretch,
+            RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5),
+            RenderTransform = _logoScale
         };
         _logoImage.ImageOpened += LogoImage_ImageOpened;
         _logoImage.ImageFailed += LogoImage_ImageFailed;
-        root.Children.Add(_logoImage);
 
+        var root = new Grid
+        {
+            // The PNG fills the complete rounded window. This color is only a
+            // decoder fallback and never forms a separate splash panel.
+            Background = new SolidColorBrush(
+                Windows.UI.Color.FromArgb(255, 8, 10, 14))
+        };
+        root.Children.Add(_logoImage);
         Content = root;
 
         _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
@@ -94,25 +101,23 @@ internal sealed class StartupSplashWindow : Window
             255,
             LwaAlpha);
 
-        _workArea = DisplayArea.GetFromWindowId(
+        var workArea = DisplayArea.GetFromWindowId(
                 windowId,
                 DisplayAreaFallback.Primary)
             .WorkArea;
 
-        UpdateBounds(
-            BaseSize,
-            255);
+        _appWindow.MoveAndResize(
+            new RectInt32(
+                workArea.X + ((workArea.Width - WindowSize) / 2),
+                workArea.Y + ((workArea.Height - WindowSize) / 2),
+                WindowSize,
+                WindowSize));
 
-        _timer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(16)
-        };
-        _timer.Tick += Timer_Tick;
+        ApplyRoundedRegion();
 
         Closed += (_, _) =>
         {
-            _timer.Stop();
-            _timer.Tick -= Timer_Tick;
+            StopRendering();
             _logoImage.ImageOpened -= LogoImage_ImageOpened;
             _logoImage.ImageFailed -= LogoImage_ImageFailed;
             Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -=
@@ -126,9 +131,8 @@ internal sealed class StartupSplashWindow : Window
         object sender,
         RoutedEventArgs e)
     {
-        // ImageOpened means the decoder has real pixels. Wait one compositor
-        // frame so the user actually sees them before MainWindow construction
-        // starts blocking the UI thread.
+        // Wait one real compositor frame after PNG decoding so the first thing
+        // the user sees is the actual icon, never the fallback surface.
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -=
             IconReady_Rendering;
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering +=
@@ -139,20 +143,8 @@ internal sealed class StartupSplashWindow : Window
         object sender,
         ExceptionRoutedEventArgs e)
     {
-        if (_pngFallbackTried)
-        {
-            StartupDiagnostics.Write(
-                $"Startup icon failed to decode: {e.ErrorMessage}");
-            return;
-        }
-
-        _pngFallbackTried = true;
         StartupDiagnostics.Write(
-            $"Startup ICO decode failed, falling back to PNG: {e.ErrorMessage}");
-
-        _logoImage.Source = new BitmapImage(
-            new Uri(
-                "ms-appx:///Assets/AsterPlay.AppIcon.png"));
+            $"Startup PNG failed to decode: {e.ErrorMessage}");
     }
 
     private void IconReady_Rendering(
@@ -173,7 +165,7 @@ internal sealed class StartupSplashWindow : Window
     {
         _revealing = false;
         _clock.Restart();
-        _timer.Start();
+        StartRendering();
     }
 
     internal void BeginReveal(
@@ -185,16 +177,39 @@ internal sealed class StartupSplashWindow : Window
 
         _mainWindow = mainWindow;
         _completed = completed;
-        _revealStartSize = _currentSize;
-        _mainWindowShown = false;
+        _revealStartScale = _currentScale;
         _revealing = true;
         _clock.Restart();
 
-        if (!_timer.IsEnabled)
-            _timer.Start();
+        // Home content is fully ready at this point. Put it on-screen now,
+        // behind the always-on-top icon, instead of revealing a blank window
+        // midway through a full-screen splash expansion.
+        _mainWindow.PositionStartupWindowBehindSplash();
+
+        StartRendering();
     }
 
-    private void Timer_Tick(
+    private void StartRendering()
+    {
+        if (_renderSubscribed)
+            return;
+
+        _renderSubscribed = true;
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering +=
+            Animation_Rendering;
+    }
+
+    private void StopRendering()
+    {
+        if (!_renderSubscribed)
+            return;
+
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -=
+            Animation_Rendering;
+        _renderSubscribed = false;
+    }
+
+    private void Animation_Rendering(
         object? sender,
         object e)
     {
@@ -209,89 +224,50 @@ internal sealed class StartupSplashWindow : Window
 
     private void TickPulse()
     {
+        // RenderTransform scaling is compositor-friendly and avoids resizing
+        // the native window every frame. One cycle is intentionally gentle.
         var seconds = _clock.Elapsed.TotalSeconds;
         var phase =
-            seconds *
-            (Math.PI * 2.0 / 1.84);
+            (seconds * (Math.PI * 2.0 / 1.9)) -
+            (Math.PI / 2.0);
 
-        var scale =
-            1.0 +
-            (Math.Sin(phase) * 0.06);
+        _currentScale =
+            1.025 +
+            (Math.Sin(phase) * 0.025);
 
-        var size = Math.Max(
-            1,
-            (int)Math.Round(
-                BaseSize * scale));
-
-        UpdateBounds(
-            size,
-            255);
+        ApplyScale(_currentScale);
     }
 
     private void TickReveal()
     {
-        const double durationMs = 1380.0;
+        const double durationMs = 460.0;
 
-        var raw =
-            Math.Clamp(
-                _clock.Elapsed.TotalMilliseconds /
-                durationMs,
-                0.0,
-                1.0);
+        var raw = Math.Clamp(
+            _clock.Elapsed.TotalMilliseconds / durationMs,
+            0.0,
+            1.0);
+        var eased = SmoothStep(raw);
 
-        var eased =
-            SmoothStep(raw);
+        _currentScale = Lerp(
+            _revealStartScale,
+            1.10,
+            eased);
+        ApplyScale(_currentScale);
 
-        var targetSize =
-            (int)Math.Ceiling(
-                Math.Max(
-                    _workArea.Width,
-                    _workArea.Height) *
-                1.38);
+        // Fade the small icon window itself. It never grows to fullscreen.
+        var alpha = (byte)Math.Round(
+            255.0 * (1.0 - eased));
 
-        var size =
-            (int)Math.Round(
-                Lerp(
-                    _revealStartSize,
-                    targetSize,
-                    eased));
-
-        // Keep the real window off-screen until the expanding icon is
-        // large enough to cover it. That avoids any white WinUI frame flashing
-        // around the splash during initialization.
-        if (!_mainWindowShown &&
-            raw >= 0.72)
-        {
-            _mainWindowShown = true;
-            _mainWindow?.PositionStartupWindowBehindSplash();
-        }
-
-        var splashFade =
-            Math.Clamp(
-                (raw - 0.72) / 0.28,
-                0.0,
-                1.0);
-
-        var splashAlpha =
-            (byte)Math.Round(
-                255.0 *
-                (1.0 -
-                 SmoothStep(splashFade)));
-
-        UpdateBounds(
-            size,
-            splashAlpha);
+        SetLayeredWindowAttributes(
+            _hwnd,
+            0,
+            alpha,
+            LwaAlpha);
 
         if (raw < 1.0)
             return;
 
-        _timer.Stop();
-
-        if (!_mainWindowShown)
-        {
-            _mainWindowShown = true;
-            _mainWindow?.PositionStartupWindowBehindSplash();
-        }
+        StopRendering();
 
         _mainWindow?.CompleteStartupWindowReveal();
 
@@ -303,56 +279,22 @@ internal sealed class StartupSplashWindow : Window
         completed?.Invoke();
     }
 
-    private void UpdateBounds(
-        int size,
-        byte alpha)
+    private void ApplyScale(double scale)
     {
-        _currentSize = size;
-
-        var centerX =
-            _workArea.X +
-            (_workArea.Width / 2);
-        var centerY =
-            _workArea.Y +
-            (_workArea.Height / 2);
-
-        var x =
-            centerX -
-            (size / 2);
-        var y =
-            centerY -
-            (size / 2);
-
-        _appWindow.MoveAndResize(
-            new RectInt32(
-                x,
-                y,
-                size,
-                size));
-
-        ApplyRoundedRegion(size);
-
-        SetLayeredWindowAttributes(
-            _hwnd,
-            0,
-            alpha,
-            LwaAlpha);
+        _logoScale.ScaleX = scale;
+        _logoScale.ScaleY = scale;
     }
 
-    private void ApplyRoundedRegion(
-        int size)
+    private void ApplyRoundedRegion()
     {
-        var radius =
-            Math.Max(
-                12,
-                (int)Math.Round(
-                    size * 0.19));
+        var radius = (int)Math.Round(
+            WindowSize * 0.19);
 
         var region = CreateRoundRectRgn(
             0,
             0,
-            size + 1,
-            size + 1,
+            WindowSize + 1,
+            WindowSize + 1,
             radius * 2,
             radius * 2);
 
@@ -368,19 +310,16 @@ internal sealed class StartupSplashWindow : Window
         }
     }
 
-    private static double SmoothStep(
-        double value)
+    private static double SmoothStep(double value)
     {
-        value =
-            Math.Clamp(
-                value,
-                0.0,
-                1.0);
+        value = Math.Clamp(
+            value,
+            0.0,
+            1.0);
 
         return value *
                value *
-               (3.0 -
-                (2.0 * value));
+               (3.0 - (2.0 * value));
     }
 
     private static double Lerp(
