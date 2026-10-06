@@ -282,6 +282,7 @@
              WinUI's compact system MenuFlyout. -->
         <Border x:Name="ServerChooserPanel"
                 Width="370"
+                MaxHeight="430"
                 Margin="34,94,0,0"
                 Padding="16,10"
                 HorizontalAlignment="Left"
@@ -308,13 +309,18 @@
                                      ShapeRoundness="4.0"/>
             </Border.Background>
 
-            <ItemsControl x:Name="ServerChooserList">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
+            <ScrollViewer VerticalScrollMode="Auto"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollMode="Disabled"
+                          HorizontalScrollBarVisibility="Disabled"
+                          ZoomMode="Disabled">
+                <ItemsControl x:Name="ServerChooserList">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Border BorderBrush="#22000000"
                                 BorderThickness="0,0,0,1">
@@ -368,8 +374,9 @@
                             </Button>
                         </Border>
                     </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
         </Border>
 
         <ScrollViewer x:Name="HomeScrollViewer"
