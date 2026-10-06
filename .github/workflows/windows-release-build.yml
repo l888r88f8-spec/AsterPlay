@@ -84,6 +84,22 @@ jobs:
           Start-Sleep -Seconds 5
 
           if ($process.HasExited) {
+            $asterPlayLog = Join-Path $env:LOCALAPPDATA "AsterPlay\AsterPlay.log"
+            if (Test-Path $asterPlayLog) {
+              Write-Host "=== AsterPlay.log ==="
+              Get-Content -Raw $asterPlayLog | Write-Host
+            }
+
+            Write-Host "=== Recent Application events ==="
+            Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = (Get-Date).AddMinutes(-10) } -ErrorAction SilentlyContinue |
+              Select-Object -First 80 TimeCreated, Id, LevelDisplayName, ProviderName, Message |
+              Format-List | Out-String -Width 300 | Write-Host
+
+            Write-Host "=== Windows Error Reporting queue ==="
+            Get-ChildItem "$env:ProgramData\Microsoft\Windows\WER\ReportQueue" -Recurse -ErrorAction SilentlyContinue |
+              Select-Object -First 100 FullName |
+              Format-Table -AutoSize | Out-String -Width 300 | Write-Host
+
             throw "AsterPlay exited during startup smoke test with code $($process.ExitCode)."
           }
 
