@@ -71,7 +71,7 @@ public static class UserError
         if (current.Message.Contains("mpv_create", StringComparison.OrdinalIgnoreCase) ||
             current.Message.Contains("mpv_initialize", StringComparison.OrdinalIgnoreCase))
         {
-            return "libmpv 初始化失败。请检查发布包完整性和显卡驱动；详细信息已写入 playback.log。";
+            return "libmpv 初始化失败。请检查发布包完整性和显卡驱动；详细信息已写入 AsterPlay.log。";
         }
 
         if (current.Message.Contains("TranscodingUrl", StringComparison.OrdinalIgnoreCase))
