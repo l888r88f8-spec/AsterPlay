@@ -40,8 +40,7 @@ jobs:
           $required = @(
             "AsterPlay.exe",
             "AsterPlay.Core.dll",
-            "CustomEffectRuntimeNative.dll",
-            "libmpv-2.dll",
+                    "libmpv-2.dll",
             "RUNTIME-SOURCE.txt"
           )
 
