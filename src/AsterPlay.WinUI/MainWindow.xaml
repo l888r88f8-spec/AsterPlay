@@ -84,14 +84,7 @@
                     CornerRadius="29"
                     BorderBrush="#46FFFFFF"
                     BorderThickness="1"
-                    Visibility="Visible"
-                    RenderTransformOrigin="0.5,0.5"
-                    PointerEntered="NavigationDock_PointerEntered"
-                    PointerMoved="NavigationDock_PointerMoved"
-                    PointerExited="NavigationDock_PointerExited">
-                <Border.RenderTransform>
-                    <CompositeTransform x:Name="NavigationDockTransform"/>
-                </Border.RenderTransform>
+                    Visibility="Visible">
                 <Border.Resources>
                     <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
                                      Color="#14000000"/>
@@ -118,13 +111,8 @@
                                          ShapeRadius="0.98"
                                          ShapeRoundness="4.0"/>
                 </Border.Background>
-                <Grid>
-                    <Canvas x:Name="DockParticleCanvas"
-                            IsHitTestVisible="False"
-                            Canvas.ZIndex="0"/>
-                    <StackPanel Orientation="Horizontal"
-                                Spacing="2"
-                                Canvas.ZIndex="1">
+                <StackPanel Orientation="Horizontal"
+                            Spacing="2">
                     <Button x:Name="HomeButton"
                             Style="{StaticResource DockButtonStyle}"
                             Click="Home_Click">
@@ -177,8 +165,7 @@
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-                    </StackPanel>
-                </Grid>
+                </StackPanel>
             </Border>
         </Grid>
 
