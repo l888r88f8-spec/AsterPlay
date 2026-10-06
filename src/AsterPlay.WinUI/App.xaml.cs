@@ -76,9 +76,11 @@ public partial class App : Application
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -=
             Splash_FirstFrameRendering;
 
-        DispatcherQueue.TryEnqueue(
-            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
-            InitializeMainWindow);
+        Microsoft.UI.Dispatching.DispatcherQueue
+            .GetForCurrentThread()
+            .TryEnqueue(
+                Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+                InitializeMainWindow);
     }
 
     private void InitializeMainWindow()
