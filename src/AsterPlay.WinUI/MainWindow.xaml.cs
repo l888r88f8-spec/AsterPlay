@@ -21,7 +21,6 @@ public sealed partial class MainWindow : Window
     private bool _startupResolutionCompleted;
     private bool _startupRevealScheduled;
     private bool _startupVisualReadyRaised;
-    private bool _startupOffscreenActive;
     private RectInt32 _startupTargetBounds;
     private bool _authenticated;
     private string _currentSection = "home-shell";
@@ -80,7 +79,7 @@ public sealed partial class MainWindow : Window
             StartupDiagnostics.WriteException("SetWindowIcon", ex);
         }
 
-        PrepareStartupOffscreenWindow();
+        PrepareStartupCoveredWindow();
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -308,7 +307,7 @@ public sealed partial class MainWindow : Window
 
     internal event EventHandler? StartupVisualReady;
 
-    private void PrepareStartupOffscreenWindow()
+    private void PrepareStartupCoveredWindow()
     {
         try
         {
@@ -340,63 +339,47 @@ public sealed partial class MainWindow : Window
                 width,
                 height);
 
-            // Move far enough beyond the work area that DWM cannot expose any
-            // part of the WinUI window while it is loading.
-            _appWindow.MoveAndResize(
-                new RectInt32(
-                    workArea.X + workArea.Width + 2048,
-                    workArea.Y + workArea.Height + 2048,
-                    width,
-                    height));
+            // Keep MainWindow at its final real screen coordinates from the
+            // very beginning. StartupSplashWindow is always-on-top and covers
+            // it while HomeView loads, so the WinUI HWND can measure, arrange
+            // and compose at the exact DPI/monitor/position it will use when
+            // the splash disappears. This avoids a second top-level-window
+            // relocation/re-presentation during the handoff.
+            _appWindow.MoveAndResize(_startupTargetBounds);
 
-            _startupOffscreenActive = true;
             StartupDiagnostics.Write(
-                $"MainWindow prepared off-screen; target={_startupTargetBounds.X},{_startupTargetBounds.Y}," +
+                $"MainWindow prepared under splash at final bounds; target=" +
+                $"{_startupTargetBounds.X},{_startupTargetBounds.Y}," +
                 $"{_startupTargetBounds.Width}x{_startupTargetBounds.Height}");
         }
         catch (Exception ex)
         {
             StartupDiagnostics.WriteException(
-                "PrepareStartupOffscreenWindow",
+                "PrepareStartupCoveredWindow",
                 ex);
-            _startupOffscreenActive = false;
         }
-    }
-
-    internal void PositionStartupWindowBehindSplash()
-    {
-        if (!_startupOffscreenActive)
-            return;
-
-        _appWindow.MoveAndResize(
-            _startupTargetBounds);
-        _startupOffscreenActive = false;
     }
 
     internal void CompleteStartupWindowReveal()
     {
         StartupDiagnostics.Write(
-            $"CompleteStartupWindowReveal: begin; offscreen={_startupOffscreenActive}, target=" +
+            $"CompleteStartupWindowReveal: activating already-positioned MainWindow; target=" +
             $"{_startupTargetBounds.X},{_startupTargetBounds.Y}," +
             $"{_startupTargetBounds.Width}x{_startupTargetBounds.Height}");
 
-        PositionStartupWindowBehindSplash();
-
-        StartupDiagnostics.Write(
-            "CompleteStartupWindowReveal: positioned; activating MainWindow");
         Activate();
+
         StartupDiagnostics.Write(
             "CompleteStartupWindowReveal: Activate returned");
     }
 
     internal async Task CompleteStartupWindowRevealAsync()
     {
+        // MainWindow has already spent the entire startup lifetime at its final
+        // screen position underneath the always-on-top splash. Reactivate it,
+        // then synchronize one last time before removing that cover window.
         CompleteStartupWindowReveal();
 
-        // Moving an already-rendered HWND from off-screen into the work area
-        // does not mean DWM has presented its surface on the physical display.
-        // Keep the splash above it while WinUI drains queued startup work and
-        // produces fresh composition frames at the real window position.
         await WaitForDispatcherIdleAsync();
 
         StartupDiagnostics.Write(
@@ -405,18 +388,16 @@ public sealed partial class MainWindow : Window
         await WaitForRenderingFramesAsync(2);
 
         StartupDiagnostics.Write(
-            "CompleteStartupWindowRevealAsync: two on-screen composition frames observed");
+            "CompleteStartupWindowRevealAsync: two covered on-screen composition frames observed");
 
         var dwmResult = DwmFlush();
         StartupDiagnostics.Write(
             $"CompleteStartupWindowRevealAsync: DwmFlush returned {dwmResult}");
 
-        // One final frame after DWM synchronization prevents the splash from
-        // uncovering a transient blank client surface on slower GPUs/drivers.
         await WaitForRenderingFramesAsync(1);
 
         StartupDiagnostics.Write(
-            "CompleteStartupWindowRevealAsync: visible MainWindow handoff ready");
+            "CompleteStartupWindowRevealAsync: covered MainWindow handoff ready");
     }
 
     private Task WaitForDispatcherIdleAsync()
