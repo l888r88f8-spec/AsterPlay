@@ -116,8 +116,8 @@ Check:
 
 Log growth is bounded:
 
-- active `AsterPlay.log`: approximately 8 MB maximum before rotation
-- one backup: `playback.previous.log`
+- `AsterPlay.log` is the only runtime log file
+- when it reaches approximately 8 MB, older entries are trimmed in place and the newest entries are retained
 
 ## 8. Release decision
 
