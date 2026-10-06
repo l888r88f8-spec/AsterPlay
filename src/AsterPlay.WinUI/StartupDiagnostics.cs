@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using AsterPlay.Services;
 
 namespace AsterPlay.WinUI;
 
@@ -20,6 +21,8 @@ internal static class StartupDiagnostics
 
     public static void Write(string message)
     {
+        var elapsedMilliseconds = Clock.Elapsed.TotalMilliseconds;
+
         try
         {
             Directory.CreateDirectory(DirectoryPath);
@@ -36,13 +39,19 @@ internal static class StartupDiagnostics
 
                 File.AppendAllText(
                     LogPath,
-                    $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} +{Clock.Elapsed.TotalMilliseconds,8:0.0} ms  {message}{Environment.NewLine}");
+                    $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} +{elapsedMilliseconds,8:0.0} ms  {message}{Environment.NewLine}");
             }
         }
         catch
         {
             // Startup diagnostics must never prevent the application from opening.
         }
+
+        // Keep startup timing in playback.log too, since that is the log users
+        // normally attach when reporting startup/reveal problems.
+        PlaybackLog.Write(
+            "Startup",
+            $"+{elapsedMilliseconds:0.0} ms {message}");
     }
 
     public static IDisposable Measure(string area) =>
