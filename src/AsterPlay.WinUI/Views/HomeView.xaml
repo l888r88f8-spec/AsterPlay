@@ -239,7 +239,13 @@
                               Foreground="#B8101217"
                               FontSize="11"
                               HorizontalAlignment="Center"
-                              VerticalAlignment="Center"/>
+                              VerticalAlignment="Center"
+                              RenderTransformOrigin="0.5,0.5">
+                        <FontIcon.RenderTransform>
+                            <RotateTransform x:Name="ServerChevronTransform"
+                                             Angle="0"/>
+                        </FontIcon.RenderTransform>
+                    </FontIcon>
                 </Grid>
             </Button>
 
@@ -274,6 +280,100 @@
                           FontSize="22"/>
             </Button>
         </Grid>
+
+        <!-- Large custom server chooser matching the reference instead of
+             WinUI's compact system MenuFlyout. -->
+        <Border x:Name="ServerChooserPanel"
+                Width="370"
+                Margin="34,94,0,0"
+                Padding="16,10"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                CornerRadius="34"
+                BorderBrush="#82FFFFFF"
+                BorderThickness="1"
+                Visibility="Collapsed"
+                Canvas.ZIndex="90">
+            <Border.Background>
+                <lg:LiquidGlassBrush BlurAmount="6.2"
+                                     BloomAmount="0.12"
+                                     RefThickness="42"
+                                     RefFactor="2.18"
+                                     RefDispersion="4.5"
+                                     DispersionRange="0.34"
+                                     RefFresnelFactor="20"
+                                     GlareFactor="58"
+                                     TintA="0.42"
+                                     TintR="239"
+                                     TintG="242"
+                                     TintB="247"
+                                     ShapeRadius="0.99"
+                                     ShapeRoundness="4.0"/>
+            </Border.Background>
+
+            <ItemsControl x:Name="ServerChooserList">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border BorderBrush="#22000000"
+                                BorderThickness="0,0,0,1">
+                            <Button Height="76"
+                                    Padding="12,0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    CornerRadius="22"
+                                    HorizontalContentAlignment="Stretch"
+                                    Template="{StaticResource FlatButtonTemplate}"
+                                    Tag="{Binding Profile}"
+                                    Click="ServerChoice_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="42"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="42"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border Width="36"
+                                            Height="36"
+                                            CornerRadius="10"
+                                            Background="#2B000000"
+                                            BorderBrush="#5CFFFFFF"
+                                            BorderThickness="1"
+                                            VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE7F8;"
+                                                  Foreground="#F5FFFFFF"
+                                                  FontSize="16"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                                    </Border>
+
+                                    <TextBlock Grid.Column="1"
+                                               Margin="12,0,8,0"
+                                               Text="{Binding DisplayName}"
+                                               Foreground="#F015171C"
+                                               FontSize="20"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center"/>
+
+                                    <TextBlock Grid.Column="2"
+                                               Text="{Binding CurrentMark}"
+                                               Foreground="#D915171C"
+                                               FontSize="22"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Grid>
+                            </Button>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Border>
 
         <ScrollViewer x:Name="HomeScrollViewer"
                       Visibility="Visible"
