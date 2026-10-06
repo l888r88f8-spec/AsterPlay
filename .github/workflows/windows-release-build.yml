@@ -9,8 +9,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: windows-release-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: windows-release-${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   build:
