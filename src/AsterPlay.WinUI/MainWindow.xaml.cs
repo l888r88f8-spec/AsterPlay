@@ -300,7 +300,7 @@ public sealed partial class MainWindow : Window
             }
 
             _client.Restore(state.Session);
-            ServerProfileStore.AddOrUpdate(state.Session.ServerUrl);
+            ServerProfileStore.EnsureExists(state.Session.ServerUrl);
             _authenticated = true;
             ShowHome();
         }
