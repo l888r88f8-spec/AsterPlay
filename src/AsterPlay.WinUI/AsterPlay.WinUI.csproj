@@ -49,5 +49,25 @@
     <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
     <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
     <PublishTrimmed>False</PublishTrimmed>
+    <AsterPlayLiquidGlassCompatRuntime>$(MSBuildThisFileDirectory)..\..\Native\LiquidGlassCompat\Prebuilt\win-x64\CustomEffectRuntimeNative.dll</AsterPlayLiquidGlassCompatRuntime>
   </PropertyGroup>
+
+  <!-- LiquidGlassWinUI 1.0.3 ships a native runtime built for Windows App SDK
+       2.2.0. Always overwrite it with AsterPlay's SDK 2.5.1 compatibility
+       runtime for normal Build/F5 as well as direct dotnet publish. -->
+  <Target Name="CopyAsterPlayLiquidGlassCompatRuntimeAfterBuild"
+          AfterTargets="Build"
+          Condition="Exists('$(AsterPlayLiquidGlassCompatRuntime)')">
+    <Copy SourceFiles="$(AsterPlayLiquidGlassCompatRuntime)"
+          DestinationFolder="$(OutDir)"
+          SkipUnchangedFiles="true"/>
+  </Target>
+
+  <Target Name="CopyAsterPlayLiquidGlassCompatRuntimeAfterPublish"
+          AfterTargets="Publish"
+          Condition="Exists('$(AsterPlayLiquidGlassCompatRuntime)') and '$(PublishDir)' != ''">
+    <Copy SourceFiles="$(AsterPlayLiquidGlassCompatRuntime)"
+          DestinationFolder="$(PublishDir)"
+          SkipUnchangedFiles="true"/>
+  </Target>
 </Project>
