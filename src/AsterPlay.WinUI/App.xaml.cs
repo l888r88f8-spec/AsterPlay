@@ -123,7 +123,7 @@ public partial class App : Application
         }
     }
 
-    private void MainWindow_StartupVisualReady(
+    private async void MainWindow_StartupVisualReady(
         object? sender,
         EventArgs e)
     {
@@ -139,8 +139,26 @@ public partial class App : Application
             return;
         }
 
-        _splashWindow.Complete(_window);
-        _splashWindow = null;
+        var splash = _splashWindow;
+
+        try
+        {
+            await splash.CompleteAsync(_window);
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.WriteException(
+                "MainWindow_StartupVisualReady handoff",
+                ex);
+
+            _window.CompleteStartupWindowReveal();
+            splash.Close();
+        }
+        finally
+        {
+            if (ReferenceEquals(_splashWindow, splash))
+                _splashWindow = null;
+        }
     }
 
     private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
