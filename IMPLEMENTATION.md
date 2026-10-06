@@ -127,7 +127,6 @@ dist/AsterPlay/
 - `AsterPlay.exe`
 - `AsterPlay.Core.dll`
 - Windows App SDK self-contained runtime
-- `CustomEffectRuntimeNative.dll`
 - `libmpv-2.dll`
 - `BUILD-INFO.txt`
 - `RUNTIME-SOURCE.txt`
