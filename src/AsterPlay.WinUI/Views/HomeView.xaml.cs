@@ -31,6 +31,8 @@ public sealed partial class HomeView : UserControl
     private bool _heroVisualInitialized;
     private string _currentHeroBackdropUrl = "";
     private Storyboard? _heroTransitionStoryboard;
+    private Storyboard? _serverChooserStoryboard;
+    private bool _serverChooserClosing;
     private readonly bool _noServerMode;
     private bool _hasCachedSnapshot;
 
@@ -102,6 +104,8 @@ public sealed partial class HomeView : UserControl
         _heroTimer.Stop();
         _heroTransitionStoryboard?.Stop();
         _heroTransitionStoryboard = null;
+        _serverChooserStoryboard?.Stop();
+        _serverChooserStoryboard = null;
     }
 
     private void HeroTimer_Tick(DispatcherQueueTimer sender, object args)
@@ -386,7 +390,8 @@ public sealed partial class HomeView : UserControl
 
         if (ServerChooserPanel.Visibility == Visibility.Visible)
         {
-            CloseServerChooser();
+            if (!_serverChooserClosing)
+                CloseServerChooser();
             return;
         }
 
@@ -406,8 +411,7 @@ public sealed partial class HomeView : UserControl
             })
             .ToArray();
 
-        ServerChooserDismissLayer.Visibility = Visibility.Visible;
-        ServerChooserPanel.Visibility = Visibility.Visible;
+        OpenServerChooser();
     }
 
     private void ServerChoice_Click(object sender, RoutedEventArgs e)
@@ -415,18 +419,18 @@ public sealed partial class HomeView : UserControl
         if (sender is not Button { Tag: ServerProfile profile })
             return;
 
-        CloseServerChooser();
-
         var currentUrl = NormalizeServerUrl(_client.ServerUrl);
         if (string.Equals(
                 NormalizeServerUrl(profile.Url),
                 currentUrl,
                 StringComparison.OrdinalIgnoreCase))
         {
+            CloseServerChooser();
             return;
         }
 
-        ServerSwitchRequested?.Invoke(this, profile);
+        CloseServerChooser(() =>
+            ServerSwitchRequested?.Invoke(this, profile));
     }
 
     private void ServerChooserDismiss_Tapped(
@@ -437,10 +441,177 @@ public sealed partial class HomeView : UserControl
         e.Handled = true;
     }
 
-    private void CloseServerChooser()
+    private void OpenServerChooser()
     {
-        ServerChooserPanel.Visibility = Visibility.Collapsed;
-        ServerChooserDismissLayer.Visibility = Visibility.Collapsed;
+        _serverChooserStoryboard?.Stop();
+        _serverChooserStoryboard = null;
+        _serverChooserClosing = false;
+
+        ServerChooserDismissLayer.Visibility = Visibility.Visible;
+        ServerChooserPanel.Visibility = Visibility.Visible;
+        ServerChooserPanel.Opacity = 0;
+        ServerChooserTransform.ScaleX = 0.96;
+        ServerChooserTransform.ScaleY = 0.96;
+        ServerChooserTransform.TranslateY = -8;
+
+        var easing = new CubicEase
+        {
+            EasingMode = EasingMode.EaseOut
+        };
+
+        var storyboard = new Storyboard();
+        AddServerChooserAnimation(
+            storyboard,
+            ServerChooserPanel,
+            "Opacity",
+            0,
+            1,
+            180,
+            easing);
+        AddServerChooserAnimation(
+            storyboard,
+            ServerChooserTransform,
+            "ScaleX",
+            0.96,
+            1,
+            180,
+            easing);
+        AddServerChooserAnimation(
+            storyboard,
+            ServerChooserTransform,
+            "ScaleY",
+            0.96,
+            1,
+            180,
+            easing);
+        AddServerChooserAnimation(
+            storyboard,
+            ServerChooserTransform,
+            "TranslateY",
+            -8,
+            0,
+            180,
+            easing);
+
+        _serverChooserStoryboard = storyboard;
+        storyboard.Completed += (_, _) =>
+        {
+            if (!ReferenceEquals(_serverChooserStoryboard, storyboard))
+                return;
+
+            storyboard.Stop();
+            ServerChooserPanel.Opacity = 1;
+            ServerChooserTransform.ScaleX = 1;
+            ServerChooserTransform.ScaleY = 1;
+            ServerChooserTransform.TranslateY = 0;
+            _serverChooserStoryboard = null;
+        };
+        storyboard.Begin();
+    }
+
+    private void CloseServerChooser(Action? completed = null)
+    {
+        if (ServerChooserPanel.Visibility != Visibility.Visible)
+        {
+            completed?.Invoke();
+            return;
+        }
+
+        // Capture the currently animated value before stopping, so clicking
+        // again during the short opening animation still fades out smoothly.
+        var opacity = ServerChooserPanel.Opacity;
+        var scaleX = ServerChooserTransform.ScaleX;
+        var scaleY = ServerChooserTransform.ScaleY;
+        var translateY = ServerChooserTransform.TranslateY;
+
+        _serverChooserStoryboard?.Stop();
+        _serverChooserStoryboard = null;
+
+        ServerChooserPanel.Opacity = opacity;
+        ServerChooserTransform.ScaleX = scaleX;
+        ServerChooserTransform.ScaleY = scaleY;
+        ServerChooserTransform.TranslateY = translateY;
+        _serverChooserClosing = true;
+
+        var easing = new CubicEase
+        {
+            EasingMode = EasingMode.EaseIn
+        };
+
+        var storyboard = new Storyboard();
+        AddServerChooserAnimation(
+            storyboard,
+            ServerChooserPanel,
+            "Opacity",
+            opacity,
+            0,
+            140,
+            easing);
+        AddServerChooserAnimation(
+            storyboard,
+            ServerChooserTransform,
+            "ScaleX",
+            scaleX,
+            0.97,
+            140,
+            easing);
+        AddServerChooserAnimation(
+            storyboard,
+            ServerChooserTransform,
+            "ScaleY",
+            scaleY,
+            0.97,
+            140,
+            easing);
+        AddServerChooserAnimation(
+            storyboard,
+            ServerChooserTransform,
+            "TranslateY",
+            translateY,
+            -6,
+            140,
+            easing);
+
+        _serverChooserStoryboard = storyboard;
+        storyboard.Completed += (_, _) =>
+        {
+            if (!ReferenceEquals(_serverChooserStoryboard, storyboard))
+                return;
+
+            storyboard.Stop();
+            ServerChooserPanel.Visibility = Visibility.Collapsed;
+            ServerChooserDismissLayer.Visibility = Visibility.Collapsed;
+            ServerChooserPanel.Opacity = 0;
+            ServerChooserTransform.ScaleX = 0.96;
+            ServerChooserTransform.ScaleY = 0.96;
+            ServerChooserTransform.TranslateY = -8;
+            _serverChooserClosing = false;
+            _serverChooserStoryboard = null;
+            completed?.Invoke();
+        };
+        storyboard.Begin();
+    }
+
+    private static void AddServerChooserAnimation(
+        Storyboard storyboard,
+        DependencyObject target,
+        string property,
+        double from,
+        double to,
+        int durationMs,
+        EasingFunctionBase easing)
+    {
+        var animation = new DoubleAnimation
+        {
+            From = from,
+            To = to,
+            Duration = TimeSpan.FromMilliseconds(durationMs),
+            EasingFunction = easing
+        };
+
+        Storyboard.SetTarget(animation, target);
+        Storyboard.SetTargetProperty(animation, property);
+        storyboard.Children.Add(animation);
     }
 
     private static string NormalizeServerUrl(string? value) =>
@@ -448,7 +619,13 @@ public sealed partial class HomeView : UserControl
 
     private void Search_Click(object sender, RoutedEventArgs e)
     {
-        CloseServerChooser();
+        if (ServerChooserPanel.Visibility == Visibility.Visible)
+        {
+            CloseServerChooser(() =>
+                SearchRequested?.Invoke(this, EventArgs.Empty));
+            return;
+        }
+
         SearchRequested?.Invoke(this, EventArgs.Empty);
     }
 
