@@ -2,7 +2,8 @@
     x:Class="AsterPlay.WinUI.Views.HomeView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:AsterPlay.WinUI.Controls">
+    xmlns:controls="using:AsterPlay.WinUI.Controls"
+    xmlns:lg="using:LiquidGlassWinUI">
 
     <UserControl.Resources>
         <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
@@ -44,10 +45,20 @@
             <Setter Property="FontSize" Value="20"/>
             <Setter Property="Background">
                 <Setter.Value>
-                    <AcrylicBrush TintColor="#CDE1FF"
-                                  TintOpacity="0.040"
-                                  TintLuminosityOpacity="0.30"
-                                  FallbackColor="#B9CDE1FF"/>
+                    <lg:LiquidGlassBrush BlurAmount="1.15"
+                                         BloomAmount="0.04"
+                                         RefThickness="18"
+                                         RefFactor="1.95"
+                                         RefDispersion="3.0"
+                                         DispersionRange="0.38"
+                                         RefFresnelFactor="18"
+                                         GlareFactor="42"
+                                         TintA="0.08"
+                                         TintR="205"
+                                         TintG="225"
+                                         TintB="255"
+                                         ShapeRadius="0.99"
+                                         ShapeRoundness="4.0"/>
                 </Setter.Value>
             </Setter>
         </Style>
@@ -64,10 +75,20 @@
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Background">
                 <Setter.Value>
-                    <AcrylicBrush TintColor="#ECEFF6"
-                                  TintOpacity="0.110"
-                                  TintLuminosityOpacity="0.36"
-                                  FallbackColor="#C6ECEFF6"/>
+                    <lg:LiquidGlassBrush BlurAmount="1.20"
+                                         BloomAmount="0.05"
+                                         RefThickness="18"
+                                         RefFactor="1.85"
+                                         RefDispersion="2.6"
+                                         DispersionRange="0.34"
+                                         RefFresnelFactor="18"
+                                         GlareFactor="42"
+                                         TintA="0.12"
+                                         TintR="236"
+                                         TintG="239"
+                                         TintB="246"
+                                         ShapeRadius="0.99"
+                                         ShapeRoundness="4.0"/>
                 </Setter.Value>
             </Setter>
         </Style>
@@ -84,10 +105,20 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Background">
                 <Setter.Value>
-                    <AcrylicBrush TintColor="#DCE6F8"
-                                  TintOpacity="0.065"
-                                  TintLuminosityOpacity="0.34"
-                                  FallbackColor="#B9DCE6F8"/>
+                    <lg:LiquidGlassBrush BlurAmount="1.20"
+                                         BloomAmount="0.05"
+                                         RefThickness="20"
+                                         RefFactor="1.90"
+                                         RefDispersion="2.8"
+                                         DispersionRange="0.36"
+                                         RefFresnelFactor="20"
+                                         GlareFactor="48"
+                                         TintA="0.10"
+                                         TintR="220"
+                                         TintG="230"
+                                         TintB="248"
+                                         ShapeRadius="0.99"
+                                         ShapeRoundness="4.0"/>
                 </Setter.Value>
             </Setter>
         </Style>
@@ -153,10 +184,20 @@
                     Template="{StaticResource FlatButtonTemplate}"
                     Click="ServerPill_Click">
                 <Button.Background>
-                    <AcrylicBrush TintColor="#EEF0F6"
-                                  TintOpacity="0.220"
-                                  TintLuminosityOpacity="0.40"
-                                  FallbackColor="#D0EEF0F6"/>
+                    <lg:LiquidGlassBrush BlurAmount="1.45"
+                                         BloomAmount="0.06"
+                                         RefThickness="24"
+                                         RefFactor="2.05"
+                                         RefDispersion="3.2"
+                                         DispersionRange="0.38"
+                                         RefFresnelFactor="21"
+                                         GlareFactor="52"
+                                         TintA="0.16"
+                                         TintR="238"
+                                         TintG="240"
+                                         TintB="246"
+                                         ShapeRadius="0.99"
+                                         ShapeRoundness="4.0"/>
                 </Button.Background>
                 <Grid VerticalAlignment="Center">
                     <Grid.ColumnDefinitions>
@@ -206,10 +247,20 @@
                     Template="{StaticResource FlatButtonTemplate}"
                     Click="Search_Click">
                 <Button.Background>
-                    <AcrylicBrush TintColor="#EEF0F6"
-                                  TintOpacity="0.220"
-                                  TintLuminosityOpacity="0.40"
-                                  FallbackColor="#D0EEF0F6"/>
+                    <lg:LiquidGlassBrush BlurAmount="1.45"
+                                         BloomAmount="0.06"
+                                         RefThickness="24"
+                                         RefFactor="2.05"
+                                         RefDispersion="3.2"
+                                         DispersionRange="0.38"
+                                         RefFresnelFactor="21"
+                                         GlareFactor="52"
+                                         TintA="0.16"
+                                         TintR="238"
+                                         TintG="240"
+                                         TintB="246"
+                                         ShapeRadius="0.99"
+                                         ShapeRoundness="4.0"/>
                 </Button.Background>
                 <FontIcon Glyph="&#xE721;"
                           Foreground="#FF101217"
@@ -246,10 +297,20 @@
                                     TranslateY="-8"/>
             </Border.RenderTransform>
             <Border.Background>
-                <AcrylicBrush TintColor="#EFF2F7"
-                                  TintOpacity="0.300"
-                                  TintLuminosityOpacity="0.42"
-                                  FallbackColor="#D0EFF2F7"/>
+                <lg:LiquidGlassBrush BlurAmount="1.65"
+                                     BloomAmount="0.08"
+                                     RefThickness="28"
+                                     RefFactor="1.80"
+                                     RefDispersion="2.4"
+                                     DispersionRange="0.28"
+                                     RefFresnelFactor="18"
+                                     GlareFactor="38"
+                                     TintA="0.20"
+                                     TintR="239"
+                                     TintG="242"
+                                     TintB="247"
+                                     ShapeRadius="0.18"
+                                     ShapeRoundness="4.0"/>
             </Border.Background>
 
             <ScrollViewer VerticalScrollMode="Auto"
