@@ -375,8 +375,18 @@ public sealed partial class MainWindow : Window
 
     internal void CompleteStartupWindowReveal()
     {
+        StartupDiagnostics.Write(
+            $"CompleteStartupWindowReveal: begin; offscreen={_startupOffscreenActive}, target=" +
+            $"{_startupTargetBounds.X},{_startupTargetBounds.Y}," +
+            $"{_startupTargetBounds.Width}x{_startupTargetBounds.Height}");
+
         PositionStartupWindowBehindSplash();
+
+        StartupDiagnostics.Write(
+            "CompleteStartupWindowReveal: positioned; activating MainWindow");
         Activate();
+        StartupDiagnostics.Write(
+            "CompleteStartupWindowReveal: Activate returned");
     }
 
     private void ScheduleStartupReveal()
