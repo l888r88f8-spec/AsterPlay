@@ -112,6 +112,12 @@ jobs:
           $process = Start-Process -FilePath $exe -PassThru
           Start-Sleep -Seconds 5
 
+          $nativeGlassLog = Join-Path $env:LOCALAPPDATA "AsterPlay\LiquidGlassNative.log"
+          if (Test-Path $nativeGlassLog) {
+            Write-Host "=== LiquidGlassNative.log ==="
+            Get-Content -Raw $nativeGlassLog | Write-Host
+          }
+
           $asterPlayLog = Join-Path $env:LOCALAPPDATA "AsterPlay\AsterPlay.log"
           if (Test-Path $asterPlayLog) {
             $liquidGlassLines = @(Select-String -Path $asterPlayLog -Pattern "LiquidGlass:" -SimpleMatch)
