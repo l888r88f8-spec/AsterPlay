@@ -23,11 +23,9 @@ public sealed partial class MainWindow : Window
     private bool _splashTransitionStarted;
     private bool _authenticated;
     private string _currentSection = "home-shell";
-    private DateTimeOffset _lastWheelDiagnosticAt = DateTimeOffset.MinValue;
     private readonly IntPtr _hwnd;
     private readonly HookProc _lowLevelMouseHookProc;
     private IntPtr _lowLevelMouseHook;
-    private DateTimeOffset _lastNativeWheelDiagnosticAt = DateTimeOffset.MinValue;
 
     private const uint WmMouseWheel = 0x020A;
     private const int WhMouseLl = 14;
@@ -70,10 +68,6 @@ public sealed partial class MainWindow : Window
         ConfigureNativeTitleBar(isLight: true);
 
         Closed += MainWindow_Closed;
-        RootGrid.AddHandler(
-            UIElement.PointerWheelChangedEvent,
-            new PointerEventHandler(RootGrid_PointerWheelChangedDiagnostic),
-            handledEventsToo: true);
         PageTitleBlock.Text = "首页";
         SetActiveNavigation(HomeButton);
 
@@ -112,32 +106,9 @@ public sealed partial class MainWindow : Window
                 // coordinates and is not DPI-virtualized, so it can be
                 // compared directly with MSLLHOOKSTRUCT.pt.
                 homeView.HandleNativeMouseWheel(delta);
-
-                var now = DateTimeOffset.UtcNow;
-                if (now - _lastNativeWheelDiagnosticAt >= TimeSpan.FromMilliseconds(500))
-                {
-                    _lastNativeWheelDiagnosticAt = now;
-                    PlaybackLog.Write(
-                        "WinUINativeWheel",
-                        $"low-level-wheel: delta={delta}, screen={input.Point.X},{input.Point.Y}, " +
-                        $"frame={frameBounds.Left},{frameBounds.Top}," +
-                        $"{frameBounds.Right - frameBounds.Left}x{frameBounds.Bottom - frameBounds.Top}");
-                }
-
                 return (IntPtr)1;
             }
 
-            var missNow = DateTimeOffset.UtcNow;
-            if (delta != 0 &&
-                missNow - _lastNativeWheelDiagnosticAt >= TimeSpan.FromMilliseconds(500))
-            {
-                _lastNativeWheelDiagnosticAt = missNow;
-                PlaybackLog.Write(
-                    "WinUINativeWheel",
-                    $"wheel-outside-frame: delta={delta}, screen={input.Point.X},{input.Point.Y}, " +
-                    $"hr=0x{frameResult:X8}, frame={frameBounds.Left},{frameBounds.Top}," +
-                    $"{frameBounds.Right - frameBounds.Left}x{frameBounds.Bottom - frameBounds.Top}");
-            }
         }
 
         return CallNextHookEx(
@@ -145,26 +116,6 @@ public sealed partial class MainWindow : Window
             code,
             wParam,
             lParam);
-    }
-
-    private void RootGrid_PointerWheelChangedDiagnostic(
-        object sender,
-        PointerRoutedEventArgs e)
-    {
-        var now = DateTimeOffset.UtcNow;
-        if (now - _lastWheelDiagnosticAt < TimeSpan.FromMilliseconds(180))
-            return;
-
-        _lastWheelDiagnosticAt = now;
-        var point = e.GetCurrentPoint(RootGrid);
-
-        PlaybackLog.Write(
-            "WinUIInput",
-            $"wheel: delta={point.Properties.MouseWheelDelta}, handled={e.Handled}, " +
-            $"source={e.OriginalSource?.GetType().Name ?? "-"}, " +
-            $"section={_currentSection}, page={PageHost.Content?.GetType().Name ?? "-"}, " +
-            $"splashVisibility={SplashLayer.Visibility}, splashHitTest={SplashLayer.IsHitTestVisible}, " +
-            $"contentOpacity={ContentLayer.Opacity:0.00}, contentHitTest={ContentLayer.IsHitTestVisible}");
     }
 
     private void SystemColorValuesChanged(UISettings sender, object args)
