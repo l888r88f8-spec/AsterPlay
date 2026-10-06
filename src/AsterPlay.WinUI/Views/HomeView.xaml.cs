@@ -685,14 +685,7 @@ public sealed partial class HomeView : UserControl
             HeroCriticRatingBadge.Visibility = Visibility.Collapsed;
         }
 
-        var officialRating = string.IsNullOrWhiteSpace(_heroItem.OfficialRating)
-            ? (string.Equals(_heroItem.Type, "Series", StringComparison.OrdinalIgnoreCase)
-                ? "剧集"
-                : string.Equals(_heroItem.Type, "Movie", StringComparison.OrdinalIgnoreCase)
-                    ? "电影"
-                    : _heroItem.Type)
-            : _heroItem.OfficialRating;
-
+        var officialRating = (_heroItem.OfficialRating ?? "").Trim();
         HeroOfficialRatingBlock.Text = officialRating;
         HeroOfficialRatingBadge.Visibility = string.IsNullOrWhiteSpace(officialRating)
             ? Visibility.Collapsed
@@ -1265,14 +1258,6 @@ public sealed partial class HomeView : UserControl
 
         if (item.ProductionYear is > 0)
             values.Add(item.ProductionYear.Value.ToString());
-
-        if (item.RunTimeTicks is > 0)
-        {
-            var minutes = item.RunTimeTicks.Value / 600_000_000L;
-            values.Add(minutes >= 60
-                ? $"{minutes / 60}小时 {minutes % 60}分"
-                : $"{minutes}分");
-        }
 
         if (!string.IsNullOrWhiteSpace(item.Type))
         {
