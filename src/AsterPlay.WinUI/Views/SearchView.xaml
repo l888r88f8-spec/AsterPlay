@@ -2,7 +2,6 @@
     x:Class="AsterPlay.WinUI.Views.SearchView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:lg="using:LiquidGlassWinUI"
     xmlns:controls="using:AsterPlay.WinUI.Controls">
 
     <Grid Padding="42,30,42,116">
@@ -17,18 +16,10 @@
                 BorderBrush="#38FFFFFF"
                 BorderThickness="1">
             <Border.Background>
-                <lg:LiquidGlassBrush BlurAmount="3.3"
-                                     BloomAmount="0.12"
-                                     RefThickness="38"
-                                     RefFactor="2.3"
-                                     RefDispersion="5.0"
-                                     GlareFactor="58"
-                                     TintA="0.055"
-                                     TintR="220"
-                                     TintG="232"
-                                     TintB="250"
-                                     ShapeRadius="0.96"
-                                     ShapeRoundness="4.0"/>
+                <AcrylicBrush TintColor="#DCE8FA"
+                                  TintOpacity="0.055"
+                                  TintLuminosityOpacity="0.42"
+                                  FallbackColor="#D9DCE8FA"/>
             </Border.Background>
 
             <Grid>
