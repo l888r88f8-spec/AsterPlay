@@ -226,7 +226,7 @@ public sealed class ImageCacheService
         {
             PlaybackLog.Write(
                 "WinUIImageCache",
-                $"load failed: key={key[..12]}, error={ex.GetType().Name}: {ex.Message}");
+                $"load failed: key={key[..12]}, url={url}, error={ex.GetType().Name}: {ex.Message}");
             return null;
         }
         finally
