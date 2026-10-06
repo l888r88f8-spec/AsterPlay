@@ -177,5 +177,22 @@
             </Border>
         </Grid>
 
+
+        <Grid x:Name="StartupCoverLayer"
+              Grid.RowSpan="2"
+              Background="{ThemeResource AsterPageBackgroundBrush}"
+              Opacity="1"
+              Visibility="Visible">
+            <Image x:Name="StartupCoverLogoImage"
+                   Source="ms-appx:///Assets/AsterPlay.AppIcon.png"
+                   Width="144"
+                   Height="144"
+                   Stretch="Uniform"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   ImageOpened="StartupCoverLogoImage_ImageOpened"
+                   ImageFailed="StartupCoverLogoImage_ImageFailed"/>
+        </Grid>
+
     </Grid>
 </Window>
