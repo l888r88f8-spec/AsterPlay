@@ -183,12 +183,15 @@
               Background="{ThemeResource AsterPageBackgroundBrush}"
               Opacity="0.999"
               Visibility="Visible">
-            <Image Source="ms-appx:///Assets/AsterPlay.AppIcon.png"
+            <Image x:Name="StartupCoverLogoImage"
+                   Source="ms-appx:///Assets/AsterPlay.AppIcon.png"
                    Width="144"
                    Height="144"
                    Stretch="Uniform"
                    HorizontalAlignment="Center"
-                   VerticalAlignment="Center"/>
+                   VerticalAlignment="Center"
+                   ImageOpened="StartupCoverLogoImage_ImageOpened"
+                   ImageFailed="StartupCoverLogoImage_ImageFailed"/>
         </Grid>
 
     </Grid>
