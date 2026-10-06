@@ -76,7 +76,6 @@ The build verifies that the release contains at least:
 
 - AsterPlay.exe
 - AsterPlay.Core.dll
-- CustomEffectRuntimeNative.dll
 - libmpv-2.dll
 - coreclr.dll
 - hostfxr.dll
