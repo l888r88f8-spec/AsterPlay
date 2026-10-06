@@ -49,16 +49,12 @@ public partial class App : Application
         try
         {
             _splashWindow = new StartupSplashWindow();
+            _splashWindow.VisualReady +=
+                SplashWindow_VisualReady;
             _splashWindow.Activate();
-            _splashWindow.StartPulse();
 
             StartupDiagnostics.Write(
-                "OnLaunched: icon-only splash activated; waiting for its first frame");
-
-            // Do not construct MainWindow on this same turn. WinUI cannot paint
-            // the splash until the dispatcher returns to the compositor.
-            Microsoft.UI.Xaml.Media.CompositionTarget.Rendering +=
-                Splash_FirstFrameRendering;
+                "OnLaunched: splash activated; waiting for decoded icon pixels");
         }
         catch (Exception ex)
         {
@@ -69,12 +65,19 @@ public partial class App : Application
         }
     }
 
-    private void Splash_FirstFrameRendering(
+    private void SplashWindow_VisualReady(
         object? sender,
-        object e)
+        EventArgs e)
     {
-        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -=
-            Splash_FirstFrameRendering;
+        if (_splashWindow is null)
+            return;
+
+        _splashWindow.VisualReady -=
+            SplashWindow_VisualReady;
+        _splashWindow.StartPulse();
+
+        StartupDiagnostics.Write(
+            "Startup icon decoded and rendered; creating MainWindow");
 
         Microsoft.UI.Dispatching.DispatcherQueue
             .GetForCurrentThread()
