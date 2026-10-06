@@ -74,10 +74,9 @@ public partial class App : Application
 
         _splashWindow.VisualReady -=
             SplashWindow_VisualReady;
-        _splashWindow.StartPulse();
 
         StartupDiagnostics.Write(
-            "Startup icon decoded and rendered; creating MainWindow");
+            "Static startup page rendered; creating MainWindow");
 
         Microsoft.UI.Dispatching.DispatcherQueue
             .GetForCurrentThread()
@@ -140,9 +139,8 @@ public partial class App : Application
             return;
         }
 
-        _splashWindow.BeginReveal(
-            _window,
-            () => _splashWindow = null);
+        _splashWindow.Complete(_window);
+        _splashWindow = null;
     }
 
     private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
