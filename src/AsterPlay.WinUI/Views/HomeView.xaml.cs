@@ -748,7 +748,7 @@ public sealed partial class HomeView : UserControl
         incomingHero.Opacity = 0;
         incomingBackdrop.Opacity = 0;
         outgoingHero.Opacity = 1;
-        outgoingBackdrop.Opacity = 0.84;
+        outgoingBackdrop.Opacity = 0.30;
 
         var easing = new CubicEase
         {
@@ -775,13 +775,13 @@ public sealed partial class HomeView : UserControl
             storyboard,
             incomingBackdrop,
             0,
-            0.84,
+            0.30,
             920,
             easing);
         AddOpacityAnimation(
             storyboard,
             outgoingBackdrop,
-            0.84,
+            0.30,
             0,
             920,
             easing);
