@@ -59,14 +59,19 @@ if ($LASTEXITCODE -ne 0) {
 $sourceBuiltLiquidGlassNative = Join-Path $Root "Native\LiquidGlassCompat\Output\x64\Release\CustomEffectRuntimeNative.dll"
 $pinnedLiquidGlassNative = Join-Path $Root "Native\LiquidGlassCompat\Prebuilt\win-x64\CustomEffectRuntimeNative.dll"
 $liquidGlassNativeSource = $null
+$preferSourceBuiltLiquidGlass = ($env:CI -eq "true") -or ($env:ASTERPLAY_USE_SOURCE_LIQUIDGLASS -eq "1")
 
-if (Test-Path $sourceBuiltLiquidGlassNative) {
+if ($preferSourceBuiltLiquidGlass -and (Test-Path $sourceBuiltLiquidGlassNative)) {
     $liquidGlassNativeSource = $sourceBuiltLiquidGlassNative
     Write-Host "Using source-built LiquidGlass runtime for Windows App SDK 2.5.1..."
 }
 elseif (Test-Path $pinnedLiquidGlassNative) {
     $liquidGlassNativeSource = $pinnedLiquidGlassNative
     Write-Host "Using pinned verified LiquidGlass runtime for Windows App SDK 2.5.1..."
+}
+elseif (Test-Path $sourceBuiltLiquidGlassNative) {
+    $liquidGlassNativeSource = $sourceBuiltLiquidGlassNative
+    Write-Warning "Pinned LiquidGlass runtime is missing; falling back to the local source-built runtime."
 }
 else {
     throw "LiquidGlass SDK 2.5.1 compatibility runtime is missing. Pull the latest main branch or build Native\LiquidGlassCompat first."
