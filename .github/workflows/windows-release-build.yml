@@ -83,8 +83,19 @@ jobs:
           $process = Start-Process -FilePath $exe -PassThru
           Start-Sleep -Seconds 5
 
+          $asterPlayLog = Join-Path $env:LOCALAPPDATA "AsterPlay\AsterPlay.log"
+          if (Test-Path $asterPlayLog) {
+            $liquidGlassLines = @(Select-String -Path $asterPlayLog -Pattern "LiquidGlass:" -SimpleMatch)
+            if ($liquidGlassLines.Count -gt 0) {
+              Write-Host "=== LiquidGlass diagnostics ==="
+              $liquidGlassLines | ForEach-Object { Write-Host $_.Line }
+              if ($liquidGlassLines.Line -match "LiquidGlass: ERROR") {
+                throw "LiquidGlass compositor effect reported an initialization error."
+              }
+            }
+          }
+
           if ($process.HasExited) {
-            $asterPlayLog = Join-Path $env:LOCALAPPDATA "AsterPlay\AsterPlay.log"
             if (Test-Path $asterPlayLog) {
               Write-Host "=== AsterPlay.log ==="
               Get-Content -Raw $asterPlayLog | Write-Host
