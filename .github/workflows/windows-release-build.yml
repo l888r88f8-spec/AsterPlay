@@ -21,6 +21,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Cache portable .NET SDK
+        uses: actions/cache@v4
+        with:
+          path: tools/dotnet
+          key: asterplay-dotnet-${{ runner.os }}-8.0.425
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: asterplay-nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            asterplay-nuget-${{ runner.os }}-
+
       - name: Bootstrap pinned portable .NET 8 SDK
         shell: cmd
         run: bootstrap-dotnet.cmd
