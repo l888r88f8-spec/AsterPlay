@@ -203,8 +203,17 @@ public sealed partial class HomeView : UserControl
                 // not end the splash by itself.
                 var serverRefreshSucceeded = await LoadAsync();
 
+                StartupDiagnostics.Write(
+                    $"HomeView: server refresh finished; success={serverRefreshSucceeded}, " +
+                    $"cachedSnapshot={_hasCachedSnapshot}, isLoaded={IsLoaded}, " +
+                    $"libraries={_libraries.Count}, resume={_resume.Count}, sections={_sections.Count}");
+
                 if (!IsLoaded)
+                {
+                    StartupDiagnostics.Write(
+                        "HomeView: startup visual wait aborted because view is no longer loaded");
                     return;
+                }
 
                 // Do not dismiss the splash merely because data objects exist.
                 // Wait until every image that is actually visible in the initial
@@ -217,7 +226,16 @@ public sealed partial class HomeView : UserControl
                     await WaitForNextRenderingFrameAsync();
 
                 if (IsLoaded)
+                {
+                    StartupDiagnostics.Write(
+                        "HomeView: all startup visual prerequisites finished; raising InitialVisualReady");
                     RaiseInitialVisualReady();
+                }
+                else
+                {
+                    StartupDiagnostics.Write(
+                        "HomeView: prerequisites finished but view unloaded before InitialVisualReady");
+                }
             });
     }
 
