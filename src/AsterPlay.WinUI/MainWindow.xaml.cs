@@ -6,7 +6,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Windowing;
 using Windows.UI.ViewManagement;
 
@@ -19,9 +18,10 @@ public sealed partial class MainWindow : Window
     private readonly AppWindow _appWindow;
     private bool _startupResolutionScheduled;
     private bool _startupResolutionCompleted;
-    private bool _splashRevealScheduled;
-    private bool _splashTransitionStarted;
-    private Storyboard? _splashPulseStoryboard;
+    private bool _startupRevealScheduled;
+    private bool _startupVisualReadyRaised;
+    private bool _startupOpacityActive;
+    private IntPtr _originalExtendedStyle;
     private bool _authenticated;
     private string _currentSection = "home-shell";
     private readonly IntPtr _hwnd;
@@ -31,6 +31,14 @@ public sealed partial class MainWindow : Window
     private const uint WmMouseWheel = 0x020A;
     private const int WhMouseLl = 14;
     private const int DwmwaExtendedFrameBounds = 9;
+    private const int GwlExStyle = -20;
+    private const long WsExLayered = 0x00080000L;
+    private const uint LwaAlpha = 0x00000002;
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoMove = 0x0002;
+    private const uint SwpNoZOrder = 0x0004;
+    private const uint SwpNoActivate = 0x0010;
+    private const uint SwpFrameChanged = 0x0020;
 
     public MainWindow()
     {
@@ -78,7 +86,7 @@ public sealed partial class MainWindow : Window
             StartupDiagnostics.WriteException("SetWindowIcon", ex);
         }
 
-        StartSplashPulse();
+        PrepareStartupHiddenWindow();
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -196,9 +204,7 @@ public sealed partial class MainWindow : Window
         }
 
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= FirstFrame_Rendering;
-        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= SplashReveal_Rendering;
-        _splashPulseStoryboard?.Stop();
-        _splashPulseStoryboard = null;
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= StartupReveal_Rendering;
 
         if (_uiSettings is not null)
             _uiSettings.ColorValuesChanged -= SystemColorValuesChanged;
@@ -306,176 +312,112 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void StartSplashPulse()
+    internal event EventHandler? StartupVisualReady;
+
+    private void PrepareStartupHiddenWindow()
     {
-        _splashPulseStoryboard?.Stop();
-
-        var easing = new SineEase
+        try
         {
-            EasingMode = EasingMode.EaseInOut
-        };
+            _originalExtendedStyle = GetWindowLongPtr(
+                _hwnd,
+                GwlExStyle);
 
-        var storyboard = new Storyboard
+            var style = _originalExtendedStyle.ToInt64() | WsExLayered;
+            SetWindowLongPtr(
+                _hwnd,
+                GwlExStyle,
+                new IntPtr(style));
+
+            if (!SetLayeredWindowAttributes(
+                    _hwnd,
+                    0,
+                    0,
+                    LwaAlpha))
+            {
+                throw new InvalidOperationException(
+                    $"SetLayeredWindowAttributes failed: {Marshal.GetLastWin32Error()}");
+            }
+
+            _startupOpacityActive = true;
+        }
+        catch (Exception ex)
         {
-            RepeatBehavior = RepeatBehavior.Forever
-        };
-
-        var scaleX = new DoubleAnimation
-        {
-            From = 0.96,
-            To = 1.08,
-            Duration = TimeSpan.FromMilliseconds(920),
-            AutoReverse = true,
-            EasingFunction = easing
-        };
-        Storyboard.SetTarget(scaleX, SplashLogoScale);
-        Storyboard.SetTargetProperty(scaleX, "ScaleX");
-        storyboard.Children.Add(scaleX);
-
-        var scaleY = new DoubleAnimation
-        {
-            From = 0.96,
-            To = 1.08,
-            Duration = TimeSpan.FromMilliseconds(920),
-            AutoReverse = true,
-            EasingFunction = easing
-        };
-        Storyboard.SetTarget(scaleY, SplashLogoScale);
-        Storyboard.SetTargetProperty(scaleY, "ScaleY");
-        storyboard.Children.Add(scaleY);
-
-        _splashPulseStoryboard = storyboard;
-        storyboard.Begin();
+            StartupDiagnostics.WriteException(
+                "PrepareStartupHiddenWindow",
+                ex);
+            _startupOpacityActive = false;
+        }
     }
 
-    private void ScheduleSplashReveal()
+    internal void SetStartupWindowOpacity(byte alpha)
     {
-        if (_splashTransitionStarted || _splashRevealScheduled)
+        if (!_startupOpacityActive)
             return;
 
-        _splashRevealScheduled = true;
-        StartupDiagnostics.Write("Splash reveal scheduled after target page frame");
-        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += SplashReveal_Rendering;
+        SetLayeredWindowAttributes(
+            _hwnd,
+            0,
+            alpha,
+            LwaAlpha);
     }
 
-    private void SplashReveal_Rendering(object? sender, object e)
+    internal void CompleteStartupWindowReveal()
     {
-        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= SplashReveal_Rendering;
-        _splashRevealScheduled = false;
-        StartSplashTransition();
-    }
-
-    private void StartSplashTransition()
-    {
-        if (_splashTransitionStarted)
+        if (!_startupOpacityActive)
             return;
 
-        _splashTransitionStarted = true;
+        SetLayeredWindowAttributes(
+            _hwnd,
+            0,
+            255,
+            LwaAlpha);
 
-        var currentScale = Math.Max(
-            0.96,
-            Math.Max(
-                SplashLogoScale.ScaleX,
-                SplashLogoScale.ScaleY));
+        SetWindowLongPtr(
+            _hwnd,
+            GwlExStyle,
+            _originalExtendedStyle);
 
-        _splashPulseStoryboard?.Stop();
-        _splashPulseStoryboard = null;
+        SetWindowPos(
+            _hwnd,
+            IntPtr.Zero,
+            0,
+            0,
+            0,
+            0,
+            SwpNoMove |
+            SwpNoSize |
+            SwpNoZOrder |
+            SwpNoActivate |
+            SwpFrameChanged);
 
-        SplashLogoScale.ScaleX = currentScale;
-        SplashLogoScale.ScaleY = currentScale;
+        _startupOpacityActive = false;
+    }
 
-        var width = Math.Max(1, RootGrid.ActualWidth);
-        var height = Math.Max(1, RootGrid.ActualHeight);
-        var diagonal = Math.Sqrt((width * width) + (height * height));
-        var targetScale = Math.Max(
-            12.0,
-            diagonal / Math.Max(1, SplashLogo.ActualWidth) * 1.12);
+    private void ScheduleStartupReveal()
+    {
+        if (_startupVisualReadyRaised || _startupRevealScheduled)
+            return;
 
-        static CubicEase ExpandEase() => new()
-        {
-            EasingMode = EasingMode.EaseInOut
-        };
-
-        static CubicEase RevealEase() => new()
-        {
-            EasingMode = EasingMode.EaseOut
-        };
-
-        var storyboard = new Storyboard();
-
-        var scaleX = new DoubleAnimation
-        {
-            From = currentScale,
-            To = targetScale,
-            Duration = TimeSpan.FromMilliseconds(1420),
-            EasingFunction = ExpandEase()
-        };
-        Storyboard.SetTarget(scaleX, SplashLogoScale);
-        Storyboard.SetTargetProperty(scaleX, "ScaleX");
-        storyboard.Children.Add(scaleX);
-
-        var scaleY = new DoubleAnimation
-        {
-            From = currentScale,
-            To = targetScale,
-            Duration = TimeSpan.FromMilliseconds(1420),
-            EasingFunction = ExpandEase()
-        };
-        Storyboard.SetTarget(scaleY, SplashLogoScale);
-        Storyboard.SetTargetProperty(scaleY, "ScaleY");
-        storyboard.Children.Add(scaleY);
-
-        // Keep the icon solid at the start of the expansion, then let the page
-        // emerge through it during the second half.
-        var logoFade = new DoubleAnimation
-        {
-            From = 1,
-            To = 0,
-            BeginTime = TimeSpan.FromMilliseconds(560),
-            Duration = TimeSpan.FromMilliseconds(780),
-            EasingFunction = RevealEase()
-        };
-        Storyboard.SetTarget(logoFade, SplashLogo);
-        Storyboard.SetTargetProperty(logoFade, "Opacity");
-        storyboard.Children.Add(logoFade);
-
-        var chromeFade = new DoubleAnimation
-        {
-            From = 0,
-            To = 1,
-            BeginTime = TimeSpan.FromMilliseconds(420),
-            Duration = TimeSpan.FromMilliseconds(860),
-            EasingFunction = RevealEase()
-        };
-        Storyboard.SetTarget(chromeFade, AppTitleBar);
-        Storyboard.SetTargetProperty(chromeFade, "Opacity");
-        storyboard.Children.Add(chromeFade);
-
-        var contentFade = new DoubleAnimation
-        {
-            From = 0,
-            To = 1,
-            BeginTime = TimeSpan.FromMilliseconds(360),
-            Duration = TimeSpan.FromMilliseconds(940),
-            EasingFunction = RevealEase()
-        };
-        Storyboard.SetTarget(contentFade, ContentLayer);
-        Storyboard.SetTargetProperty(contentFade, "Opacity");
-        storyboard.Children.Add(contentFade);
-
-        storyboard.Completed += (_, _) =>
-        {
-            AppTitleBar.Opacity = 1;
-            ContentLayer.Opacity = 1;
-            SplashLogo.Opacity = 0;
-            SplashLayer.IsHitTestVisible = false;
-            SplashLayer.Visibility = Visibility.Collapsed;
-            StartupDiagnostics.Write("Splash transition completed");
-        };
-
+        _startupRevealScheduled = true;
         StartupDiagnostics.Write(
-            $"Splash transition started; icon-only targetScale={targetScale:0.0}");
-        storyboard.Begin();
+            "Startup reveal scheduled after target page frame");
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering +=
+            StartupReveal_Rendering;
+    }
+
+    private void StartupReveal_Rendering(object? sender, object e)
+    {
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -=
+            StartupReveal_Rendering;
+        _startupRevealScheduled = false;
+
+        if (_startupVisualReadyRaised)
+            return;
+
+        _startupVisualReadyRaised = true;
+        StartupDiagnostics.Write(
+            "Target page frame ready; handing off from splash window");
+        StartupVisualReady?.Invoke(this, EventArgs.Empty);
     }
 
     private sealed record StartupState(
@@ -502,7 +444,7 @@ public sealed partial class MainWindow : Window
         view.ManageServersRequested += (_, _) => ShowServers(returnToLogin: true);
 
         PageHost.Content = view;
-        ScheduleSplashReveal();
+        ScheduleStartupReveal();
     }
 
     private void ShowNoServerHome()
@@ -522,7 +464,7 @@ public sealed partial class MainWindow : Window
 
         PageHost.Content = view;
         StartupDiagnostics.Write("ShowNoServerHome: empty home shell assigned");
-        ScheduleSplashReveal();
+        ScheduleStartupReveal();
     }
 
     private void ShowHome()
@@ -567,7 +509,7 @@ public sealed partial class MainWindow : Window
         view.InitialVisualReady += (_, _) =>
         {
             StartupDiagnostics.Write("ShowHome: cache decision completed; revealing app");
-            ScheduleSplashReveal();
+            ScheduleStartupReveal();
         };
 
         // HomeView construction is now intentionally data-free. Once the shell
@@ -982,6 +924,36 @@ public sealed partial class MainWindow : Window
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+    private static extern IntPtr GetWindowLongPtr(
+        IntPtr hWnd,
+        int index);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+    private static extern IntPtr SetWindowLongPtr(
+        IntPtr hWnd,
+        int index,
+        IntPtr value);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetLayeredWindowAttributes(
+        IntPtr hWnd,
+        uint colorKey,
+        byte alpha,
+        uint flags);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPos(
+        IntPtr hWnd,
+        IntPtr hWndInsertAfter,
+        int x,
+        int y,
+        int cx,
+        int cy,
+        uint flags);
 
 
 }
