@@ -79,7 +79,7 @@ public sealed partial class MainWindow : Window
             StartupDiagnostics.WriteException("SetWindowIcon", ex);
         }
 
-        PrepareStartupCoveredWindow();
+        PrepareStartupWindow();
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -307,7 +307,7 @@ public sealed partial class MainWindow : Window
 
     internal event EventHandler? StartupVisualReady;
 
-    private void PrepareStartupCoveredWindow()
+    private void PrepareStartupWindow()
     {
         try
         {
@@ -340,64 +340,22 @@ public sealed partial class MainWindow : Window
                 height);
 
             // Keep MainWindow at its final real screen coordinates from the
-            // very beginning. StartupSplashWindow is always-on-top and covers
-            // it while HomeView loads, so the WinUI HWND can measure, arrange
-            // and compose at the exact DPI/monitor/position it will use when
-            // the splash disappears. This avoids a second top-level-window
-            // relocation/re-presentation during the handoff.
+            // very beginning. Its own startup cover is already part of the
+            // XAML tree before Activate(), so HomeView can measure, arrange and
+            // compose at the exact DPI/monitor/position used after reveal.
             _appWindow.MoveAndResize(_startupTargetBounds);
 
             StartupDiagnostics.Write(
-                $"MainWindow prepared under splash at final bounds; target=" +
+                $"MainWindow prepared at final bounds with startup cover; target=" +
                 $"{_startupTargetBounds.X},{_startupTargetBounds.Y}," +
                 $"{_startupTargetBounds.Width}x{_startupTargetBounds.Height}");
         }
         catch (Exception ex)
         {
             StartupDiagnostics.WriteException(
-                "PrepareStartupCoveredWindow",
+                "PrepareStartupWindow",
                 ex);
         }
-    }
-
-    internal void CompleteStartupWindowReveal()
-    {
-        StartupDiagnostics.Write(
-            $"CompleteStartupWindowReveal: activating already-positioned MainWindow; target=" +
-            $"{_startupTargetBounds.X},{_startupTargetBounds.Y}," +
-            $"{_startupTargetBounds.Width}x{_startupTargetBounds.Height}");
-
-        Activate();
-
-        StartupDiagnostics.Write(
-            "CompleteStartupWindowReveal: Activate returned");
-    }
-
-    internal async Task CompleteStartupWindowRevealAsync()
-    {
-        // MainWindow has already spent the entire startup lifetime at its final
-        // screen position underneath the always-on-top splash. Reactivate it,
-        // then synchronize one last time before removing that cover window.
-        CompleteStartupWindowReveal();
-
-        await WaitForDispatcherIdleAsync();
-
-        StartupDiagnostics.Write(
-            "CompleteStartupWindowRevealAsync: dispatcher reached low-priority idle");
-
-        await WaitForRenderingFramesAsync(2);
-
-        StartupDiagnostics.Write(
-            "CompleteStartupWindowRevealAsync: two covered on-screen composition frames observed");
-
-        var dwmResult = DwmFlush();
-        StartupDiagnostics.Write(
-            $"CompleteStartupWindowRevealAsync: DwmFlush returned {dwmResult}");
-
-        await WaitForRenderingFramesAsync(1);
-
-        StartupDiagnostics.Write(
-            "CompleteStartupWindowRevealAsync: covered MainWindow handoff ready");
     }
 
     internal async Task DismissStartupCoverAsync()
@@ -446,21 +404,6 @@ public sealed partial class MainWindow : Window
 
         StartupDiagnostics.Write(
             "ForceDismissStartupCover: startup cover collapsed");
-    }
-
-    private Task WaitForDispatcherIdleAsync()
-    {
-        var completion = new TaskCompletionSource<bool>(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-
-        if (!DispatcherQueue.TryEnqueue(
-                Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
-                () => completion.TrySetResult(true)))
-        {
-            completion.TrySetResult(true);
-        }
-
-        return completion.Task;
     }
 
     private static Task WaitForRenderingFramesAsync(int frameCount)
