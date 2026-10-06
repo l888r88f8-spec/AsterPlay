@@ -438,6 +438,16 @@ public sealed partial class MainWindow : Window
                 "DismissStartupCoverAsync: post-reveal dispatcher responsive"));
     }
 
+    internal void ForceDismissStartupCover()
+    {
+        StartupCoverLayer.IsHitTestVisible = false;
+        StartupCoverLayer.Opacity = 0;
+        StartupCoverLayer.Visibility = Visibility.Collapsed;
+
+        StartupDiagnostics.Write(
+            "ForceDismissStartupCover: startup cover collapsed");
+    }
+
     private Task WaitForDispatcherIdleAsync()
     {
         var completion = new TaskCompletionSource<bool>(
