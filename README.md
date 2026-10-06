@@ -27,7 +27,7 @@ AsterPlay is a native Windows desktop client for Emby built with **C# / .NET 8 /
 
 - UI: WinUI 3 on .NET 8
 - Windows App SDK: self-contained deployment
-- Visual effects: LiquidGlassWinUI
+- Visual effects: WinUI Acrylic / Composition
 - Emby API: HttpClient
 - Player: libmpv gpu-next with D3D11 composition into SwapChainPanel
 - Core: AsterPlay.Core contains the shared Emby/session/playback/details/danmaku logic
