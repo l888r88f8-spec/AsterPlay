@@ -24,7 +24,7 @@
             <TextBlock x:Name="CurrentMediaTextBlock"
                        TextWrapping="Wrap"/>
             <TextBlock x:Name="CurrentMatchTextBlock"
-                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                       Foreground="{ThemeResource AsterAccentBrush}"
                        TextWrapping="Wrap"/>
         </StackPanel>
 
