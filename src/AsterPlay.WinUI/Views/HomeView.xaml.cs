@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using AsterPlay.Models;
 using AsterPlay.Services;
+using AsterPlay.WinUI.Controls;
 using AsterPlay.WinUI.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -200,8 +201,20 @@ public sealed partial class HomeView : UserControl
                 // contacted the server and populated the home data. Cached
                 // content may be applied early behind the splash, but it does
                 // not end the splash by itself.
-                await LoadAsync();
-                await WaitForInitialHeroPreloadAsync();
+                var serverRefreshSucceeded = await LoadAsync();
+
+                if (!IsLoaded)
+                    return;
+
+                // Do not dismiss the splash merely because data objects exist.
+                // Wait until every image that is actually visible in the initial
+                // viewport has finished its byte fetch + BitmapImage decode +
+                // Image.Source assignment. A failed image counts as settled so
+                // one bad artwork URL cannot trap the app behind the splash.
+                if (serverRefreshSucceeded || _hasCachedSnapshot)
+                    await WaitForInitialViewportImagesAsync();
+                else
+                    await WaitForNextRenderingFrameAsync();
 
                 if (IsLoaded)
                     RaiseInitialVisualReady();
@@ -214,9 +227,128 @@ public sealed partial class HomeView : UserControl
             return;
 
         _initialVisualReadyRaised = true;
+
+        if (_heroImagesReady && _heroCandidates.Count > 1)
+            _heroTimer.Start();
+
         InitialVisualReady?.Invoke(this, EventArgs.Empty);
         StartupDiagnostics.Write(
             $"HomeView: initial visual ready; cachedSnapshot={_hasCachedSnapshot}");
+    }
+
+    private async Task WaitForInitialViewportImagesAsync()
+    {
+        // Give data templates / ItemsRepeater containers time to be realized
+        // before inspecting the actual first-screen visual tree.
+        await WaitForNextRenderingFrameAsync();
+
+        if (!IsLoaded)
+            return;
+
+        HomeScrollViewer.UpdateLayout();
+        await WaitForNextRenderingFrameAsync();
+
+        if (!IsLoaded)
+            return;
+
+        var images = new HashSet<CachedImage>();
+
+        CollectVisibleCachedImages(
+            HomeScrollViewer,
+            HomeScrollViewer,
+            images);
+
+        // These live outside the ScrollViewer but are visible in the startup
+        // composition and should not pop in after the splash disappears.
+        if (!string.IsNullOrWhiteSpace(PageBackdropImage.SourceUrl))
+            images.Add(PageBackdropImage);
+
+        if (!string.IsNullOrWhiteSpace(CurrentUserAvatarImage.SourceUrl))
+            images.Add(CurrentUserAvatarImage);
+
+        var targets = images
+            .Where(image => !string.IsNullOrWhiteSpace(image.SourceUrl))
+            .ToArray();
+
+        StartupDiagnostics.Write(
+            $"HomeView: waiting for initial viewport images; count={targets.Length}");
+
+        var results = await Task.WhenAll(
+            targets.Select(image => image.EnsureLoadedAsync()));
+
+        StartupDiagnostics.Write(
+            $"HomeView: initial viewport images settled; decoded={results.Count(result => result)}/{results.Length}");
+
+        // Ensure the decoded BitmapImage sources have reached the compositor.
+        await WaitForNextRenderingFrameAsync();
+    }
+
+    private static void CollectVisibleCachedImages(
+        DependencyObject root,
+        FrameworkElement viewport,
+        ISet<CachedImage> images)
+    {
+        var childCount = VisualTreeHelper.GetChildrenCount(root);
+
+        for (var index = 0; index < childCount; index++)
+        {
+            var child = VisualTreeHelper.GetChild(root, index);
+
+            if (child is CachedImage image &&
+                image.Visibility == Visibility.Visible &&
+                image.ActualWidth > 0 &&
+                image.ActualHeight > 0 &&
+                IsInsideViewport(image, viewport))
+            {
+                images.Add(image);
+            }
+
+            CollectVisibleCachedImages(child, viewport, images);
+        }
+    }
+
+    private static bool IsInsideViewport(
+        FrameworkElement element,
+        FrameworkElement viewport)
+    {
+        if (viewport.ActualWidth <= 0 || viewport.ActualHeight <= 0)
+            return true;
+
+        try
+        {
+            var transform = element.TransformToVisual(viewport);
+            var bounds = transform.TransformBounds(
+                new Windows.Foundation.Rect(
+                    0,
+                    0,
+                    element.ActualWidth,
+                    element.ActualHeight));
+
+            return bounds.Right > 0 &&
+                   bounds.Bottom > 0 &&
+                   bounds.Left < viewport.ActualWidth &&
+                   bounds.Top < viewport.ActualHeight;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static Task WaitForNextRenderingFrameAsync()
+    {
+        var completion = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        EventHandler<object>? handler = null;
+        handler = (_, _) =>
+        {
+            Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= handler;
+            completion.TrySetResult(true);
+        };
+
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += handler;
+        return completion.Task;
     }
 
     private Task LoadCachedSnapshotAsync()
@@ -245,7 +377,7 @@ public sealed partial class HomeView : UserControl
         return Task.CompletedTask;
     }
 
-    private async Task LoadAsync()
+    private async Task<bool> LoadAsync()
     {
         StartupDiagnostics.Write($"HomeView.LoadAsync: begin; cachedSnapshot={_hasCachedSnapshot}");
         if (!_hasCachedSnapshot)
@@ -307,6 +439,7 @@ public sealed partial class HomeView : UserControl
             _hasCachedSnapshot = true;
             ShowContentState();
             StartupDiagnostics.Write("HomeView.LoadAsync: refreshed snapshot saved");
+            return true;
         }
         catch (Exception ex)
         {
@@ -315,13 +448,15 @@ public sealed partial class HomeView : UserControl
             if (UserError.IsAuthenticationFailure(ex))
             {
                 AuthenticationFailed?.Invoke(this, EventArgs.Empty);
-                return;
+                return false;
             }
 
             if (!_hasCachedSnapshot)
             {
                 ShowLoadingError(UserError.GetMessage(ex, "加载首页"));
             }
+
+            return false;
         }
         finally
         {
@@ -770,40 +905,46 @@ public sealed partial class HomeView : UserControl
         _heroPreloadTask = PreloadHeroCandidatesAsync(preloadGeneration);
     }
 
-    private async Task WaitForInitialHeroPreloadAsync()
+    private async Task PreloadHeroCandidatesAsync(int generation)
     {
         try
         {
-            await _heroPreloadTask;
+            var urls = _heroCandidates
+                .Select(item => _client.BuildBackdropUrl(item, 1800))
+                .Where(url => !string.IsNullOrWhiteSpace(url))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+
+            // Prioritize the artwork the user will see first. Remaining Hero
+            // images are warmed only after the first one has reached cache.
+            if (urls.Length > 0)
+                await ImageCacheService.Shared.PreloadAsync(urls.Take(1));
+
+            if (generation != _heroPreloadGeneration)
+                return;
+
+            if (urls.Length > 1)
+                await ImageCacheService.Shared.PreloadAsync(urls.Skip(1));
+
+            if (generation != _heroPreloadGeneration)
+                return;
+
+            _heroImagesReady = true;
+
+            StartupDiagnostics.Write(
+                $"HomeView hero preload complete: generation={generation}, images={urls.Length}");
+
+            if (IsLoaded &&
+                _initialVisualReadyRaised &&
+                _heroCandidates.Count > 1)
+            {
+                _heroTimer.Start();
+            }
         }
         catch (Exception ex)
         {
-            // A missing artwork image must not trap the application behind the
-            // splash forever. The home data itself is already ready.
             PlaybackLog.Error("WinUIHeroPreload", ex);
         }
-    }
-
-    private async Task PreloadHeroCandidatesAsync(int generation)
-    {
-        var urls = _heroCandidates
-            .Select(item => _client.BuildBackdropUrl(item, 1800))
-            .Where(url => !string.IsNullOrWhiteSpace(url))
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-
-        await ImageCacheService.Shared.PreloadAsync(urls);
-
-        if (generation != _heroPreloadGeneration)
-            return;
-
-        _heroImagesReady = true;
-
-        StartupDiagnostics.Write(
-            $"HomeView hero preload complete: generation={generation}, images={urls.Length}");
-
-        if (IsLoaded && _heroCandidates.Count > 1)
-            _heroTimer.Start();
     }
 
     private void ApplyHero(EmbyItem? item)
@@ -879,6 +1020,27 @@ public sealed partial class HomeView : UserControl
 
         if (string.IsNullOrWhiteSpace(backdropUrl))
             return;
+
+        // While the splash is covering the app, snap to the newest Hero rather
+        // than starting a cross-fade that may still be mid-animation when the
+        // real window is revealed.
+        if (!_initialVisualReadyRaised && _heroVisualInitialized)
+        {
+            _heroTransitionStoryboard?.Stop();
+            _heroTransitionStoryboard = null;
+
+            HeroImage.SourceUrl = backdropUrl;
+            HeroImage.Opacity = 1;
+            HeroImageAlt.SourceUrl = "";
+            HeroImageAlt.Opacity = 0;
+
+            PageBackdropImage.SourceUrl = backdropUrl;
+            PageBackdropImage.Opacity = 0.22;
+
+            _heroShowingPrimary = true;
+            _currentHeroBackdropUrl = backdropUrl;
+            return;
+        }
 
         if (!_heroVisualInitialized)
         {
