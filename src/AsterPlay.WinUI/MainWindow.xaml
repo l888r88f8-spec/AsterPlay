@@ -9,6 +9,7 @@
           Loaded="RootGrid_Loaded">
         <Grid.Resources>
         <Style x:Key="DockButtonStyle" TargetType="Button">
+            <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="MinWidth" Value="86"/>
             <Setter Property="Height" Value="56"/>
             <Setter Property="Margin" Value="2"/>
