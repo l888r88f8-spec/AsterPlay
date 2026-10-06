@@ -89,10 +89,7 @@
                                      Color="#52FFFFFF"/>
                 </Border.Resources>
                 <Grid>
-                    <controls:LiveLiquidGlassSurface x:Name="LiquidDockSurface"
-                                                     Radius="34"
-                                                     DistortionAmount="18"
-                                                     BlurAmount="1.4"/>
+                    <controls:LiveLiquidGlassSurface x:Name="LiquidDockSurface"/>
 
                     <StackPanel Orientation="Horizontal"
                                 Spacing="2"
