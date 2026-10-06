@@ -251,6 +251,13 @@ public sealed partial class HomeView : UserControl
         if (!IsLoaded)
             return;
 
+        StartupDiagnostics.Write(
+            $"HomeView: viewport layout ready; actual={HomeScrollViewer.ActualWidth:0.0}x{HomeScrollViewer.ActualHeight:0.0}, " +
+            $"viewport={HomeScrollViewer.ViewportWidth:0.0}x{HomeScrollViewer.ViewportHeight:0.0}, " +
+            $"extent={HomeScrollViewer.ExtentWidth:0.0}x{HomeScrollViewer.ExtentHeight:0.0}, " +
+            $"offset={HomeScrollViewer.VerticalOffset:0.0}, scrollable={HomeScrollViewer.ScrollableHeight:0.0}");
+
+        var realizedImageCount = CountCachedImages(HomeScrollViewer);
         var images = new HashSet<CachedImage>();
 
         CollectVisibleCachedImages(
@@ -271,16 +278,61 @@ public sealed partial class HomeView : UserControl
             .ToArray();
 
         StartupDiagnostics.Write(
-            $"HomeView: waiting for initial viewport images; count={targets.Length}");
+            $"HomeView: waiting for initial viewport images; realized={realizedImageCount}, targets={targets.Length}");
 
+        for (var index = 0; index < targets.Length; index++)
+        {
+            var image = targets[index];
+            StartupDiagnostics.Write(
+                $"HomeView: startup image[{index}] begin; name={ResolveImageName(image)}, " +
+                $"size={image.ActualWidth:0.0}x{image.ActualHeight:0.0}, lazy={image.LazyLoadingEnabled}, " +
+                $"source={image.SourceUrl}");
+        }
+
+        var imageStopwatch = System.Diagnostics.Stopwatch.StartNew();
         var results = await Task.WhenAll(
             targets.Select(image => image.EnsureLoadedAsync()));
+        imageStopwatch.Stop();
+
+        for (var index = 0; index < targets.Length; index++)
+        {
+            var image = targets[index];
+            StartupDiagnostics.Write(
+                $"HomeView: startup image[{index}] settled; decoded={results[index]}, " +
+                $"name={ResolveImageName(image)}, source={image.SourceUrl}");
+        }
 
         StartupDiagnostics.Write(
-            $"HomeView: initial viewport images settled; decoded={results.Count(result => result)}/{results.Length}");
+            $"HomeView: initial viewport images settled; decoded={results.Count(result => result)}/{results.Length}, " +
+            $"elapsed={imageStopwatch.Elapsed.TotalMilliseconds:0.0} ms");
 
         // Ensure the decoded BitmapImage sources have reached the compositor.
         await WaitForNextRenderingFrameAsync();
+        StartupDiagnostics.Write(
+            "HomeView: post-image composition frame rendered");
+    }
+
+    private static int CountCachedImages(DependencyObject root)
+    {
+        var count = root is CachedImage ? 1 : 0;
+        var childCount = VisualTreeHelper.GetChildrenCount(root);
+
+        for (var index = 0; index < childCount; index++)
+            count += CountCachedImages(VisualTreeHelper.GetChild(root, index));
+
+        return count;
+    }
+
+    private static string ResolveImageName(CachedImage image)
+    {
+        if (!string.IsNullOrWhiteSpace(image.Name))
+            return image.Name;
+
+        var parent = VisualTreeHelper.GetParent(image);
+        return parent is FrameworkElement frameworkElement &&
+               !string.IsNullOrWhiteSpace(frameworkElement.Name)
+            ? $"{frameworkElement.Name}/CachedImage"
+            : "(template CachedImage)";
     }
 
     private static void CollectVisibleCachedImages(
