@@ -80,6 +80,10 @@ public sealed partial class HomeView : UserControl
             : $"欢迎回来，{_client.UserName}";
 
         ServerNameBlock.Text = ResolveServerDisplayName();
+        CurrentUserAvatarImage.SourceUrl =
+            _client.IsAuthenticated
+                ? _client.BuildCurrentUserPrimaryUrl(160)
+                : "";
 
         if (_noServerMode)
         {
@@ -478,7 +482,6 @@ public sealed partial class HomeView : UserControl
 
         ServerChooserDismissLayer.Visibility = Visibility.Visible;
         ServerChooserPanel.Visibility = Visibility.Visible;
-        ServerChevronTransform.Angle = 180;
     }
 
     private void ServerChoice_Click(object sender, RoutedEventArgs e)
@@ -512,7 +515,6 @@ public sealed partial class HomeView : UserControl
     {
         ServerChooserPanel.Visibility = Visibility.Collapsed;
         ServerChooserDismissLayer.Visibility = Visibility.Collapsed;
-        ServerChevronTransform.Angle = 0;
     }
 
     private static string NormalizeServerUrl(string? value) =>
@@ -535,9 +537,10 @@ public sealed partial class HomeView : UserControl
             if (string.IsNullOrWhiteSpace(serverName))
                 return;
 
-            ServerProfileStore.AddOrUpdate(_client.ServerUrl, serverName);
-            ServerNameBlock.Text = serverName;
-            StartupDiagnostics.Write($"HomeView: server name refreshed to '{serverName}'");
+            ServerProfileStore.UpdateServerName(_client.ServerUrl, serverName);
+            ServerNameBlock.Text = ResolveServerDisplayName();
+            StartupDiagnostics.Write(
+                $"HomeView: discovered server name '{serverName}', display='{ServerNameBlock.Text}'");
         }
         catch (Exception ex)
         {
