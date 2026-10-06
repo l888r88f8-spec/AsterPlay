@@ -303,7 +303,21 @@ public sealed class EmbyClient
     public string BuildBackdropUrl(EmbyItem item, int maxWidth = 1920)
     {
         if (item.BackdropImageTags.Count > 0)
-            return WithToken($"/Items/{Esc(item.Id)}/Images/Backdrop/0?maxWidth={maxWidth}&quality=90");
+        {
+            return WithToken(
+                $"/Items/{Esc(item.Id)}/Images/Backdrop/0?maxWidth={maxWidth}&quality=90");
+        }
+
+        // Episodes commonly do not own a backdrop. Emby exposes the inherited
+        // series/parent artwork through ParentBackdropItemId. Prefer that before
+        // falling back to the episode Primary image; some servers return 500 for
+        // missing/broken episode Primary artwork even though parent artwork is
+        // perfectly valid.
+        if (!string.IsNullOrWhiteSpace(item.ParentBackdropItemId))
+        {
+            return WithToken(
+                $"/Items/{Esc(item.ParentBackdropItemId)}/Images/Backdrop/0?maxWidth={maxWidth}&quality=90");
+        }
 
         return BuildPrimaryUrl(item, maxWidth);
     }
