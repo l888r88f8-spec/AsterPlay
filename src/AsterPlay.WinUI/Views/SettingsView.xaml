@@ -21,9 +21,9 @@
             <Border Padding="26" CornerRadius="28">
                 <Border.Background>
                     <AcrylicBrush TintColor="#F0F2F8"
-                                  TintOpacity="0.080"
-                                  TintLuminosityOpacity="0.42"
-                                  FallbackColor="#D9F0F2F8"/>
+                                  TintOpacity="0.050"
+                                  TintLuminosityOpacity="0.30"
+                                  FallbackColor="#B9F0F2F8"/>
                 </Border.Background>
                 <StackPanel Spacing="14">
                     <TextBlock Text="常规"
@@ -43,9 +43,9 @@
             <Border Padding="26" CornerRadius="28">
                 <Border.Background>
                     <AcrylicBrush TintColor="#F0F2F8"
-                                  TintOpacity="0.080"
-                                  TintLuminosityOpacity="0.42"
-                                  FallbackColor="#D9F0F2F8"/>
+                                  TintOpacity="0.050"
+                                  TintLuminosityOpacity="0.30"
+                                  FallbackColor="#B9F0F2F8"/>
                 </Border.Background>
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -77,9 +77,9 @@
             <Border Padding="26" CornerRadius="28">
                 <Border.Background>
                     <AcrylicBrush TintColor="#F0F2F8"
-                                  TintOpacity="0.070"
-                                  TintLuminosityOpacity="0.42"
-                                  FallbackColor="#D9F0F2F8"/>
+                                  TintOpacity="0.045"
+                                  TintLuminosityOpacity="0.30"
+                                  FallbackColor="#B9F0F2F8"/>
                 </Border.Background>
                 <Grid>
                     <StackPanel>
@@ -101,9 +101,9 @@
             <Border Padding="26" CornerRadius="28">
                 <Border.Background>
                     <AcrylicBrush TintColor="#F0F2F8"
-                                  TintOpacity="0.070"
-                                  TintLuminosityOpacity="0.42"
-                                  FallbackColor="#D9F0F2F8"/>
+                                  TintOpacity="0.045"
+                                  TintLuminosityOpacity="0.30"
+                                  FallbackColor="#B9F0F2F8"/>
                 </Border.Background>
                 <StackPanel Spacing="6">
                     <TextBlock Text="关于"
