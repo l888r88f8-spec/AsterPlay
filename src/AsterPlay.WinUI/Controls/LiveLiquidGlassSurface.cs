@@ -50,7 +50,7 @@ public sealed class LiveLiquidGlassSurface : UserControl
         {
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
-            ClearColor = Colors.Transparent
+            ClearColor = Color.FromArgb(0, 0, 0, 0)
         };
 
         Content = _canvas;
