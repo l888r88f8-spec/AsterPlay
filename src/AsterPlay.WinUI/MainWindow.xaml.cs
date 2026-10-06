@@ -109,6 +109,13 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    internal void EnsureStartupBounds(
+        RectInt32 startupBounds)
+    {
+        _appWindow.MoveAndResize(
+            startupBounds);
+    }
+
     private IntPtr LowLevelMouseHook(
         int code,
         IntPtr wParam,
@@ -370,7 +377,7 @@ public sealed partial class MainWindow : Window
 
         _startupVisualReadyRaised = true;
         StartupDiagnostics.Write(
-            "Target page frame ready; revealing Home beneath startup cover");
+            "Target page frame ready; Home can be revealed beneath native splash");
         StartupVisualReady?.Invoke(this, EventArgs.Empty);
     }
 
