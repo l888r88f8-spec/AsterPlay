@@ -9,12 +9,6 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- AsterPlay typography baseline. WinUI's built-in controls use
-                 ContentControlThemeFontFamily, while TextBlock/Button get an
-                 explicit Medium baseline for clearer Chinese UI text. -->
-            <FontFamily x:Key="AsterUiFontFamily">Microsoft YaHei UI</FontFamily>
-            <FontFamily x:Key="ContentControlThemeFontFamily">Microsoft YaHei UI</FontFamily>
-
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="AsterPageBackgroundBrush" Color="#080A0F"/>
@@ -222,6 +216,11 @@
                     <Color x:Key="AsterAmbientOverlayBottomColor">#D0000000</Color>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
+
+            <!-- AsterPlay typography baseline. Keep ResourceDictionary property
+                 elements first; ordinary resource items must follow them. -->
+            <FontFamily x:Key="AsterUiFontFamily">Microsoft YaHei UI</FontFamily>
+            <FontFamily x:Key="ContentControlThemeFontFamily">Microsoft YaHei UI</FontFamily>
 
             <Style TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="{StaticResource AsterUiFontFamily}"/>
