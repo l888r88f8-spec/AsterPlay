@@ -116,49 +116,37 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid>
-        <!-- The current Hero softly colors the page below it, matching the
-             reference's poster-to-content mist instead of ending at a hard edge. -->
+    <Grid Background="{ThemeResource AsterPageBackgroundBrush}">
+        <!-- One low-opacity ambient copy is enough to carry the Hero's
+             colour into the first content rows. The Hero itself stays sharp;
+             this layer replaces the previous dual-image + full-screen Acrylic
+             stack to reduce GPU work and decoded texture memory. -->
         <Grid x:Name="PageBackdropLayer"
+              Height="1080"
+              VerticalAlignment="Top"
               Visibility="Collapsed"
               IsHitTestVisible="False">
             <controls:CachedImage x:Name="PageBackdropImage"
                                   LazyLoadingEnabled="False"
                                   Stretch="UniformToFill"
-                                  Opacity="0.30"
+                                  Opacity="0.22"
                                   RenderTransformOrigin="0.5,0.5">
                 <controls:CachedImage.RenderTransform>
-                    <ScaleTransform ScaleX="1.16"
-                                    ScaleY="1.16"/>
-                </controls:CachedImage.RenderTransform>
-            </controls:CachedImage>
-            <controls:CachedImage x:Name="PageBackdropImageAlt"
-                                  LazyLoadingEnabled="False"
-                                  Stretch="UniformToFill"
-                                  Opacity="0"
-                                  RenderTransformOrigin="0.5,0.5">
-                <controls:CachedImage.RenderTransform>
-                    <ScaleTransform ScaleX="1.16"
-                                    ScaleY="1.16"/>
+                    <ScaleTransform ScaleX="1.05"
+                                    ScaleY="1.05"/>
                 </controls:CachedImage.RenderTransform>
             </controls:CachedImage>
 
-            <Rectangle>
-                <Rectangle.Fill>
-                    <AcrylicBrush TintColor="{ThemeResource AsterHeroFadeEndColor}"
-                                  TintOpacity="0.62"
-                                  TintLuminosityOpacity="0.54"
-                                  FallbackColor="{ThemeResource AsterHeroFadeEndColor}"/>
-                </Rectangle.Fill>
-            </Rectangle>
-
+            <!-- Fade the ambient artwork itself into the real page background.
+                 This extends well below the Hero so there is no visible seam. -->
             <Rectangle>
                 <Rectangle.Fill>
                     <LinearGradientBrush StartPoint="0,0"
                                          EndPoint="0,1">
-                        <GradientStop Color="#08000000" Offset="0"/>
-                        <GradientStop Color="{ThemeResource AsterAmbientOverlayMidColor}" Offset="0.52"/>
-                        <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="0.88"/>
+                        <GradientStop Color="#00000000" Offset="0"/>
+                        <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.34"/>
+                        <GradientStop Color="{ThemeResource AsterAmbientOverlayMidColor}" Offset="0.58"/>
+                        <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}" Offset="0.78"/>
                         <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="1"/>
                     </LinearGradientBrush>
                 </Rectangle.Fill>
@@ -424,14 +412,15 @@
                     <!-- The important reference detail: the artwork dissolves into a
                          bright, milky page instead of ending at a visible boundary. -->
                     <Rectangle VerticalAlignment="Bottom"
-                               Height="290">
+                               Height="390">
                         <Rectangle.Fill>
                             <LinearGradientBrush StartPoint="0,0"
                                                  EndPoint="0,1">
                                 <GradientStop Color="#00000000" Offset="0"/>
-                                <GradientStop Color="{ThemeResource AsterHeroFadeMidColor}" Offset="0.42"/>
-                                <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="0.92"/>
-                                <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="1"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.26"/>
+                                <GradientStop Color="{ThemeResource AsterHeroFadeMidColor}" Offset="0.58"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}" Offset="0.82"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}" Offset="1"/>
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
