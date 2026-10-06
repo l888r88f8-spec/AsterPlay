@@ -21,6 +21,9 @@ internal sealed class StartupSplashWindow : Window
     private readonly AppWindow _appWindow;
     private readonly DispatcherTimer _timer;
     private readonly Stopwatch _clock = new();
+    private readonly Image _logoImage;
+    private bool _visualReadyRaised;
+    private bool _pngFallbackTried;
 
     private RectInt32 _workArea;
     private int _currentSize = BaseSize;
@@ -40,16 +43,20 @@ internal sealed class StartupSplashWindow : Window
                 Windows.UI.Color.FromArgb(255, 8, 10, 14))
         };
 
-        root.Children.Add(
-            new Image
-            {
-                Source = new BitmapImage(
-                    new Uri(
-                        "ms-appx:///Assets/AsterPlay.AppIcon.png")),
-                Stretch = Stretch.UniformToFill,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                VerticalAlignment = VerticalAlignment.Stretch
-            });
+        _logoImage = new Image
+        {
+            // Use the exact resource that Windows uses for the executable icon.
+            // ICO decoding is handled by WIC. PNG remains a fallback below.
+            Source = new BitmapImage(
+                new Uri(
+                    "ms-appx:///Assets/AsterPlay.ico")),
+            Stretch = Stretch.UniformToFill,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch
+        };
+        _logoImage.ImageOpened += LogoImage_ImageOpened;
+        _logoImage.ImageFailed += LogoImage_ImageFailed;
+        root.Children.Add(_logoImage);
 
         Content = root;
 
@@ -106,7 +113,60 @@ internal sealed class StartupSplashWindow : Window
         {
             _timer.Stop();
             _timer.Tick -= Timer_Tick;
+            _logoImage.ImageOpened -= LogoImage_ImageOpened;
+            _logoImage.ImageFailed -= LogoImage_ImageFailed;
+            Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -=
+                IconReady_Rendering;
         };
+    }
+
+    internal event EventHandler? VisualReady;
+
+    private void LogoImage_ImageOpened(
+        object sender,
+        RoutedEventArgs e)
+    {
+        // ImageOpened means the decoder has real pixels. Wait one compositor
+        // frame so the user actually sees them before MainWindow construction
+        // starts blocking the UI thread.
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -=
+            IconReady_Rendering;
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering +=
+            IconReady_Rendering;
+    }
+
+    private void LogoImage_ImageFailed(
+        object sender,
+        ExceptionRoutedEventArgs e)
+    {
+        if (_pngFallbackTried)
+        {
+            StartupDiagnostics.Write(
+                $"Startup icon failed to decode: {e.ErrorMessage}");
+            return;
+        }
+
+        _pngFallbackTried = true;
+        StartupDiagnostics.Write(
+            $"Startup ICO decode failed, falling back to PNG: {e.ErrorMessage}");
+
+        _logoImage.Source = new BitmapImage(
+            new Uri(
+                "ms-appx:///Assets/AsterPlay.AppIcon.png"));
+    }
+
+    private void IconReady_Rendering(
+        object? sender,
+        object e)
+    {
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -=
+            IconReady_Rendering;
+
+        if (_visualReadyRaised)
+            return;
+
+        _visualReadyRaised = true;
+        VisualReady?.Invoke(this, EventArgs.Empty);
     }
 
     internal void StartPulse()
