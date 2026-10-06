@@ -2,6 +2,7 @@
     x:Class="AsterPlay.WinUI.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:AsterPlay.WinUI.Controls"
     Title="AsterPlay">
 
     <Grid x:Name="RootGrid"
@@ -76,10 +77,10 @@
                     HorizontalAlignment="Center"
                     VerticalAlignment="Bottom"
                     Margin="0,0,0,14"
-                    Padding="6"
+                    Padding="0"
                     CornerRadius="34"
-                    BorderBrush="#78FFFFFF"
-                    BorderThickness="1"
+                    Background="Transparent"
+                    BorderThickness="0"
                     Visibility="Visible">
                 <Border.Resources>
                     <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
@@ -87,14 +88,15 @@
                     <SolidColorBrush x:Key="ButtonBackgroundPressed"
                                      Color="#52FFFFFF"/>
                 </Border.Resources>
-                <Border.Background>
-                    <AcrylicBrush TintColor="#EFEFF4"
-                                  TintOpacity="0.240"
-                                  TintLuminosityOpacity="0.42"
-                                  FallbackColor="#D0EFEFF4"/>
-                </Border.Background>
-                <StackPanel Orientation="Horizontal"
-                            Spacing="2">
+                <Grid>
+                    <controls:LiveLiquidGlassSurface x:Name="LiquidDockSurface"
+                                                     Radius="34"
+                                                     DistortionAmount="18"
+                                                     BlurAmount="1.4"/>
+
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="2"
+                                Margin="6">
                     <Button x:Name="HomeButton"
                             Style="{StaticResource DockButtonStyle}"
                             Click="Home_Click">
@@ -159,7 +161,8 @@
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-                </StackPanel>
+                    </StackPanel>
+                </Grid>
             </Border>
         </Grid>
 
