@@ -36,6 +36,7 @@ public sealed partial class HomeView : UserControl
     private readonly bool _noServerMode;
     private bool _hasCachedSnapshot;
     private bool _initialVisualReadyRaised;
+    private Task _heroPreloadTask = Task.CompletedTask;
 
     public event EventHandler? LibraryRequested;
     public event EventHandler<EmbyItem>? MediaRequested;
@@ -195,16 +196,12 @@ public sealed partial class HomeView : UserControl
 
                 await LoadCachedSnapshotAsync();
 
-                if (_hasCachedSnapshot)
-                {
-                    RaiseInitialVisualReady();
-                    await LoadAsync();
-                    return;
-                }
-
-                // With no cache, keep the splash visible until the first real
-                // network result (or visible error state) has been applied.
+                // Startup should finish only after this launch has actually
+                // contacted the server and populated the home data. Cached
+                // content may be applied early behind the splash, but it does
+                // not end the splash by itself.
                 await LoadAsync();
+                await WaitForInitialHeroPreloadAsync();
 
                 if (IsLoaded)
                     RaiseInitialVisualReady();
@@ -752,6 +749,7 @@ public sealed partial class HomeView : UserControl
         if (_heroCandidates.Count == 0)
         {
             _heroTimer.Stop();
+            _heroPreloadTask = Task.CompletedTask;
             ApplyHero(null);
             return;
         }
@@ -769,7 +767,21 @@ public sealed partial class HomeView : UserControl
         ApplyHero(_heroCandidates[_heroIndex]);
 
         _heroTimer.Stop();
-        _ = PreloadHeroCandidatesAsync(preloadGeneration);
+        _heroPreloadTask = PreloadHeroCandidatesAsync(preloadGeneration);
+    }
+
+    private async Task WaitForInitialHeroPreloadAsync()
+    {
+        try
+        {
+            await _heroPreloadTask;
+        }
+        catch (Exception ex)
+        {
+            // A missing artwork image must not trap the application behind the
+            // splash forever. The home data itself is already ready.
+            PlaybackLog.Error("WinUIHeroPreload", ex);
+        }
     }
 
     private async Task PreloadHeroCandidatesAsync(int generation)
