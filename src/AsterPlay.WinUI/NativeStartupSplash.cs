@@ -550,11 +550,7 @@ internal sealed class NativeStartupSplash : IDisposable
     private struct BitmapInfo
     {
         public BitmapInfoHeader Header;
-
-        [MarshalAs(
-            UnmanagedType.ByValArray,
-            SizeConst = 256)]
-        public uint[]? Colors;
+        public uint ColorPlaceholder;
     }
 
     [StructLayout(LayoutKind.Sequential)]
