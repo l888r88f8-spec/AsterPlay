@@ -200,15 +200,15 @@ internal sealed class StartupSplashWindow : Window
         // large enough to cover it. That avoids any white WinUI frame flashing
         // around the splash during initialization.
         if (!_mainWindowShown &&
-            raw >= 0.52)
+            raw >= 0.72)
         {
             _mainWindowShown = true;
-            _mainWindow?.ShowStartupWindowBehindSplash();
+            _mainWindow?.PositionStartupWindowBehindSplash();
         }
 
         var splashFade =
             Math.Clamp(
-                (raw - 0.54) / 0.46,
+                (raw - 0.72) / 0.28,
                 0.0,
                 1.0);
 
@@ -230,7 +230,7 @@ internal sealed class StartupSplashWindow : Window
         if (!_mainWindowShown)
         {
             _mainWindowShown = true;
-            _mainWindow?.ShowStartupWindowBehindSplash();
+            _mainWindow?.PositionStartupWindowBehindSplash();
         }
 
         _mainWindow?.CompleteStartupWindowReveal();
