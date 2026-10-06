@@ -20,7 +20,7 @@
             <Setter Property="Padding" Value="9,4"/>
             <Setter Property="CornerRadius" Value="19"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#E8101217"/>
+            <Setter Property="Foreground" Value="#FF101217"/>
             <Setter Property="BorderThickness" Value="0"/>
         </Style>
         </Grid.Resources>
@@ -96,15 +96,15 @@
                                      Color="Transparent"/>
                 </Border.Resources>
                 <Border.Background>
-                    <lg:LiquidGlassBrush BlurAmount="5.15"
-                                         BloomAmount="0.12"
+                    <lg:LiquidGlassBrush BlurAmount="3.4"
+                                         BloomAmount="0.10"
                                          RefThickness="38"
-                                         RefFactor="2.20"
-                                         RefDispersion="4.4"
-                                         DispersionRange="0.32"
-                                         RefFresnelFactor="20"
-                                         GlareFactor="58"
-                                         TintA="0.30"
+                                         RefFactor="2.24"
+                                         RefDispersion="3.8"
+                                         DispersionRange="0.30"
+                                         RefFresnelFactor="22"
+                                         GlareFactor="60"
+                                         TintA="0.44"
                                          TintR="239"
                                          TintG="239"
                                          TintB="244"
@@ -122,7 +122,7 @@
                                       FontSize="19"
                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="首页"
-                                       FontSize="11"
+                                       FontSize="12"
                                        FontWeight="SemiBold"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
@@ -136,7 +136,7 @@
                                       FontSize="19"
                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="媒体库"
-                                       FontSize="11"
+                                       FontSize="12"
                                        FontWeight="SemiBold"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
@@ -150,7 +150,7 @@
                                       FontSize="19"
                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="服务器"
-                                       FontSize="11"
+                                       FontSize="12"
                                        FontWeight="SemiBold"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
@@ -164,7 +164,7 @@
                                       FontSize="19"
                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="设置"
-                                       FontSize="11"
+                                       FontSize="12"
                                        FontWeight="SemiBold"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
