@@ -85,7 +85,7 @@ Exercise where practical:
 - Missing/failed transcode.
 - Missing libmpv runtime.
 
-Pass criteria: the user sees an actionable message and the failure is written to `playback.log` or `crash.log` without crashing unrelated UI.
+Pass criteria: the user sees an actionable message and the failure is written to `AsterPlay.log` without crashing unrelated UI.
 
 ## 6. Danmaku regression
 
@@ -112,11 +112,11 @@ Check:
 - Playback progress reports continue at the expected cadence.
 - Closing PlayerView releases mpv/composition resources.
 
-`playback.log` includes `[Performance]` entries for home, library page loads, and details loads, including elapsed time and memory figures.
+`AsterPlay.log` includes `[Performance]` entries for home, library page loads, and details loads, including elapsed time and memory figures.
 
 Log growth is bounded:
 
-- active `playback.log`: approximately 8 MB maximum before rotation
+- active `AsterPlay.log`: approximately 8 MB maximum before rotation
 - one backup: `playback.previous.log`
 
 ## 8. Release decision
