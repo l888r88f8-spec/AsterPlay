@@ -476,6 +476,7 @@ public sealed partial class HomeView : UserControl
             })
             .ToArray();
 
+        ServerChooserDismissLayer.Visibility = Visibility.Visible;
         ServerChooserPanel.Visibility = Visibility.Visible;
         ServerChevronTransform.Angle = 180;
     }
@@ -499,9 +500,18 @@ public sealed partial class HomeView : UserControl
         ServerSwitchRequested?.Invoke(this, profile);
     }
 
+    private void ServerChooserDismiss_Tapped(
+        object sender,
+        Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+    {
+        CloseServerChooser();
+        e.Handled = true;
+    }
+
     private void CloseServerChooser()
     {
         ServerChooserPanel.Visibility = Visibility.Collapsed;
+        ServerChooserDismissLayer.Visibility = Visibility.Collapsed;
         ServerChevronTransform.Angle = 0;
     }
 
