@@ -225,12 +225,18 @@ public sealed partial class MainWindow : Window
 
         if (_uiSettings is not null)
             _uiSettings.ColorValuesChanged -= SystemColorValuesChanged;
+
+        LiquidDockSurface.SourceElement = null;
     }
 
     private void RootGrid_Loaded(object sender, RoutedEventArgs e)
     {
         StartupDiagnostics.Write(
             $"RootGrid.Loaded; startupScheduled={_startupResolutionScheduled}, section={_currentSection}");
+
+        // Sample PageHost only. The dock lives in a sibling layer, so the
+        // liquid-glass capture can never recursively capture itself.
+        LiquidDockSurface.SourceElement = PageHost;
 
         if (_startupResolutionScheduled)
             return;
@@ -798,9 +804,9 @@ public sealed partial class MainWindow : Window
 
     private void SetActiveNavigation(Button active)
     {
-        // The dock floats over artwork and other highly variable backgrounds.
-        // Its pale glass substrate supplies a stable contrast surface, so the
-        // labels can stay dark and the selected destination can use blue.
+        // The dock is rendered by LiveLiquidGlassSurface over the live PageHost
+        // capture. Keep navigation button fills transparent so the refraction
+        // remains visible; selection is communicated only through foreground.
         var inactiveBackground =
             new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
         var selectedBackground =
