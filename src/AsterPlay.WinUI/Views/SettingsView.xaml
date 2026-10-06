@@ -1,8 +1,7 @@
 <UserControl
     x:Class="AsterPlay.WinUI.Views.SettingsView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:lg="using:LiquidGlassWinUI">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <ScrollViewer>
         <StackPanel Padding="48,34,48,126"
@@ -21,15 +20,10 @@
 
             <Border Padding="26" CornerRadius="28">
                 <Border.Background>
-                    <lg:LiquidGlassBrush BlurAmount="1.6"
-                                         BloomAmount="0.16"
-                                         RefThickness="34"
-                                         RefFactor="2.0"
-                                         RefDispersion="4"
-                                         GlareFactor="58"
-                                         TintA="0.08"
-                                         ShapeRadius="0.88"
-                                         ShapeRoundness="3.8"/>
+                    <AcrylicBrush TintColor="#F0F2F8"
+                                  TintOpacity="0.080"
+                                  TintLuminosityOpacity="0.42"
+                                  FallbackColor="#D9F0F2F8"/>
                 </Border.Background>
                 <StackPanel Spacing="14">
                     <TextBlock Text="常规"
@@ -48,15 +42,10 @@
 
             <Border Padding="26" CornerRadius="28">
                 <Border.Background>
-                    <lg:LiquidGlassBrush BlurAmount="1.6"
-                                         BloomAmount="0.16"
-                                         RefThickness="34"
-                                         RefFactor="2.0"
-                                         RefDispersion="4"
-                                         GlareFactor="58"
-                                         TintA="0.08"
-                                         ShapeRadius="0.88"
-                                         ShapeRoundness="3.8"/>
+                    <AcrylicBrush TintColor="#F0F2F8"
+                                  TintOpacity="0.080"
+                                  TintLuminosityOpacity="0.42"
+                                  FallbackColor="#D9F0F2F8"/>
                 </Border.Background>
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -87,15 +76,10 @@
 
             <Border Padding="26" CornerRadius="28">
                 <Border.Background>
-                    <lg:LiquidGlassBrush BlurAmount="1.5"
-                                         BloomAmount="0.14"
-                                         RefThickness="30"
-                                         RefFactor="1.9"
-                                         RefDispersion="3.5"
-                                         GlareFactor="52"
-                                         TintA="0.07"
-                                         ShapeRadius="0.88"
-                                         ShapeRoundness="3.8"/>
+                    <AcrylicBrush TintColor="#F0F2F8"
+                                  TintOpacity="0.070"
+                                  TintLuminosityOpacity="0.42"
+                                  FallbackColor="#D9F0F2F8"/>
                 </Border.Background>
                 <Grid>
                     <StackPanel>
@@ -116,15 +100,10 @@
 
             <Border Padding="26" CornerRadius="28">
                 <Border.Background>
-                    <lg:LiquidGlassBrush BlurAmount="1.5"
-                                         BloomAmount="0.14"
-                                         RefThickness="30"
-                                         RefFactor="1.9"
-                                         RefDispersion="3.5"
-                                         GlareFactor="52"
-                                         TintA="0.07"
-                                         ShapeRadius="0.88"
-                                         ShapeRoundness="3.8"/>
+                    <AcrylicBrush TintColor="#F0F2F8"
+                                  TintOpacity="0.070"
+                                  TintLuminosityOpacity="0.42"
+                                  FallbackColor="#D9F0F2F8"/>
                 </Border.Background>
                 <StackPanel Spacing="6">
                     <TextBlock Text="关于"
