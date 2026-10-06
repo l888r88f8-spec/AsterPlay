@@ -230,8 +230,9 @@ public sealed partial class MainWindow : Window
         _startupResolutionScheduled = true;
 
         // Wait for the first composition frame before touching disk, DPAPI,
-        // UISettings, EmbyClient, or page XAML. This guarantees the user sees
-        // the actual home shell first.
+        // UISettings, EmbyClient, or page XAML. MainWindow is still DWM-cloaked
+        // here, so this first frame can be prepared without exposing the native
+        // blank HWND surface.
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += FirstFrame_Rendering;
     }
 
@@ -548,7 +549,7 @@ public sealed partial class MainWindow : Window
 
         _startupVisualReadyRaised = true;
         StartupDiagnostics.Write(
-            "Target page frame ready; handing off from splash window");
+            "Target page frame ready; revealing Home beneath startup cover");
         StartupVisualReady?.Invoke(this, EventArgs.Empty);
     }
 
