@@ -289,7 +289,7 @@
                                     TranslateY="-8"/>
             </Border.RenderTransform>
             <Border.Background>
-                <lg:LiquidGlassBrush BlurAmount="3.5"
+                <lg:LiquidGlassBrush BlurAmount="7.5"
                                      BloomAmount="0.10"
                                      RefThickness="42"
                                      RefFactor="2.22"
