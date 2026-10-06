@@ -33,8 +33,6 @@ public sealed partial class HomeView : UserControl
     private Storyboard? _heroTransitionStoryboard;
     private readonly bool _noServerMode;
     private bool _hasCachedSnapshot;
-    private DateTimeOffset _lastWheelDiagnosticAt = DateTimeOffset.MinValue;
-    private DateTimeOffset _lastViewChangedDiagnosticAt = DateTimeOffset.MinValue;
 
     public event EventHandler? LibraryRequested;
     public event EventHandler<EmbyItem>? MediaRequested;
@@ -64,12 +62,6 @@ public sealed partial class HomeView : UserControl
 
         Loaded += HomeView_Activated;
         Unloaded += HomeView_Unloaded;
-
-        AddHandler(
-            UIElement.PointerWheelChangedEvent,
-            new PointerEventHandler(HomeView_PointerWheelChangedDiagnostic),
-            handledEventsToo: true);
-        HomeScrollViewer.ViewChanged += HomeScrollViewer_ViewChangedDiagnostic;
 
         LibrariesGrid.ItemsSource = _libraries;
         ResumeGrid.ItemsSource = _resume;
@@ -103,10 +95,6 @@ public sealed partial class HomeView : UserControl
         if (_heroImagesReady && _heroCandidates.Count > 1)
             _heroTimer.Start();
 
-        LogHomeScrollState("activated");
-        DispatcherQueue.TryEnqueue(
-            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
-            () => LogHomeScrollState("activated-deferred"));
     }
 
     private void HomeView_Unloaded(object sender, RoutedEventArgs e)
@@ -123,8 +111,6 @@ public sealed partial class HomeView : UserControl
 
         _heroIndex = (_heroIndex + 1) % _heroCandidates.Count;
         ApplyHero(_heroCandidates[_heroIndex]);
-        StartupDiagnostics.Write(
-            $"HomeView hero advanced: index={_heroIndex}, item={_heroItem?.Id}");
     }
 
     internal bool HandleNativeMouseWheel(int delta)
@@ -154,62 +140,8 @@ public sealed partial class HomeView : UserControl
             zoomFactor: null,
             disableAnimation: true);
 
-        PlaybackLog.Write(
-            "WinUINativeWheel",
-            $"delta={delta}, target={target:0.0}, {BuildHomeScrollState()}");
-
         return true;
     }
-
-    private void HomeView_PointerWheelChangedDiagnostic(
-        object sender,
-        PointerRoutedEventArgs e)
-    {
-        var now = DateTimeOffset.UtcNow;
-        if (now - _lastWheelDiagnosticAt < TimeSpan.FromMilliseconds(180))
-            return;
-
-        _lastWheelDiagnosticAt = now;
-
-        var point = e.GetCurrentPoint(this);
-        PlaybackLog.Write(
-            "WinUIHomeScroll",
-            $"wheel: delta={point.Properties.MouseWheelDelta}, handled={e.Handled}, " +
-            $"source={e.OriginalSource?.GetType().Name ?? "-"}, " +
-            $"position={point.Position.X:0},{point.Position.Y:0}, " +
-            BuildHomeScrollState());
-
-        DispatcherQueue.TryEnqueue(
-            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
-            () => LogHomeScrollState("wheel-after"));
-    }
-
-    private void HomeScrollViewer_ViewChangedDiagnostic(
-        object? sender,
-        ScrollViewerViewChangedEventArgs e)
-    {
-        var now = DateTimeOffset.UtcNow;
-        if (now - _lastViewChangedDiagnosticAt < TimeSpan.FromMilliseconds(220))
-            return;
-
-        _lastViewChangedDiagnosticAt = now;
-        LogHomeScrollState($"view-changed intermediate={e.IsIntermediate}");
-    }
-
-    private void LogHomeScrollState(string reason) =>
-        PlaybackLog.Write(
-            "WinUIHomeScroll",
-            $"{reason}: {BuildHomeScrollState()}");
-
-    private string BuildHomeScrollState() =>
-        $"visible={HomeScrollViewer.Visibility}, " +
-        $"offset={HomeScrollViewer.VerticalOffset:0.0}, " +
-        $"scrollable={HomeScrollViewer.ScrollableHeight:0.0}, " +
-        $"extent={HomeScrollViewer.ExtentHeight:0.0}, " +
-        $"viewport={HomeScrollViewer.ViewportHeight:0.0}, " +
-        $"viewerActual={HomeScrollViewer.ActualWidth:0.0}x{HomeScrollViewer.ActualHeight:0.0}, " +
-        $"contentActual={HomeContentStack.ActualWidth:0.0}x{HomeContentStack.ActualHeight:0.0}, " +
-        $"contentDesired={HomeContentStack.DesiredSize.Width:0.0}x{HomeContentStack.DesiredSize.Height:0.0}";
 
     private void HomeScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
     {
@@ -232,8 +164,6 @@ public sealed partial class HomeView : UserControl
         HeroContainer.Margin =
             new Thickness(-horizontalPadding, 0, -horizontalPadding, -86);
 
-        LogHomeScrollState(
-            $"size-changed {e.NewSize.Width:0.0}x{e.NewSize.Height:0.0}");
     }
 
     private void HomeView_Loaded(object sender, RoutedEventArgs e)
@@ -427,10 +357,6 @@ public sealed partial class HomeView : UserControl
         StartupDiagnostics.Write(
             $"HomeView state: Content; verticalOffset={HomeScrollViewer.VerticalOffset:0.0}");
 
-        LogHomeScrollState("content-visible");
-        DispatcherQueue.TryEnqueue(
-            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
-            () => LogHomeScrollState("content-visible-deferred"));
     }
 
     private void ShowLoadingError(string message)
@@ -683,7 +609,6 @@ public sealed partial class HomeView : UserControl
             HeroImage.SourceUrl = "";
             HeroImageAlt.SourceUrl = "";
             PageBackdropImage.SourceUrl = "";
-            PageBackdropImageAlt.SourceUrl = "";
             PageBackdropLayer.Visibility = Visibility.Collapsed;
             _heroVisualInitialized = false;
             _currentHeroBackdropUrl = "";
@@ -745,9 +670,10 @@ public sealed partial class HomeView : UserControl
             HeroImage.SourceUrl = backdropUrl;
             HeroImage.Opacity = 1;
             HeroImageAlt.Opacity = 0;
+
             PageBackdropImage.SourceUrl = backdropUrl;
-            PageBackdropImage.Opacity = 0.30;
-            PageBackdropImageAlt.Opacity = 0;
+            PageBackdropImage.Opacity = 0.22;
+
             _heroShowingPrimary = true;
             _heroVisualInitialized = true;
             _currentHeroBackdropUrl = backdropUrl;
@@ -766,15 +692,10 @@ public sealed partial class HomeView : UserControl
 
         var incomingHero = _heroShowingPrimary ? HeroImageAlt : HeroImage;
         var outgoingHero = _heroShowingPrimary ? HeroImage : HeroImageAlt;
-        var incomingBackdrop = _heroShowingPrimary ? PageBackdropImageAlt : PageBackdropImage;
-        var outgoingBackdrop = _heroShowingPrimary ? PageBackdropImage : PageBackdropImageAlt;
 
         incomingHero.SourceUrl = backdropUrl;
-        incomingBackdrop.SourceUrl = backdropUrl;
         incomingHero.Opacity = 0;
-        incomingBackdrop.Opacity = 0;
         outgoingHero.Opacity = 1;
-        outgoingBackdrop.Opacity = 0.30;
 
         var easing = new CubicEase
         {
@@ -797,26 +718,16 @@ public sealed partial class HomeView : UserControl
             0,
             760,
             easing);
-        AddOpacityAnimation(
-            storyboard,
-            incomingBackdrop,
-            0,
-            0.30,
-            920,
-            easing);
-        AddOpacityAnimation(
-            storyboard,
-            outgoingBackdrop,
-            0.30,
-            0,
-            920,
-            easing);
 
         _heroShowingPrimary = !_heroShowingPrimary;
         _currentHeroBackdropUrl = backdropUrl;
         _heroTransitionStoryboard = storyboard;
         storyboard.Completed += (_, _) =>
         {
+            // Update the subtle ambient copy only after the Hero crossfade.
+            // This avoids running a second full-screen crossfade in parallel.
+            PageBackdropImage.SourceUrl = backdropUrl;
+            PageBackdropImage.Opacity = 0.22;
             _heroTransitionStoryboard = null;
         };
         storyboard.Begin();
