@@ -325,8 +325,7 @@
                             <LinearGradientBrush StartPoint="0,0"
                                                  EndPoint="0,1">
                                 <GradientStop Color="#00000000" Offset="0"/>
-                                <GradientStop Color="#22FFFFFF" Offset="0.24"/>
-                                <GradientStop Color="#92FFFFFF" Offset="0.60"/>
+                                <GradientStop Color="{ThemeResource AsterHeroFadeMidColor}" Offset="0.42"/>
                                 <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="0.92"/>
                                 <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="1"/>
                             </LinearGradientBrush>
@@ -341,29 +340,24 @@
                         <TextBlock x:Name="WelcomeBlock"
                                    Visibility="Collapsed"/>
 
-                        <Border HorizontalAlignment="Center"
-                                Padding="12,4"
-                                CornerRadius="12"
-                                Background="#16000000">
-                            <TextBlock x:Name="HeroTitleBlock"
-                                       Text="AsterPlay"
-                                       Foreground="White"
-                                       FontSize="44"
-                                       FontWeight="SemiBold"
-                                       TextAlignment="Center"
-                                       HorizontalAlignment="Center"
-                                       TextWrapping="Wrap"/>
-                        </Border>
+                        <TextBlock x:Name="HeroTitleBlock"
+                                   Text="AsterPlay"
+                                   Foreground="White"
+                                   FontSize="44"
+                                   FontWeight="SemiBold"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   TextWrapping="Wrap"/>
 
                         <TextBlock x:Name="HeroMetaBlock"
-                                   Foreground="#DD111318"
+                                   Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                    FontSize="15"
                                    FontWeight="SemiBold"
                                    TextAlignment="Center"
                                    HorizontalAlignment="Center"/>
 
                         <TextBlock x:Name="HeroOverviewBlock"
-                                   Foreground="#E6111318"
+                                   Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                    FontSize="15"
                                    LineHeight="23"
                                    MaxWidth="760"
