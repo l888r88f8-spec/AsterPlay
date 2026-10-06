@@ -5,10 +5,6 @@
     xmlns:lg="using:LiquidGlassWinUI"
     Title="AsterPlay">
 
-    <Window.SystemBackdrop>
-        <MicaBackdrop Kind="BaseAlt"/>
-    </Window.SystemBackdrop>
-
     <Grid x:Name="RootGrid"
           Background="{ThemeResource AsterPageBackgroundBrush}"
           Loaded="RootGrid_Loaded">
@@ -182,6 +178,18 @@
         </Grid>
 
 
+        <Grid x:Name="StartupCoverLayer"
+              Grid.RowSpan="2"
+              Panel.ZIndex="10000"
+              Background="{ThemeResource AsterPageBackgroundBrush}"
+              Visibility="Visible">
+            <Image Source="ms-appx:///Assets/AsterPlay.AppIcon.png"
+                   Width="144"
+                   Height="144"
+                   Stretch="Uniform"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"/>
+        </Grid>
 
     </Grid>
 </Window>
