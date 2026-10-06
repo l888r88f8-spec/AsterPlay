@@ -152,9 +152,9 @@
                 PointerExited="InteractiveOverlay_PointerExited">
             <Border.Background>
                 <AcrylicBrush TintColor="#B9D7FF"
-                                  TintOpacity="0.100"
-                                  TintLuminosityOpacity="0.52"
-                                  FallbackColor="#D9B9D7FF"/>
+                                  TintOpacity="0.065"
+                                  TintLuminosityOpacity="0.34"
+                                  FallbackColor="#B9B9D7FF"/>
             </Border.Background>
 
             <StackPanel Spacing="12">
