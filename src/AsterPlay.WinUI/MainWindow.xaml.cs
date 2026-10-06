@@ -25,6 +25,7 @@ public sealed partial class MainWindow : Window
     private bool _startupCoverLogoReady;
     private bool _startupFirstFrameObserved;
     private bool _startupNativeReleaseScheduled;
+    private int _startupNativeReleaseFramesRemaining;
     private bool _nativeStartupPaintActive = true;
     private readonly SubclassProc _startupSubclassProc;
     private IntPtr _nativeStartupBrush;
@@ -293,32 +294,39 @@ public sealed partial class MainWindow : Window
         }
 
         _startupNativeReleaseScheduled = true;
+        _startupNativeReleaseFramesRemaining = 3;
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering +=
             StartupNativeRelease_Rendering;
 
         StartupDiagnostics.Write(
-            "XAML startup cover ready; waiting one frame before releasing native startup painter");
+            "XAML startup cover ready; holding native painter for 3 stable compositor frames");
     }
 
     private void StartupNativeRelease_Rendering(object? sender, object e)
     {
+        if (_startupNativeReleaseFramesRemaining > 1)
+        {
+            _startupNativeReleaseFramesRemaining--;
+            return;
+        }
+
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -=
             StartupNativeRelease_Rendering;
         _startupNativeReleaseScheduled = false;
+        _startupNativeReleaseFramesRemaining = 0;
 
         var flushBefore = DwmFlush();
         StartupDiagnostics.Write(
-            $"XAML startup cover composed; pre-native-release DwmFlush={flushBefore}");
+            $"XAML startup cover stable for 3 frames; pre-native-release DwmFlush={flushBefore}");
 
         ReleaseNativeStartupSurface();
 
-        // Do not force a synchronous WM_PAINT/RedrawWindow here. The XAML
-        // startup cover has already been composed; forcing a native repaint at
-        // this exact handoff creates the visible hitch users perceive as a
-        // dropped frame.
+        // Do not force a synchronous WM_PAINT here. The exact same PNG has
+        // already been present in XAML for several compositor frames, so the
+        // handoff should no longer expose a one-frame icon blink.
         var flushAfter = DwmFlush();
         StartupDiagnostics.Write(
-            $"Native startup painter released; XAML cover owns MainWindow; DwmFlush={flushAfter}");
+            $"Native startup painter released after stable XAML handoff; DwmFlush={flushAfter}");
     }
 
     private async Task ResolveStartupStateAsync()
@@ -479,7 +487,7 @@ public sealed partial class MainWindow : Window
         var fade = compositor.CreateScalarKeyFrameAnimation();
         fade.InsertKeyFrame(0.0f, 1.0f);
         fade.InsertKeyFrame(1.0f, 0.0f, easing);
-        fade.Duration = TimeSpan.FromMilliseconds(320);
+        fade.Duration = TimeSpan.FromMilliseconds(640);
 
         var completion = new TaskCompletionSource<bool>(
             TaskCreationOptions.RunContinuationsAsynchronously);
@@ -492,7 +500,7 @@ public sealed partial class MainWindow : Window
         batch.End();
 
         StartupDiagnostics.Write(
-            "DismissStartupCoverAsync: 320 ms compositor fade started");
+            "DismissStartupCoverAsync: 640 ms compositor fade started");
 
         await completion.Task;
 
