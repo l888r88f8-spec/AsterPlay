@@ -226,17 +226,12 @@ public sealed partial class MainWindow : Window
         if (_uiSettings is not null)
             _uiSettings.ColorValuesChanged -= SystemColorValuesChanged;
 
-        LiquidDockSurface.SourceElement = null;
     }
 
     private void RootGrid_Loaded(object sender, RoutedEventArgs e)
     {
         StartupDiagnostics.Write(
             $"RootGrid.Loaded; startupScheduled={_startupResolutionScheduled}, section={_currentSection}");
-
-        // Sample PageHost only. The dock lives in a sibling layer, so the
-        // liquid-glass capture can never recursively capture itself.
-        LiquidDockSurface.SourceElement = PageHost;
 
         if (_startupResolutionScheduled)
             return;
@@ -255,6 +250,12 @@ public sealed partial class MainWindow : Window
 
         StartupDiagnostics.Write(
             "First MainWindow XAML frame composed behind native splash");
+
+        var liquidGlassError = LiquidGlassWinUI.LiquidGlassBrush.LastError;
+        StartupDiagnostics.Write(
+            string.IsNullOrWhiteSpace(liquidGlassError)
+                ? "LiquidGlass: compositor effect connected with no reported error"
+                : $"LiquidGlass: ERROR {liquidGlassError}");
 
         DispatcherQueue.TryEnqueue(
             Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
@@ -804,9 +805,8 @@ public sealed partial class MainWindow : Window
 
     private void SetActiveNavigation(Button active)
     {
-        // The dock is rendered by LiveLiquidGlassSurface over the live PageHost
-        // capture. Keep navigation button fills transparent so the refraction
-        // remains visible; selection is communicated only through foreground.
+        // Keep navigation button fills transparent so the compositor-native
+        // LiquidGlassBrush remains fully visible. Selection is foreground-only.
         var inactiveBackground =
             new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
         var selectedBackground =
