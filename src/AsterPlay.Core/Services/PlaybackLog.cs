@@ -6,16 +6,15 @@ public static class PlaybackLog
 {
     private static readonly object Sync = new();
     private static readonly string DirectoryPath =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "AsterPlay");
 
     private static readonly string LogFilePath =
-        Path.Combine(DirectoryPath, "playback.log");
-
-    private static readonly string PreviousLogFilePath =
-        Path.Combine(DirectoryPath, "playback.previous.log");
+        Path.Combine(DirectoryPath, "AsterPlay.log");
 
     private const long MaxLogBytes = 8L * 1024 * 1024;
+    private const long TrimTargetBytes = 4L * 1024 * 1024;
 
     private static readonly string SessionStartedAt =
         DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
@@ -29,11 +28,13 @@ public static class PlaybackLog
         try
         {
             Directory.CreateDirectory(DirectoryPath);
-            var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{area}] {Redact(message)}{Environment.NewLine}";
+            var line =
+                $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{area}] " +
+                $"{Redact(message)}{Environment.NewLine}";
 
             lock (Sync)
             {
-                RotateIfNeeded();
+                TrimIfNeeded();
 
                 if (!_sessionHeaderWritten)
                 {
@@ -48,11 +49,11 @@ public static class PlaybackLog
         }
         catch
         {
-            // Diagnostics must never break playback.
+            // Diagnostics must never affect application behavior.
         }
     }
 
-    private static void RotateIfNeeded()
+    private static void TrimIfNeeded()
     {
         try
         {
@@ -62,20 +63,42 @@ public static class PlaybackLog
                 return;
             }
 
-            if (File.Exists(PreviousLogFilePath))
-                File.Delete(PreviousLogFilePath);
+            var text = File.ReadAllText(LogFilePath);
+            if (text.Length == 0)
+                return;
 
-            File.Move(LogFilePath, PreviousLogFilePath);
-            _sessionHeaderWritten = false;
+            // Keep roughly the newest half of the log in the same file so
+            // AsterPlay always has one active runtime log: AsterPlay.log.
+            var approximateKeepChars = (int)Math.Min(
+                text.Length,
+                TrimTargetBytes);
+
+            var startIndex = Math.Max(0, text.Length - approximateKeepChars);
+            if (startIndex > 0)
+            {
+                var nextLine = text.IndexOf('\n', startIndex);
+                if (nextLine >= 0 && nextLine + 1 < text.Length)
+                    startIndex = nextLine + 1;
+            }
+
+            var retained = text[startIndex..];
+            var marker =
+                $"========== AsterPlay.log trimmed {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}; older entries removed =========={Environment.NewLine}";
+
+            File.WriteAllText(
+                LogFilePath,
+                marker + retained);
         }
         catch
         {
-            // Rotation is best-effort; diagnostics must never affect playback.
+            // Trimming is best-effort; diagnostics must never affect the app.
         }
     }
 
     public static void Error(string area, Exception ex) =>
-        Write(area, $"{ex.GetType().Name}: {ex.Message}{Environment.NewLine}{ex.StackTrace}");
+        Write(
+            area,
+            $"{ex.GetType().Name}: {ex.Message}{Environment.NewLine}{ex.StackTrace}");
 
     public static string Redact(string value)
     {
