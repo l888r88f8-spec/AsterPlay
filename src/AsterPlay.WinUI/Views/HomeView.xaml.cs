@@ -454,45 +454,65 @@ public sealed partial class HomeView : UserControl
             return;
         }
 
-        var currentUrl = NormalizeServerUrl(_client.ServerUrl);
-        var flyout = new MenuFlyout
+        if (ServerChooserPanel.Visibility == Visibility.Visible)
         {
-            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft
-        };
-
-        foreach (var profile in servers)
-        {
-            var isCurrent = string.Equals(
-                NormalizeServerUrl(profile.Url),
-                currentUrl,
-                StringComparison.OrdinalIgnoreCase);
-
-            var item = new MenuFlyoutItem
-            {
-                Text = isCurrent
-                    ? $"●  {profile.DisplayName}"
-                    : $"    {profile.DisplayName}",
-                Tag = profile,
-                IsEnabled = !isCurrent
-            };
-            item.Click += ServerChoice_Click;
-            flyout.Items.Add(item);
+            CloseServerChooser();
+            return;
         }
 
-        flyout.ShowAt(ServerPillButton);
+        var currentUrl = NormalizeServerUrl(_client.ServerUrl);
+        ServerChooserList.ItemsSource = servers
+            .Select(profile =>
+            {
+                var isCurrent = string.Equals(
+                    NormalizeServerUrl(profile.Url),
+                    currentUrl,
+                    StringComparison.OrdinalIgnoreCase);
+
+                return new ServerChooserItem(
+                    profile,
+                    profile.DisplayName,
+                    isCurrent ? "✓" : "");
+            })
+            .ToArray();
+
+        ServerChooserPanel.Visibility = Visibility.Visible;
+        ServerChevronTransform.Angle = 180;
     }
 
     private void ServerChoice_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuFlyoutItem { Tag: ServerProfile profile })
-            ServerSwitchRequested?.Invoke(this, profile);
+        if (sender is not Button { Tag: ServerProfile profile })
+            return;
+
+        CloseServerChooser();
+
+        var currentUrl = NormalizeServerUrl(_client.ServerUrl);
+        if (string.Equals(
+                NormalizeServerUrl(profile.Url),
+                currentUrl,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        ServerSwitchRequested?.Invoke(this, profile);
+    }
+
+    private void CloseServerChooser()
+    {
+        ServerChooserPanel.Visibility = Visibility.Collapsed;
+        ServerChevronTransform.Angle = 0;
     }
 
     private static string NormalizeServerUrl(string? value) =>
         (value ?? "").Trim().TrimEnd('/');
 
-    private void Search_Click(object sender, RoutedEventArgs e) =>
+    private void Search_Click(object sender, RoutedEventArgs e)
+    {
+        CloseServerChooser();
         SearchRequested?.Invoke(this, EventArgs.Empty);
+    }
 
     private async Task RefreshServerDisplayNameAsync()
     {
@@ -1294,6 +1314,11 @@ public sealed partial class HomeView : UserControl
     private static bool IsVisibleLibrary(EmbyItem view) =>
         !new[] { "boxsets", "playlists", "folders", "livetv", "homevideos" }
             .Contains((view.CollectionType ?? "").ToLowerInvariant());
+
+    private sealed record ServerChooserItem(
+        ServerProfile Profile,
+        string DisplayName,
+        string CurrentMark);
 
     private sealed record HomeLibraryTile(
         EmbyItem Item,
