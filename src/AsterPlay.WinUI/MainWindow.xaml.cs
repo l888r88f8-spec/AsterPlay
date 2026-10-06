@@ -257,9 +257,22 @@ public sealed partial class MainWindow : Window
                 ? "LiquidGlass: compositor effect connected with no reported error"
                 : $"LiquidGlass: ERROR {liquidGlassError}");
 
+        _ = LogLiquidGlassStatusAfterDelayAsync();
+
         DispatcherQueue.TryEnqueue(
             Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
             async () => await ResolveStartupStateAsync());
+    }
+
+    private static async Task LogLiquidGlassStatusAfterDelayAsync()
+    {
+        await Task.Delay(1500);
+
+        var error = LiquidGlassWinUI.LiquidGlassBrush.LastError;
+        StartupDiagnostics.Write(
+            string.IsNullOrWhiteSpace(error)
+                ? "LiquidGlass: delayed compositor check has no reported error"
+                : $"LiquidGlass: ERROR delayed compositor check: {error}");
     }
 
     private async Task ResolveStartupStateAsync()
