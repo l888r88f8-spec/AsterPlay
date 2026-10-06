@@ -21,6 +21,10 @@ public sealed partial class MainWindow : Window
     private bool _startupResolutionCompleted;
     private bool _startupRevealScheduled;
     private bool _startupVisualReadyRaised;
+    private bool _startupCoverLogoReady;
+    private bool _startupFirstFrameObserved;
+    private bool _startupUncloakScheduled;
+    private bool _startupWindowCloaked;
     private RectInt32 _startupTargetBounds;
     private bool _authenticated;
     private string _currentSection = "home-shell";
@@ -31,6 +35,7 @@ public sealed partial class MainWindow : Window
     private const uint WmMouseWheel = 0x020A;
     private const int WhMouseLl = 14;
     private const int DwmwaExtendedFrameBounds = 9;
+    private const int DwmwaCloak = 13;
 
 
     public MainWindow()
@@ -41,6 +46,13 @@ public sealed partial class MainWindow : Window
         StartupDiagnostics.Write("MainWindow constructor: after InitializeComponent");
 
         _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+
+        // WinUI 3 desktop Window is an HWND. Activate() makes that HWND visible
+        // before the first XAML frame is guaranteed to exist, which exposes the
+        // default white client surface. Cloak it at DWM level first: WinUI can
+        // still initialize and compose while the user cannot see the blank HWND.
+        SetStartupWindowCloaked(true);
+
         _lowLevelMouseHookProc = LowLevelMouseHook;
 
         _lowLevelMouseHook = SetWindowsHookEx(
@@ -197,7 +209,11 @@ public sealed partial class MainWindow : Window
         }
 
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= FirstFrame_Rendering;
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= StartupCoverReady_Rendering;
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= StartupReveal_Rendering;
+
+        if (_startupWindowCloaked)
+            SetStartupWindowCloaked(false);
 
         if (_uiSettings is not null)
             _uiSettings.ColorValuesChanged -= SystemColorValuesChanged;
@@ -222,11 +238,74 @@ public sealed partial class MainWindow : Window
     private void FirstFrame_Rendering(object? sender, object e)
     {
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= FirstFrame_Rendering;
-        StartupDiagnostics.Write("First home shell frame rendered");
+        _startupFirstFrameObserved = true;
+
+        StartupDiagnostics.Write(
+            $"First MainWindow XAML frame composed while cloaked; logoReady={_startupCoverLogoReady}");
+
+        TryScheduleStartupUncloak();
 
         DispatcherQueue.TryEnqueue(
             Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
             async () => await ResolveStartupStateAsync());
+    }
+
+    private void StartupCoverLogoImage_ImageOpened(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _startupCoverLogoReady = true;
+        StartupDiagnostics.Write(
+            $"Startup cover PNG decoded; firstFrameObserved={_startupFirstFrameObserved}");
+
+        TryScheduleStartupUncloak();
+    }
+
+    private void StartupCoverLogoImage_ImageFailed(
+        object sender,
+        ExceptionRoutedEventArgs e)
+    {
+        // A broken logo must never leave the application permanently invisible.
+        _startupCoverLogoReady = true;
+        StartupDiagnostics.Write(
+            $"Startup cover PNG decode failed; continuing with background only: {e.ErrorMessage}");
+
+        TryScheduleStartupUncloak();
+    }
+
+    private void TryScheduleStartupUncloak()
+    {
+        if (!_startupWindowCloaked ||
+            !_startupFirstFrameObserved ||
+            !_startupCoverLogoReady ||
+            _startupUncloakScheduled)
+        {
+            return;
+        }
+
+        _startupUncloakScheduled = true;
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering +=
+            StartupCoverReady_Rendering;
+
+        StartupDiagnostics.Write(
+            "Startup cover ready; waiting one composed frame before DWM uncloak");
+    }
+
+    private void StartupCoverReady_Rendering(object? sender, object e)
+    {
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -=
+            StartupCoverReady_Rendering;
+        _startupUncloakScheduled = false;
+
+        var flushBefore = DwmFlush();
+        StartupDiagnostics.Write(
+            $"Startup cover composed while cloaked; pre-uncloak DwmFlush={flushBefore}");
+
+        SetStartupWindowCloaked(false);
+
+        var flushAfter = DwmFlush();
+        StartupDiagnostics.Write(
+            $"MainWindow uncloaked with startup cover already composed; post-uncloak DwmFlush={flushAfter}");
     }
 
     private async Task ResolveStartupStateAsync()
@@ -394,6 +473,22 @@ public sealed partial class MainWindow : Window
             Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
             () => StartupDiagnostics.Write(
                 "DismissStartupCoverAsync: post-reveal dispatcher responsive"));
+    }
+
+    private void SetStartupWindowCloaked(bool cloaked)
+    {
+        var value = cloaked ? 1 : 0;
+        var result = DwmSetWindowAttribute(
+            _hwnd,
+            DwmwaCloak,
+            ref value,
+            Marshal.SizeOf<int>());
+
+        if (result == 0)
+            _startupWindowCloaked = cloaked;
+
+        StartupDiagnostics.Write(
+            $"DWM window cloak set={cloaked}; result={result}");
     }
 
     internal void ForceDismissStartupCover()
@@ -954,6 +1049,13 @@ public sealed partial class MainWindow : Window
         IntPtr hWnd,
         int attribute,
         out NativeRect value,
+        int size);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(
+        IntPtr hWnd,
+        int attribute,
+        ref int value,
         int size);
 
     [DllImport("dwmapi.dll")]
