@@ -400,6 +400,40 @@ public sealed partial class MainWindow : Window
             "CompleteStartupWindowRevealAsync: covered MainWindow handoff ready");
     }
 
+    internal async Task DismissStartupCoverAsync()
+    {
+        if (StartupCoverLayer.Visibility != Visibility.Visible)
+            return;
+
+        // The external splash has just been closed. Keep the identical cover
+        // inside MainWindow visible for a couple of real, unoccluded frames so
+        // the first pixels the user sees from this HWND are never the default
+        // blank client surface.
+        await WaitForRenderingFramesAsync(2);
+
+        var coverDwmResult = DwmFlush();
+        StartupDiagnostics.Write(
+            $"DismissStartupCoverAsync: internal cover presented; DwmFlush={coverDwmResult}");
+
+        StartupCoverLayer.IsHitTestVisible = false;
+        StartupCoverLayer.Opacity = 0;
+
+        StartupDiagnostics.Write(
+            "DismissStartupCoverAsync: internal cover opacity set to 0");
+
+        // Opacity removal does not invalidate the page layout. HomeView has
+        // already completed layout and image decode underneath this overlay.
+        await WaitForRenderingFramesAsync(2);
+
+        var homeDwmResult = DwmFlush();
+        StartupDiagnostics.Write(
+            $"DismissStartupCoverAsync: home presented; DwmFlush={homeDwmResult}");
+
+        StartupCoverLayer.Visibility = Visibility.Collapsed;
+        StartupDiagnostics.Write(
+            "DismissStartupCoverAsync: internal cover collapsed");
+    }
+
     private Task WaitForDispatcherIdleAsync()
     {
         var completion = new TaskCompletionSource<bool>(
