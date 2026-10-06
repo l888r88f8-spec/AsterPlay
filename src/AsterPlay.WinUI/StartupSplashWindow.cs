@@ -147,8 +147,16 @@ internal sealed class StartupSplashWindow : Window
     {
         // Server/home content is already ready. The splash stays top-most until
         // the loaded MainWindow is positioned and activated underneath it.
+        StartupDiagnostics.Write(
+            "StartupSplashWindow.Complete: revealing MainWindow behind splash");
+
         mainWindow.CompleteStartupWindowReveal();
+
+        StartupDiagnostics.Write(
+            "StartupSplashWindow.Complete: MainWindow activated; closing splash");
         Close();
+        StartupDiagnostics.Write(
+            "StartupSplashWindow.Complete: splash Close returned");
     }
 
     [DllImport(
