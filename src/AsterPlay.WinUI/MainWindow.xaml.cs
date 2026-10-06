@@ -898,8 +898,8 @@ public sealed partial class MainWindow : Window
     private void SetActiveNavigation(Button active)
     {
         // The dock floats over artwork and other highly variable backgrounds.
-        // Keep its labels bright and stable instead of inheriting page-theme
-        // text colors, while the dark glass tint supplies the contrast surface.
+        // Its pale glass substrate supplies a stable contrast surface, so the
+        // labels can stay dark and the selected destination can use blue.
         var inactiveBackground =
             new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
         var selectedBackground =
