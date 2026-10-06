@@ -2,7 +2,6 @@
     x:Class="AsterPlay.WinUI.Views.PlayerView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:lg="using:LiquidGlassWinUI"
     xmlns:controls="using:AsterPlay.WinUI.Controls"
     Loaded="PlayerView_Loaded"
     Unloaded="PlayerView_Unloaded"
@@ -152,18 +151,10 @@
                 PointerEntered="InteractiveOverlay_PointerEntered"
                 PointerExited="InteractiveOverlay_PointerExited">
             <Border.Background>
-                <lg:LiquidGlassBrush BlurAmount="1.8"
-                                     BloomAmount="0.16"
-                                     RefThickness="36"
-                                     RefFactor="2.1"
-                                     RefDispersion="4.5"
-                                     GlareFactor="60"
-                                     TintA="0.10"
-                                     TintR="185"
-                                     TintG="215"
-                                     TintB="255"
-                                     ShapeRadius="0.94"
-                                     ShapeRoundness="3.8"/>
+                <AcrylicBrush TintColor="#B9D7FF"
+                                  TintOpacity="0.100"
+                                  TintLuminosityOpacity="0.52"
+                                  FallbackColor="#D9B9D7FF"/>
             </Border.Background>
 
             <StackPanel Spacing="12">
