@@ -53,27 +53,58 @@ public partial class App : Application
             _splashWindow.StartPulse();
 
             StartupDiagnostics.Write(
-                "OnLaunched: icon-only splash activated");
+                "OnLaunched: icon-only splash activated; waiting for its first frame");
 
+            // Do not construct MainWindow on this same turn. WinUI cannot paint
+            // the splash until the dispatcher returns to the compositor.
+            Microsoft.UI.Xaml.Media.CompositionTarget.Rendering +=
+                Splash_FirstFrameRendering;
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.WriteException("OnLaunched", ex);
+            _splashWindow?.Close();
+            _splashWindow = null;
+            throw;
+        }
+    }
+
+    private void Splash_FirstFrameRendering(
+        object? sender,
+        object e)
+    {
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -=
+            Splash_FirstFrameRendering;
+
+        DispatcherQueue.TryEnqueue(
+            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+            InitializeMainWindow);
+    }
+
+    private void InitializeMainWindow()
+    {
+        try
+        {
             using (StartupDiagnostics.Measure("MainWindow constructor"))
                 _window = new MainWindow();
 
             _window.StartupVisualReady +=
                 MainWindow_StartupVisualReady;
 
+            // MainWindow is positioned off-screen before activation, so it can
+            // run Loaded/Rendering and resolve startup state without flashing
+            // a white client area on the user's desktop.
             using (StartupDiagnostics.Measure("MainWindow.Activate"))
                 _window.Activate();
 
-            // MainWindow is fully transparent while it initializes. Re-activate
-            // the small always-on-top splash so only the icon is visible.
-            _splashWindow.Activate();
+            _splashWindow?.Activate();
 
             StartupDiagnostics.Write(
-                "OnLaunched: hidden MainWindow activated");
+                "OnLaunched: off-screen MainWindow activated behind splash");
         }
         catch (Exception ex)
         {
-            StartupDiagnostics.WriteException("OnLaunched", ex);
+            StartupDiagnostics.WriteException("InitializeMainWindow", ex);
 
             _splashWindow?.Close();
             _splashWindow = null;
