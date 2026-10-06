@@ -156,7 +156,7 @@
         <!-- Reference-style fixed controls: a compact frosted server capsule
              on the left and a circular search control on the right. -->
         <Grid x:Name="FloatingTopControls"
-              Margin="34,30,116,0"
+              Margin="34,58,34,0"
               VerticalAlignment="Top"
               Canvas.ZIndex="100">
             <Grid.ColumnDefinitions>
@@ -271,7 +271,7 @@
         <Border x:Name="ServerChooserPanel"
                 Width="370"
                 MaxHeight="430"
-                Margin="34,94,0,0"
+                Margin="34,122,0,0"
                 Padding="16,10"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
