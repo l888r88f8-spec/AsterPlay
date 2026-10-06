@@ -81,7 +81,6 @@ if (Test-Path $runtimeSource) {
 $requiredFiles = @(
     "AsterPlay.exe",
     "AsterPlay.Core.dll",
-    "CustomEffectRuntimeNative.dll",
     "libmpv-2.dll",
     "coreclr.dll",
     "hostfxr.dll",
