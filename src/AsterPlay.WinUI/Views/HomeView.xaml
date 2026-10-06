@@ -207,7 +207,6 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="34"/>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="18"/>
                     </Grid.ColumnDefinitions>
 
                     <Border Width="34"
@@ -215,17 +214,22 @@
                             CornerRadius="9"
                             BorderBrush="#66FFFFFF"
                             BorderThickness="1"
-                            Background="#42000000">
-                        <FontIcon Glyph="&#xE7F8;"
-                                  Foreground="White"
-                                  FontSize="15"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"/>
+                            Background="#2C000000">
+                        <Grid>
+                            <FontIcon Glyph="&#xE77B;"
+                                      Foreground="#F5FFFFFF"
+                                      FontSize="16"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
+                            <controls:CachedImage x:Name="CurrentUserAvatarImage"
+                                                  LazyLoadingEnabled="False"
+                                                  Stretch="UniformToFill"/>
+                        </Grid>
                     </Border>
 
                     <TextBlock x:Name="ServerNameBlock"
                                Grid.Column="1"
-                               Margin="11,0,10,0"
+                               Margin="11,0,4,0"
                                Text="服务器"
                                Foreground="#EA101217"
                                FontSize="16"
@@ -233,19 +237,6 @@
                                TextTrimming="CharacterEllipsis"
                                MaxWidth="190"
                                VerticalAlignment="Center"/>
-
-                    <FontIcon Grid.Column="2"
-                              Glyph="&#xE70D;"
-                              Foreground="#B8101217"
-                              FontSize="11"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Center"
-                              RenderTransformOrigin="0.5,0.5">
-                        <FontIcon.RenderTransform>
-                            <RotateTransform x:Name="ServerChevronTransform"
-                                             Angle="0"/>
-                        </FontIcon.RenderTransform>
-                    </FontIcon>
                 </Grid>
             </Button>
 
