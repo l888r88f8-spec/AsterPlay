@@ -89,10 +89,12 @@
                                Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                FontSize="19"
                                FontWeight="SemiBold"/>
-                    <TextBlock Text="名称"
+                    <TextBlock Text="名称（可选）"
                                Foreground="{ThemeResource AsterSecondaryTextBrush}"
                                Margin="0,8,0,0"/>
-                    <TextBox x:Name="NameBox" Height="40"/>
+                    <TextBox x:Name="NameBox"
+                             Height="40"
+                             PlaceholderText="留空时自动使用服务器名称"/>
                     <TextBlock Text="服务器地址"
                                Foreground="{ThemeResource AsterSecondaryTextBrush}"
                                Margin="0,8,0,0"/>
