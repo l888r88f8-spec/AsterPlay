@@ -903,11 +903,11 @@ public sealed partial class MainWindow : Window
         var inactiveBackground =
             new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
         var selectedBackground =
-            new SolidColorBrush(Windows.UI.Color.FromArgb(92, 58, 121, 216));
+            new SolidColorBrush(Windows.UI.Color.FromArgb(26, 255, 255, 255));
         var inactiveForeground =
-            new SolidColorBrush(Windows.UI.Color.FromArgb(242, 255, 255, 255));
+            new SolidColorBrush(Windows.UI.Color.FromArgb(232, 16, 18, 23));
         var selectedForeground =
-            new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 255, 255));
+            new SolidColorBrush(Windows.UI.Color.FromArgb(255, 35, 120, 245));
 
         foreach (var button in new[] { HomeButton, LibraryButton, ServersButton, SettingsButton })
         {
