@@ -341,24 +341,29 @@
                         <TextBlock x:Name="WelcomeBlock"
                                    Visibility="Collapsed"/>
 
-                        <TextBlock x:Name="HeroTitleBlock"
-                                   Text="AsterPlay"
-                                   Foreground="White"
-                                   FontSize="44"
-                                   FontWeight="SemiBold"
-                                   TextAlignment="Center"
-                                   HorizontalAlignment="Center"
-                                   TextWrapping="Wrap"/>
+                        <Border HorizontalAlignment="Center"
+                                Padding="12,4"
+                                CornerRadius="12"
+                                Background="#16000000">
+                            <TextBlock x:Name="HeroTitleBlock"
+                                       Text="AsterPlay"
+                                       Foreground="White"
+                                       FontSize="44"
+                                       FontWeight="SemiBold"
+                                       TextAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       TextWrapping="Wrap"/>
+                        </Border>
 
                         <TextBlock x:Name="HeroMetaBlock"
-                                   Foreground="#F5FFFFFF"
+                                   Foreground="#DD111318"
                                    FontSize="15"
                                    FontWeight="SemiBold"
                                    TextAlignment="Center"
                                    HorizontalAlignment="Center"/>
 
                         <TextBlock x:Name="HeroOverviewBlock"
-                                   Foreground="#F0FFFFFF"
+                                   Foreground="#E6111318"
                                    FontSize="15"
                                    LineHeight="23"
                                    MaxWidth="760"
