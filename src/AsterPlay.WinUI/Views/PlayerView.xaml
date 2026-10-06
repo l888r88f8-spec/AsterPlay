@@ -18,7 +18,7 @@
             <Setter Property="CornerRadius" Value="15"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Background" Value="#22FFFFFF"/>
-            <Setter Property="BorderBrush" Value="#24FFFFFF"/>
+            <Setter Property="BorderBrush" Value="{StaticResource AsterGlassEdgeBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
 
@@ -29,7 +29,7 @@
             <Setter Property="CornerRadius" Value="15"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Background" Value="#22FFFFFF"/>
-            <Setter Property="BorderBrush" Value="#24FFFFFF"/>
+            <Setter Property="BorderBrush" Value="{StaticResource AsterGlassEdgeBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
     </UserControl.Resources>
