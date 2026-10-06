@@ -170,7 +170,7 @@
         <Grid x:Name="FloatingTopControls"
               Margin="34,30,172,0"
               VerticalAlignment="Top"
-              Canvas.ZIndex="80">
+              Canvas.ZIndex="100">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
@@ -280,6 +280,12 @@
                           FontSize="22"/>
             </Button>
         </Grid>
+
+        <Grid x:Name="ServerChooserDismissLayer"
+              Background="#01000000"
+              Visibility="Collapsed"
+              Tapped="ServerChooserDismiss_Tapped"
+              Canvas.ZIndex="85"/>
 
         <!-- Large custom server chooser matching the reference instead of
              WinUI's compact system MenuFlyout. -->
