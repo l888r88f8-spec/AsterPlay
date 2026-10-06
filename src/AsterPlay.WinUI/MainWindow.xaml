@@ -31,7 +31,7 @@
 
         <Grid x:Name="AppTitleBar"
               Grid.Row="0"
-              Opacity="0"
+              Opacity="1"
               Background="{ThemeResource AsterTitleBarBrush}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="220"/>
@@ -71,7 +71,7 @@
 
         <Grid x:Name="ContentLayer"
               Grid.Row="1"
-              Opacity="0">
+              Opacity="1">
             <ContentControl x:Name="PageHost"
                             HorizontalContentAlignment="Stretch"
                             VerticalContentAlignment="Stretch"/>
@@ -181,30 +181,7 @@
             </Border>
         </Grid>
 
-        <Grid x:Name="SplashLayer"
-              Grid.Row="0"
-              Grid.RowSpan="2"
-              Background="Transparent"
-              IsHitTestVisible="True"
-              Canvas.ZIndex="2000">
-            <!-- Keep startup deliberately clean: no glass plate, circle, border,
-                 veil or backdrop rectangle. Only the real AsterPlay app icon is
-                 visible until the target page is ready. -->
-            <Image x:Name="SplashLogo"
-                   Width="132"
-                   Height="132"
-                   Source="ms-appx:///Assets/AsterPlay.AppIcon.png"
-                   Stretch="Uniform"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   RenderTransformOrigin="0.5,0.5">
-                <Image.RenderTransform>
-                    <ScaleTransform x:Name="SplashLogoScale"
-                                    ScaleX="1"
-                                    ScaleY="1"/>
-                </Image.RenderTransform>
-            </Image>
-        </Grid>
+
 
     </Grid>
 </Window>
