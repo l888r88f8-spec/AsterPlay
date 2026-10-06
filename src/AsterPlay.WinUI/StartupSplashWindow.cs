@@ -143,20 +143,20 @@ internal sealed class StartupSplashWindow : Window
         VisualReady?.Invoke(this, EventArgs.Empty);
     }
 
-    internal void Complete(MainWindow mainWindow)
+    internal async Task CompleteAsync(MainWindow mainWindow)
     {
-        // Server/home content is already ready. The splash stays top-most until
-        // the loaded MainWindow is positioned and activated underneath it.
+        // Keep the splash top-most while the real window moves on-screen,
+        // activates, drains pending UI work and completes a DWM-presented frame.
         StartupDiagnostics.Write(
-            "StartupSplashWindow.Complete: revealing MainWindow behind splash");
+            "StartupSplashWindow.CompleteAsync: revealing MainWindow behind splash");
 
-        mainWindow.CompleteStartupWindowReveal();
+        await mainWindow.CompleteStartupWindowRevealAsync();
 
         StartupDiagnostics.Write(
-            "StartupSplashWindow.Complete: MainWindow activated; closing splash");
+            "StartupSplashWindow.CompleteAsync: visible MainWindow ready; closing splash");
         Close();
         StartupDiagnostics.Write(
-            "StartupSplashWindow.Complete: splash Close returned");
+            "StartupSplashWindow.CompleteAsync: splash Close returned");
     }
 
     [DllImport(
