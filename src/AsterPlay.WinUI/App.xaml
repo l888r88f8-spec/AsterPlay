@@ -22,6 +22,69 @@
                     <SolidColorBrush x:Key="AsterAmbientBottomBrush" Color="#182F79A8"/>
                     <SolidColorBrush x:Key="AsterRailArrowForegroundBrush" Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="AsterRailArrowBorderBrush" Color="#38FFFFFF"/>
+                    <SolidColorBrush x:Key="AsterAccentBrush" Color="#2378F5"/>
+                    <SolidColorBrush x:Key="AsterAccentHoverBrush" Color="#3B8CFF"/>
+                    <SolidColorBrush x:Key="AsterAccentPressedBrush" Color="#1C68D8"/>
+                    <SolidColorBrush x:Key="AsterControlFillBrush" Color="#1A202B"/>
+                    <SolidColorBrush x:Key="AsterControlFillPointerOverBrush" Color="#222A37"/>
+                    <SolidColorBrush x:Key="AsterControlFillPressedBrush" Color="#2B3545"/>
+                    <SolidColorBrush x:Key="AsterControlFillDisabledBrush" Color="#121720"/>
+                    <SolidColorBrush x:Key="AsterControlBorderBrush" Color="#38FFFFFF"/>
+                    <SolidColorBrush x:Key="AsterControlBorderStrongBrush" Color="#58FFFFFF"/>
+                    <SolidColorBrush x:Key="AsterSelectionBrush" Color="#332378F5"/>
+
+                    <!-- Pin WinUI control colors to the AsterPlay palette. Keep the
+                         2.5.x templates/rendering, but do not inherit SDK-specific
+                         color changes from XamlControlsResources. -->
+                    <SolidColorBrush x:Key="ButtonBackground" Color="#1A202B"/>
+                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#222A37"/>
+                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#2B3545"/>
+                    <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#121720"/>
+                    <SolidColorBrush x:Key="ButtonForeground" Color="#F7F8FB"/>
+                    <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#F7F8FB"/>
+                    <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#F7F8FB"/>
+                    <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#7C8797"/>
+                    <SolidColorBrush x:Key="ButtonBorderBrush" Color="#38FFFFFF"/>
+                    <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#58FFFFFF"/>
+                    <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#58FFFFFF"/>
+
+                    <SolidColorBrush x:Key="TextControlBackground" Color="#1A202B"/>
+                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#222A37"/>
+                    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#1A202B"/>
+                    <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="#121720"/>
+                    <SolidColorBrush x:Key="TextControlForeground" Color="#F7F8FB"/>
+                    <SolidColorBrush x:Key="TextControlForegroundDisabled" Color="#7C8797"/>
+                    <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#7C8797"/>
+                    <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#A5ADBA"/>
+                    <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#A5ADBA"/>
+                    <SolidColorBrush x:Key="TextControlBorderBrush" Color="#38FFFFFF"/>
+                    <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#58FFFFFF"/>
+                    <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#2378F5"/>
+                    <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="#20FFFFFF"/>
+
+                    <SolidColorBrush x:Key="ComboBoxBackground" Color="#1A202B"/>
+                    <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#222A37"/>
+                    <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#2B3545"/>
+                    <SolidColorBrush x:Key="ComboBoxBackgroundDisabled" Color="#121720"/>
+                    <SolidColorBrush x:Key="ComboBoxForeground" Color="#F7F8FB"/>
+                    <SolidColorBrush x:Key="ComboBoxForegroundPointerOver" Color="#F7F8FB"/>
+                    <SolidColorBrush x:Key="ComboBoxForegroundPressed" Color="#F7F8FB"/>
+                    <SolidColorBrush x:Key="ComboBoxForegroundDisabled" Color="#7C8797"/>
+                    <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#38FFFFFF"/>
+                    <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#58FFFFFF"/>
+                    <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="#58FFFFFF"/>
+
+                    <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="#162378F5"/>
+                    <SolidColorBrush x:Key="ListViewItemBackgroundPressed" Color="#242378F5"/>
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="#2C2378F5"/>
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="#3A2378F5"/>
+                    <SolidColorBrush x:Key="ProgressRingForeground" Color="#2378F5"/>
+                    <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#2378F5"/>
+                    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#D92378F5"/>
+                    <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#B82378F5"/>
+                    <SolidColorBrush x:Key="AccentFillColorDisabledBrush" Color="#552378F5"/>
+                    <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush" Color="#3B8CFF"/>
+                    <SolidColorBrush x:Key="AccentTextFillColorSecondaryBrush" Color="#2378F5"/>
                     <Color x:Key="AsterHeroFadeMidColor">#B5080A0F</Color>
                     <Color x:Key="AsterHeroFadeEndColor">#FF080A0F</Color>
                     <Color x:Key="AsterAmbientOverlayTopColor">#38080A0F</Color>
@@ -41,6 +104,66 @@
                     <SolidColorBrush x:Key="AsterAmbientBottomBrush" Color="#1458A9D6"/>
                     <SolidColorBrush x:Key="AsterRailArrowForegroundBrush" Color="#20242C"/>
                     <SolidColorBrush x:Key="AsterRailArrowBorderBrush" Color="#26000000"/>
+                    <SolidColorBrush x:Key="AsterAccentBrush" Color="#2378F5"/>
+                    <SolidColorBrush x:Key="AsterAccentHoverBrush" Color="#176CE8"/>
+                    <SolidColorBrush x:Key="AsterAccentPressedBrush" Color="#155FCB"/>
+                    <SolidColorBrush x:Key="AsterControlFillBrush" Color="#E7ECF3"/>
+                    <SolidColorBrush x:Key="AsterControlFillPointerOverBrush" Color="#DEE5EE"/>
+                    <SolidColorBrush x:Key="AsterControlFillPressedBrush" Color="#D4DDE9"/>
+                    <SolidColorBrush x:Key="AsterControlFillDisabledBrush" Color="#EDF1F6"/>
+                    <SolidColorBrush x:Key="AsterControlBorderBrush" Color="#26000000"/>
+                    <SolidColorBrush x:Key="AsterControlBorderStrongBrush" Color="#3A000000"/>
+                    <SolidColorBrush x:Key="AsterSelectionBrush" Color="#242378F5"/>
+
+                    <SolidColorBrush x:Key="ButtonBackground" Color="#E7ECF3"/>
+                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#DEE5EE"/>
+                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#D4DDE9"/>
+                    <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#EDF1F6"/>
+                    <SolidColorBrush x:Key="ButtonForeground" Color="#151820"/>
+                    <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#151820"/>
+                    <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#151820"/>
+                    <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#7A8492"/>
+                    <SolidColorBrush x:Key="ButtonBorderBrush" Color="#26000000"/>
+                    <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#3A000000"/>
+                    <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#3A000000"/>
+
+                    <SolidColorBrush x:Key="TextControlBackground" Color="#F8FAFC"/>
+                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#F3F6FA"/>
+                    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="#EDF1F6"/>
+                    <SolidColorBrush x:Key="TextControlForeground" Color="#151820"/>
+                    <SolidColorBrush x:Key="TextControlForegroundDisabled" Color="#7A8492"/>
+                    <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#7A8492"/>
+                    <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#5F6876"/>
+                    <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#5F6876"/>
+                    <SolidColorBrush x:Key="TextControlBorderBrush" Color="#26000000"/>
+                    <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#3A000000"/>
+                    <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#2378F5"/>
+                    <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="#18000000"/>
+
+                    <SolidColorBrush x:Key="ComboBoxBackground" Color="#F8FAFC"/>
+                    <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#F3F6FA"/>
+                    <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#E7ECF3"/>
+                    <SolidColorBrush x:Key="ComboBoxBackgroundDisabled" Color="#EDF1F6"/>
+                    <SolidColorBrush x:Key="ComboBoxForeground" Color="#151820"/>
+                    <SolidColorBrush x:Key="ComboBoxForegroundPointerOver" Color="#151820"/>
+                    <SolidColorBrush x:Key="ComboBoxForegroundPressed" Color="#151820"/>
+                    <SolidColorBrush x:Key="ComboBoxForegroundDisabled" Color="#7A8492"/>
+                    <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#26000000"/>
+                    <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#3A000000"/>
+                    <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="#3A000000"/>
+
+                    <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="#102378F5"/>
+                    <SolidColorBrush x:Key="ListViewItemBackgroundPressed" Color="#1C2378F5"/>
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="#242378F5"/>
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="#322378F5"/>
+                    <SolidColorBrush x:Key="ProgressRingForeground" Color="#2378F5"/>
+                    <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#2378F5"/>
+                    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#E62378F5"/>
+                    <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#C72378F5"/>
+                    <SolidColorBrush x:Key="AccentFillColorDisabledBrush" Color="#552378F5"/>
+                    <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush" Color="#176CE8"/>
+                    <SolidColorBrush x:Key="AccentTextFillColorSecondaryBrush" Color="#2378F5"/>
                     <Color x:Key="AsterHeroFadeMidColor">#72F4F6F9</Color>
                     <Color x:Key="AsterHeroFadeEndColor">#FFF4F6F9</Color>
                     <Color x:Key="AsterAmbientOverlayTopColor">#22F4F6F9</Color>
@@ -60,6 +183,16 @@
                     <SolidColorBrush x:Key="AsterAmbientBottomBrush" Color="Transparent"/>
                     <SolidColorBrush x:Key="AsterRailArrowForegroundBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
                     <SolidColorBrush x:Key="AsterRailArrowBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+                    <SolidColorBrush x:Key="AsterAccentBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
+                    <SolidColorBrush x:Key="AsterAccentHoverBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
+                    <SolidColorBrush x:Key="AsterAccentPressedBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
+                    <SolidColorBrush x:Key="AsterControlFillBrush" Color="{ThemeResource SystemColorWindowColor}"/>
+                    <SolidColorBrush x:Key="AsterControlFillPointerOverBrush" Color="{ThemeResource SystemColorButtonFaceColor}"/>
+                    <SolidColorBrush x:Key="AsterControlFillPressedBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
+                    <SolidColorBrush x:Key="AsterControlFillDisabledBrush" Color="{ThemeResource SystemColorButtonFaceColor}"/>
+                    <SolidColorBrush x:Key="AsterControlBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+                    <SolidColorBrush x:Key="AsterControlBorderStrongBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+                    <SolidColorBrush x:Key="AsterSelectionBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
                     <Color x:Key="AsterHeroFadeMidColor">#90000000</Color>
                     <Color x:Key="AsterHeroFadeEndColor">#FF000000</Color>
                     <Color x:Key="AsterAmbientOverlayTopColor">#60000000</Color>
