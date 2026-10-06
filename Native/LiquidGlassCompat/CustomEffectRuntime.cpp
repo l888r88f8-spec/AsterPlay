@@ -30,6 +30,7 @@ namespace
     constexpr uintptr_t kEffectTypeGetBoundsRva = 0x1f7d0;
     constexpr uintptr_t kEffectTypeCalcInputBoundsRva = 0x1ee90;
     constexpr uintptr_t kDirectPropertyUpdaterFunctionVtableRva = 0x471e0;
+    constexpr uintptr_t kEffectTypeObjectTableRva = 0x64000;
     constexpr size_t kEffectTypeCount = 0x1f;
     // Reverse engineering shows EffectType virtual calls stop at slot 21
     // (+0xa8, GetEffectOpacityRelation) in this WinAppSDK build. Slot 22+
@@ -273,6 +274,196 @@ namespace
             left.Data2 == right.Data2 &&
             left.Data3 == right.Data3 &&
             memcmp(left.Data4, right.Data4, sizeof(left.Data4)) == 0;
+    }
+
+    [[noreturn]] void ThrowLayoutMismatch(char const* diagnostic)
+    {
+        NativeLog(diagnostic);
+        check_hresult(HRESULT_FROM_WIN32(ERROR_REVISION_MISMATCH));
+        std::terminate();
+    }
+
+    size_t GetModuleImageSize(HMODULE module)
+    {
+        auto const base = reinterpret_cast<uint8_t*>(module);
+        auto const* dos = reinterpret_cast<IMAGE_DOS_HEADER const*>(base);
+        if (!dos || dos->e_magic != IMAGE_DOS_SIGNATURE)
+        {
+            ThrowLayoutMismatch("ValidateWucEffectsLayout: invalid DOS header");
+        }
+
+        auto const* nt = reinterpret_cast<IMAGE_NT_HEADERS const*>(base + dos->e_lfanew);
+        if (nt->Signature != IMAGE_NT_SIGNATURE)
+        {
+            ThrowLayoutMismatch("ValidateWucEffectsLayout: invalid NT header");
+        }
+
+        return static_cast<size_t>(nt->OptionalHeader.SizeOfImage);
+    }
+
+    bool IsInsideModule(
+        uint8_t const* base,
+        size_t imageSize,
+        void const* pointer,
+        size_t bytes = 1)
+    {
+        if (!pointer || bytes == 0)
+        {
+            return false;
+        }
+
+        auto const start = reinterpret_cast<uintptr_t>(base);
+        auto const end = start + imageSize;
+        auto const value = reinterpret_cast<uintptr_t>(pointer);
+
+        return value >= start &&
+            value < end &&
+            bytes <= static_cast<size_t>(end - value);
+    }
+
+    void ValidateWucEffectsLayout(HMODULE module)
+    {
+        NativeLog("ValidateWucEffectsLayout: begin");
+
+        auto const* base = reinterpret_cast<uint8_t const*>(module);
+        auto const imageSize = GetModuleImageSize(module);
+
+        auto requireRange = [&](uintptr_t rva, size_t bytes, char const* diagnostic)
+        {
+            if (rva >= imageSize || bytes > imageSize - rva)
+            {
+                ThrowLayoutMismatch(diagnostic);
+            }
+        };
+
+        requireRange(
+            kEffectTypeFromGuidRva,
+            kFromGuidPatchSize,
+            "ValidateWucEffectsLayout: FromGuid RVA outside module");
+        requireRange(
+            kEffectTypeTableRva,
+            sizeof(void*) * kEffectTypeCount,
+            "ValidateWucEffectsLayout: EffectType table outside module");
+        requireRange(
+            kEffectTypeGetBoundsRva,
+            16,
+            "ValidateWucEffectsLayout: GetBounds RVA outside module");
+        requireRange(
+            kEffectTypeCalcInputBoundsRva,
+            16,
+            "ValidateWucEffectsLayout: CalcInputBounds RVA outside module");
+        requireRange(
+            kDirectPropertyUpdaterFunctionVtableRva,
+            sizeof(void*) * 6,
+            "ValidateWucEffectsLayout: updater vtable outside module");
+
+        uint8_t const expectedGetBounds[] = {
+            0x40, 0x53, 0x48, 0x83, 0xec, 0x20, 0x48, 0x8b,
+            0xda, 0x49, 0x8b, 0xd1, 0x48, 0x8b, 0xcb,
+        };
+        if (memcmp(
+                base + kEffectTypeGetBoundsRva,
+                expectedGetBounds,
+                sizeof(expectedGetBounds)) != 0)
+        {
+            ThrowLayoutMismatch(
+                "ValidateWucEffectsLayout: GetBounds signature mismatch");
+        }
+
+        uint8_t const expectedCalcInputBounds[] = {
+            0x48, 0x8b, 0x44, 0x24, 0x28, 0x41, 0x0f, 0x10,
+            0x00, 0xf3, 0x0f, 0x7f, 0x00, 0x48, 0x8b, 0x44,
+        };
+        if (memcmp(
+                base + kEffectTypeCalcInputBoundsRva,
+                expectedCalcInputBounds,
+                sizeof(expectedCalcInputBounds)) != 0)
+        {
+            ThrowLayoutMismatch(
+                "ValidateWucEffectsLayout: CalcInputBounds signature mismatch");
+        }
+
+        // The SDK 2.5.1 EffectType registry contains 31 pointer-sized singleton
+        // objects at 0x64000..0x640f0. Validate both that table and the vtable
+        // functions we depend on before dereferencing any private ABI entry.
+        auto* table = reinterpret_cast<void* const*>(
+            base + kEffectTypeTableRva);
+        bool sawSharedGetBounds = false;
+        bool sawSharedCalcInputBounds = false;
+
+        for (size_t index = 0; index < kEffectTypeCount; ++index)
+        {
+            auto const* expectedObject =
+                base + kEffectTypeObjectTableRva + index * sizeof(void*);
+            auto* effectType = table[index];
+
+            if (effectType != expectedObject ||
+                !IsInsideModule(base, imageSize, effectType, sizeof(void*)))
+            {
+                ThrowLayoutMismatch(
+                    "ValidateWucEffectsLayout: EffectType table layout mismatch");
+            }
+
+            auto* vtable = *reinterpret_cast<void***>(effectType);
+            if (!IsInsideModule(
+                    base,
+                    imageSize,
+                    vtable,
+                    sizeof(void*) * kEffectTypeVtableSlotCount))
+            {
+                ThrowLayoutMismatch(
+                    "ValidateWucEffectsLayout: EffectType vtable outside module");
+            }
+
+            if (!IsInsideModule(base, imageSize, vtable[1]) ||
+                !IsInsideModule(base, imageSize, vtable[15]) ||
+                !IsInsideModule(base, imageSize, vtable[16]))
+            {
+                ThrowLayoutMismatch(
+                    "ValidateWucEffectsLayout: EffectType slot target outside module");
+            }
+
+            sawSharedGetBounds =
+                sawSharedGetBounds ||
+                vtable[15] == base + kEffectTypeGetBoundsRva;
+            sawSharedCalcInputBounds =
+                sawSharedCalcInputBounds ||
+                vtable[16] == base + kEffectTypeCalcInputBoundsRva;
+        }
+
+        if (!sawSharedGetBounds || !sawSharedCalcInputBounds)
+        {
+            ThrowLayoutMismatch(
+                "ValidateWucEffectsLayout: expected bounds helpers not referenced");
+        }
+
+        // The DirectPropertyUpdater std::function vtable is copied into our
+        // synthetic constant-buffer updater objects. Verify its first six function
+        // pointers against the exact SDK 2.5.1 layout before using it.
+        uintptr_t const expectedUpdaterFunctionRvas[] = {
+            0x18e80,
+            0x18e80,
+            0x18ed0,
+            0x19140,
+            0x18eb0,
+            0x18f00,
+        };
+        auto* updaterVtable = reinterpret_cast<void* const*>(
+            base + kDirectPropertyUpdaterFunctionVtableRva);
+
+        for (size_t index = 0;
+             index < ARRAYSIZE(expectedUpdaterFunctionRvas);
+             ++index)
+        {
+            if (updaterVtable[index] !=
+                base + expectedUpdaterFunctionRvas[index])
+            {
+                ThrowLayoutMismatch(
+                    "ValidateWucEffectsLayout: updater vtable mismatch");
+            }
+        }
+
+        NativeLog("ValidateWucEffectsLayout: SDK 2.5.1 private ABI verified");
     }
 
     RuntimeEffectEntry* FindEntryByGuidLocked(GUID const& id)
@@ -1602,6 +1793,7 @@ namespace
             g_originalCompileEffectDescription = original;
             g_wuceffectsiModule = module;
 
+            ValidateWucEffectsLayout(module);
             InitializeAllEffectTypes(module);
             NativeLog("InstallHook: EffectTypes initialized");
 
