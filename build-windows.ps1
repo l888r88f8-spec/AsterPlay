@@ -56,6 +56,79 @@ if ($LASTEXITCODE -ne 0) {
     throw "WinUI 3 publish failed."
 }
 
+# LiquidGlassWinUI 1.0.3 ships a native compatibility runtime whose private
+# wuceffectsi.dll RVAs target Windows App SDK 2.2.0. Windows App SDK 2.5.1 keeps
+# the same EffectType ABI used by the runtime, but the code/data moved. Patch only
+# the five build-specific RVAs after strict signature-count validation.
+function Replace-LiquidGlassRva {
+    param(
+        [byte[]]$Buffer,
+        [uint32]$OldValue,
+        [uint32]$NewValue,
+        [int]$ExpectedCount,
+        [string]$Name
+    )
+
+    $oldBytes = [BitConverter]::GetBytes($OldValue)
+    $newBytes = [BitConverter]::GetBytes($NewValue)
+    $matches = [System.Collections.Generic.List[int]]::new()
+
+    for ($i = 0; $i -le $Buffer.Length - 4; $i++) {
+        if ($Buffer[$i] -eq $oldBytes[0] -and
+            $Buffer[$i + 1] -eq $oldBytes[1] -and
+            $Buffer[$i + 2] -eq $oldBytes[2] -and
+            $Buffer[$i + 3] -eq $oldBytes[3]) {
+            $matches.Add($i)
+        }
+    }
+
+    if ($matches.Count -ne $ExpectedCount) {
+        throw "LiquidGlass SDK 2.5.1 compatibility patch refused: $Name expected $ExpectedCount match(es), found $($matches.Count)."
+    }
+
+    foreach ($offset in $matches) {
+        for ($j = 0; $j -lt 4; $j++) {
+            $Buffer[$offset + $j] = $newBytes[$j]
+        }
+    }
+
+    Write-Host ("  Patched {0}: 0x{1:X} -> 0x{2:X} ({3} occurrence(s))" -f $Name, $OldValue, $NewValue, $matches.Count)
+}
+
+$liquidGlassNative = Join-Path $Publish "CustomEffectRuntimeNative.dll"
+if (-not (Test-Path $liquidGlassNative)) {
+    throw "LiquidGlass native runtime is missing after publish: CustomEffectRuntimeNative.dll"
+}
+
+Write-Host "Applying LiquidGlassWinUI compatibility patch for Windows App SDK 2.5.1..."
+$liquidGlassBytes = [IO.File]::ReadAllBytes($liquidGlassNative)
+
+# Verified by function-level comparison of the SDK 2.2.0 and 2.5.1
+# self-contained wuceffectsi.dll binaries used by AsterPlay:
+#   EffectType::FromGuid                 0x17C48 -> 0x193D8
+#   EffectType table                     0x62150 -> 0x64150
+#   EffectType::GetBounds                0x1E040 -> 0x1F7D0
+#   EffectType::CalcInputBounds          0x1D700 -> 0x1EE90
+#   DirectPropertyUpdater function vtbl  0x451E0 -> 0x471E0
+Replace-LiquidGlassRva $liquidGlassBytes 0x00017C48 0x000193D8 5 "EffectType::FromGuid"
+Replace-LiquidGlassRva $liquidGlassBytes 0x00062150 0x00064150 1 "EffectType table"
+Replace-LiquidGlassRva $liquidGlassBytes 0x0001E040 0x0001F7D0 1 "EffectType::GetBounds"
+Replace-LiquidGlassRva $liquidGlassBytes 0x0001D700 0x0001EE90 1 "EffectType::CalcInputBounds"
+Replace-LiquidGlassRva $liquidGlassBytes 0x000451E0 0x000471E0 1 "DirectPropertyUpdater vtable"
+
+[IO.File]::WriteAllBytes($liquidGlassNative, $liquidGlassBytes)
+
+@(
+    "LiquidGlassWinUI 1.0.3 native runtime compatibility patch",
+    "Target: Windows App SDK 2.5.1",
+    "Architecture: x64",
+    "EffectType::FromGuid: 0x17C48 -> 0x193D8",
+    "EffectType table: 0x62150 -> 0x64150",
+    "EffectType::GetBounds: 0x1E040 -> 0x1F7D0",
+    "EffectType::CalcInputBounds: 0x1D700 -> 0x1EE90",
+    "DirectPropertyUpdater vtable: 0x451E0 -> 0x471E0"
+) | Set-Content -Encoding UTF8 (Join-Path $Publish "LIQUIDGLASS-COMPAT.txt")
+
 $usingBundledMpv = -not $env:ASTERPLAY_MPV_DIR
 if ($usingBundledMpv) {
     $BootstrapMpv = Join-Path $Root "bootstrap-mpv.ps1"
@@ -81,6 +154,9 @@ if (Test-Path $runtimeSource) {
 $requiredFiles = @(
     "AsterPlay.exe",
     "AsterPlay.Core.dll",
+    "LiquidGlassWinUI.dll",
+    "CustomEffectRuntimeNative.dll",
+    "LIQUIDGLASS-COMPAT.txt",
     "libmpv-2.dll",
     "coreclr.dll",
     "hostfxr.dll",
