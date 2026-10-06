@@ -159,6 +159,14 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: pwsh
         run: |
+          git fetch origin main
+          $remoteHead = (git rev-parse origin/main).Trim()
+          $currentHead = (git rev-parse HEAD).Trim()
+          if ($remoteHead -ne $currentHead) {
+            Write-Host "main advanced to $remoteHead while this run was executing; skipping native runtime pin from $currentHead."
+            exit 0
+          }
+
           $source = "Native\LiquidGlassCompat\Output\x64\Release\CustomEffectRuntimeNative.dll"
           $directory = "Native\LiquidGlassCompat\Prebuilt\win-x64"
           $destination = Join-Path $directory "CustomEffectRuntimeNative.dll"
