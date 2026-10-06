@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Windows.Graphics;
 using Windows.UI.ViewManagement;
 
 namespace AsterPlay.WinUI;
@@ -6,6 +7,7 @@ namespace AsterPlay.WinUI;
 public partial class App : Application
 {
     private MainWindow? _window;
+    private NativeStartupSplash? _splash;
 
     public App()
     {
@@ -44,12 +46,31 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         StartupDiagnostics.Write(
-            "OnLaunched: creating single MainWindow with in-window startup cover");
+            "OnLaunched: resolving one shared rect for native splash and MainWindow");
 
         try
         {
+            var startupBounds =
+                StartupWindowPlacement.Resolve();
+
+            StartupDiagnostics.Write(
+                $"OnLaunched: shared startup bounds=" +
+                $"{startupBounds.X},{startupBounds.Y}," +
+                $"{startupBounds.Width}x{startupBounds.Height}");
+
+            using (StartupDiagnostics.Measure("NativeStartupSplash constructor"))
+                _splash = new NativeStartupSplash(
+                    startupBounds,
+                    RequestedTheme);
+
+            _splash.Show();
+
             using (StartupDiagnostics.Measure("MainWindow constructor"))
-                _window = new MainWindow();
+                _window = new MainWindow(
+                    startupBounds);
+
+            _splash.AttachOwner(
+                _window.NativeHandle);
 
             _window.StartupVisualReady +=
                 MainWindow_StartupVisualReady;
@@ -57,12 +78,20 @@ public partial class App : Application
             using (StartupDiagnostics.Measure("MainWindow.Activate"))
                 _window.Activate();
 
+            LogStartupBoundsMatch(
+                startupBounds,
+                _window.CurrentBounds);
+
             StartupDiagnostics.Write(
-                "OnLaunched: MainWindow activated; startup cover is visible");
+                "OnLaunched: MainWindow activated behind native splash");
         }
         catch (Exception ex)
         {
             StartupDiagnostics.WriteException("OnLaunched", ex);
+
+            _splash?.Dispose();
+            _splash = null;
+
             throw;
         }
     }
@@ -77,15 +106,26 @@ public partial class App : Application
         _window.StartupVisualReady -=
             MainWindow_StartupVisualReady;
 
+        var splash = _splash;
+        _splash = null;
+
+        if (splash is null)
+        {
+            StartupDiagnostics.Write(
+                "MainWindow startup visual ready; native splash already absent");
+            return;
+        }
+
         try
         {
             StartupDiagnostics.Write(
-                "MainWindow startup visual ready; dismissing in-window cover");
+                "MainWindow startup visual ready; fading native splash");
 
-            await _window.DismissStartupCoverAsync();
+            await splash.FadeOutAsync(
+                durationMilliseconds: 640);
 
             StartupDiagnostics.Write(
-                "Single-window startup handoff completed");
+                "Native splash to MainWindow handoff completed");
         }
         catch (Exception ex)
         {
@@ -93,9 +133,26 @@ public partial class App : Application
                 "MainWindow_StartupVisualReady",
                 ex);
 
-            // Never leave the startup cover permanently blocking the app.
-            _window.ForceDismissStartupCover();
+            splash.Dispose();
         }
+    }
+
+    private static void LogStartupBoundsMatch(
+        RectInt32 requested,
+        RectInt32 actual)
+    {
+        var exactMatch =
+            requested.X == actual.X &&
+            requested.Y == actual.Y &&
+            requested.Width == actual.Width &&
+            requested.Height == actual.Height;
+
+        StartupDiagnostics.Write(
+            $"Startup bounds verification: exactMatch={exactMatch}; " +
+            $"requested={requested.X},{requested.Y}," +
+            $"{requested.Width}x{requested.Height}; " +
+            $"main={actual.X},{actual.Y}," +
+            $"{actual.Width}x{actual.Height}");
     }
 
     private void App_UnhandledException(
