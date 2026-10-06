@@ -32,6 +32,7 @@
         </ControlTemplate>
 
         <Style x:Key="RoundActionButtonStyle" TargetType="Button">
+            <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Template" Value="{StaticResource FlatButtonTemplate}"/>
             <Setter Property="Width" Value="38"/>
             <Setter Property="Height" Value="38"/>
@@ -52,6 +53,7 @@
         </Style>
 
         <Style x:Key="SectionMoreButtonStyle" TargetType="Button">
+            <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Template" Value="{StaticResource FlatButtonTemplate}"/>
             <Setter Property="Height" Value="36"/>
             <Setter Property="Padding" Value="16,0"/>
