@@ -30,9 +30,9 @@
             <Border Padding="20" CornerRadius="28">
                 <Border.Background>
                     <AcrylicBrush TintColor="#F0F2F8"
-                                  TintOpacity="0.080"
-                                  TintLuminosityOpacity="0.42"
-                                  FallbackColor="#D9F0F2F8"/>
+                                  TintOpacity="0.050"
+                                  TintLuminosityOpacity="0.30"
+                                  FallbackColor="#B9F0F2F8"/>
                 </Border.Background>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -68,9 +68,9 @@
                     CornerRadius="28">
                 <Border.Background>
                     <AcrylicBrush TintColor="#F0F2F8"
-                                  TintOpacity="0.090"
-                                  TintLuminosityOpacity="0.52"
-                                  FallbackColor="#D9F0F2F8"/>
+                                  TintOpacity="0.060"
+                                  TintLuminosityOpacity="0.34"
+                                  FallbackColor="#B9F0F2F8"/>
                 </Border.Background>
 
                 <StackPanel Spacing="10">
