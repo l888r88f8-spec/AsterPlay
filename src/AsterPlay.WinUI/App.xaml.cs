@@ -5,7 +5,8 @@ namespace AsterPlay.WinUI;
 
 public partial class App : Application
 {
-    private Window? _window;
+    private MainWindow? _window;
+    private StartupSplashWindow? _splashWindow;
 
     public App()
     {
@@ -47,21 +48,65 @@ public partial class App : Application
 
         try
         {
-            StartupDiagnostics.Write("OnLaunched: before MainWindow constructor");
+            _splashWindow = new StartupSplashWindow();
+            _splashWindow.Activate();
+            _splashWindow.StartPulse();
+
+            StartupDiagnostics.Write(
+                "OnLaunched: icon-only splash activated");
+
             using (StartupDiagnostics.Measure("MainWindow constructor"))
                 _window = new MainWindow();
-            StartupDiagnostics.Write("OnLaunched: after MainWindow constructor");
 
-            using (StartupDiagnostics.Measure("Window.Activate"))
+            _window.StartupVisualReady +=
+                MainWindow_StartupVisualReady;
+
+            using (StartupDiagnostics.Measure("MainWindow.Activate"))
                 _window.Activate();
 
-            StartupDiagnostics.Write("OnLaunched: after Window.Activate");
+            // MainWindow is fully transparent while it initializes. Re-activate
+            // the small always-on-top splash so only the icon is visible.
+            _splashWindow.Activate();
+
+            StartupDiagnostics.Write(
+                "OnLaunched: hidden MainWindow activated");
         }
         catch (Exception ex)
         {
             StartupDiagnostics.WriteException("OnLaunched", ex);
+
+            _splashWindow?.Close();
+            _splashWindow = null;
+
+            if (_window is not null)
+            {
+                _window.CompleteStartupWindowReveal();
+                _window.Activate();
+            }
+
             throw;
         }
+    }
+
+    private void MainWindow_StartupVisualReady(
+        object? sender,
+        EventArgs e)
+    {
+        if (_window is null)
+            return;
+
+        _window.StartupVisualReady -=
+            MainWindow_StartupVisualReady;
+
+        if (_splashWindow is null)
+        {
+            _window.CompleteStartupWindowReveal();
+            return;
+        }
+
+        _splashWindow.BeginReveal(
+            _window,
+            () => _splashWindow = null);
     }
 
     private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
