@@ -405,15 +405,16 @@ public sealed partial class MainWindow : Window
         if (StartupCoverLayer.Visibility != Visibility.Visible)
             return;
 
-        // The external splash has just been closed. Keep the identical cover
-        // inside MainWindow visible for a couple of real, unoccluded frames so
-        // the first pixels the user sees from this HWND are never the default
-        // blank client surface.
-        await WaitForRenderingFramesAsync(2);
+        // StartupCoverLayer intentionally uses Opacity=0.999 rather than 1.
+        // That tiny blend is visually imperceptible but prevents WinUI/DWM from
+        // treating HomeView as a fully occluded surface and postponing its first
+        // real composition until the cover disappears.
+        await WaitForRenderingFramesAsync(3);
 
-        var coverDwmResult = DwmFlush();
+        var coveredDwmResult = DwmFlush();
         StartupDiagnostics.Write(
-            $"DismissStartupCoverAsync: internal cover presented; DwmFlush={coverDwmResult}");
+            $"DismissStartupCoverAsync: blended cover + home presented; " +
+            $"coverOpacity={StartupCoverLayer.Opacity:0.###}, DwmFlush={coveredDwmResult}");
 
         StartupCoverLayer.IsHitTestVisible = false;
         StartupCoverLayer.Opacity = 0;
@@ -421,17 +422,20 @@ public sealed partial class MainWindow : Window
         StartupDiagnostics.Write(
             "DismissStartupCoverAsync: internal cover opacity set to 0");
 
-        // Opacity removal does not invalidate the page layout. HomeView has
-        // already completed layout and image decode underneath this overlay.
         await WaitForRenderingFramesAsync(2);
 
         var homeDwmResult = DwmFlush();
         StartupDiagnostics.Write(
-            $"DismissStartupCoverAsync: home presented; DwmFlush={homeDwmResult}");
+            $"DismissStartupCoverAsync: uncovered home presented; DwmFlush={homeDwmResult}");
 
         StartupCoverLayer.Visibility = Visibility.Collapsed;
         StartupDiagnostics.Write(
             "DismissStartupCoverAsync: internal cover collapsed");
+
+        DispatcherQueue.TryEnqueue(
+            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+            () => StartupDiagnostics.Write(
+                "DismissStartupCoverAsync: post-reveal dispatcher responsive"));
     }
 
     private Task WaitForDispatcherIdleAsync()
