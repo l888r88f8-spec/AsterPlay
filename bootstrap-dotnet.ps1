@@ -10,6 +10,16 @@ Write-Host "=== AsterPlay portable .NET 8 SDK bootstrap ==="
 Write-Host "Target: $InstallDir"
 Write-Host "SDK:    $SdkVersion"
 
+$Dotnet = Join-Path $InstallDir "dotnet.exe"
+if (Test-Path $Dotnet) {
+    $installedSdks = @(& $Dotnet --list-sdks 2>$null)
+    if ($LASTEXITCODE -eq 0 -and ($installedSdks | Where-Object { $_ -match ("^" + [Regex]::Escape($SdkVersion) + "\s") })) {
+        Write-Host "Pinned SDK is already installed; skipping download."
+        & $Dotnet --list-sdks
+        exit 0
+    }
+}
+
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 Invoke-WebRequest -UseBasicParsing "https://dot.net/v1/dotnet-install.ps1" -OutFile $Installer
 
@@ -17,7 +27,6 @@ Invoke-WebRequest -UseBasicParsing "https://dot.net/v1/dotnet-install.ps1" -OutF
 
 if ($LASTEXITCODE -ne 0) { throw "Portable .NET 8 SDK bootstrap failed." }
 
-$Dotnet = Join-Path $InstallDir "dotnet.exe"
 if (-not (Test-Path $Dotnet)) { throw "dotnet.exe was not created at $Dotnet" }
 
 Write-Host ""
