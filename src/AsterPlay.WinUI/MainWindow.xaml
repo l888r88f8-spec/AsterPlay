@@ -120,10 +120,12 @@
                             <FontIcon FontFamily="Segoe MDL2 Assets"
                                       Glyph="&#xE80F;"
                                       FontSize="19"
+                                      Foreground="{Binding Foreground, ElementName=HomeButton}"
                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="首页"
                                        FontSize="12"
                                        FontWeight="SemiBold"
+                                       Foreground="{Binding Foreground, ElementName=HomeButton}"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -134,10 +136,12 @@
                             <FontIcon FontFamily="Segoe MDL2 Assets"
                                       Glyph="&#xE8F1;"
                                       FontSize="19"
+                                      Foreground="{Binding Foreground, ElementName=LibraryButton}"
                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="媒体库"
                                        FontSize="12"
                                        FontWeight="SemiBold"
+                                       Foreground="{Binding Foreground, ElementName=LibraryButton}"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -148,10 +152,12 @@
                             <FontIcon FontFamily="Segoe MDL2 Assets"
                                       Glyph="&#xE7F8;"
                                       FontSize="19"
+                                      Foreground="{Binding Foreground, ElementName=ServersButton}"
                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="服务器"
                                        FontSize="12"
                                        FontWeight="SemiBold"
+                                       Foreground="{Binding Foreground, ElementName=ServersButton}"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -162,10 +168,12 @@
                             <FontIcon FontFamily="Segoe MDL2 Assets"
                                       Glyph="&#xE713;"
                                       FontSize="19"
+                                      Foreground="{Binding Foreground, ElementName=SettingsButton}"
                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="设置"
                                        FontSize="12"
                                        FontWeight="SemiBold"
+                                       Foreground="{Binding Foreground, ElementName=SettingsButton}"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
