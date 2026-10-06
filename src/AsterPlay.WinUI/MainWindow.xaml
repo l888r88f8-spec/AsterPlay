@@ -20,7 +20,7 @@
             <Setter Property="Padding" Value="8,3"/>
             <Setter Property="CornerRadius" Value="17"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{ThemeResource AsterSecondaryTextBrush}"/>
+            <Setter Property="Foreground" Value="#F2FFFFFF"/>
             <Setter Property="BorderThickness" Value="0"/>
         </Style>
         </Grid.Resources>
@@ -87,27 +87,27 @@
                     Visibility="Visible">
                 <Border.Resources>
                     <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
-                                     Color="#14000000"/>
+                                     Color="#20FFFFFF"/>
                     <SolidColorBrush x:Key="ButtonBackgroundPressed"
-                                     Color="#22000000"/>
+                                     Color="#30FFFFFF"/>
                     <SolidColorBrush x:Key="ButtonBorderBrushPointerOver"
                                      Color="Transparent"/>
                     <SolidColorBrush x:Key="ButtonBorderBrushPressed"
                                      Color="Transparent"/>
                 </Border.Resources>
                 <Border.Background>
-                    <lg:LiquidGlassBrush BlurAmount="3.85"
-                                         BloomAmount="0.11"
+                    <lg:LiquidGlassBrush BlurAmount="4.25"
+                                         BloomAmount="0.10"
                                          RefThickness="34"
-                                         RefFactor="2.35"
-                                         RefDispersion="5.2"
-                                         DispersionRange="0.38"
+                                         RefFactor="2.30"
+                                         RefDispersion="4.8"
+                                         DispersionRange="0.34"
                                          RefFresnelFactor="22"
-                                         GlareFactor="58"
-                                         TintA="0.035"
-                                         TintR="218"
-                                         TintG="230"
-                                         TintB="248"
+                                         GlareFactor="54"
+                                         TintA="0.13"
+                                         TintR="18"
+                                         TintG="22"
+                                         TintB="30"
                                          ShapeRadius="0.98"
                                          ShapeRoundness="4.0"/>
                 </Border.Background>
@@ -119,10 +119,11 @@
                         <StackPanel Spacing="2">
                             <FontIcon FontFamily="Segoe MDL2 Assets"
                                       Glyph="&#xE80F;"
-                                      FontSize="18"
+                                      FontSize="19"
                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="首页"
-                                       FontSize="10"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -132,10 +133,11 @@
                         <StackPanel Spacing="2">
                             <FontIcon FontFamily="Segoe MDL2 Assets"
                                       Glyph="&#xE8F1;"
-                                      FontSize="18"
+                                      FontSize="19"
                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="媒体库"
-                                       FontSize="10"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -145,10 +147,11 @@
                         <StackPanel Spacing="2">
                             <FontIcon FontFamily="Segoe MDL2 Assets"
                                       Glyph="&#xE7F8;"
-                                      FontSize="18"
+                                      FontSize="19"
                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="服务器"
-                                       FontSize="10"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -158,10 +161,11 @@
                         <StackPanel Spacing="2">
                             <FontIcon FontFamily="Segoe MDL2 Assets"
                                       Glyph="&#xE713;"
-                                      FontSize="18"
+                                      FontSize="19"
                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="设置"
-                                       FontSize="10"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
