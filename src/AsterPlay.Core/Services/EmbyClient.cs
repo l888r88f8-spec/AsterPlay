@@ -319,6 +319,16 @@ public sealed class EmbyClient
                 $"/Items/{Esc(item.ParentBackdropItemId)}/Images/Backdrop/0?maxWidth={maxWidth}&quality=90");
         }
 
+        // Last-resort episode fallback: use the series Primary instead of a
+        // potentially missing episode Primary. UniformToFill will crop it to
+        // the landscape card without leaving an empty startup tile.
+        if (string.Equals(item.Type, "Episode", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(item.SeriesId))
+        {
+            return WithToken(
+                $"/Items/{Esc(item.SeriesId)}/Images/Primary?maxWidth={maxWidth}&quality=90");
+        }
+
         return BuildPrimaryUrl(item, maxWidth);
     }
 
