@@ -26,6 +26,7 @@ internal sealed class StartupSplashWindow : Window
     private int _currentSize = BaseSize;
     private int _revealStartSize = BaseSize;
     private bool _revealing;
+    private bool _mainWindowShown;
     private MainWindow? _mainWindow;
     private Action? _completed;
 
@@ -125,6 +126,7 @@ internal sealed class StartupSplashWindow : Window
         _mainWindow = mainWindow;
         _completed = completed;
         _revealStartSize = _currentSize;
+        _mainWindowShown = false;
         _revealing = true;
         _clock.Restart();
 
@@ -194,15 +196,19 @@ internal sealed class StartupSplashWindow : Window
                     targetSize,
                     eased));
 
+        // Keep the real window off-screen until the expanding icon is
+        // large enough to cover it. That avoids any white WinUI frame flashing
+        // around the splash during initialization.
+        if (!_mainWindowShown &&
+            raw >= 0.52)
+        {
+            _mainWindowShown = true;
+            _mainWindow?.ShowStartupWindowBehindSplash();
+        }
+
         var splashFade =
             Math.Clamp(
-                (raw - 0.40) / 0.60,
-                0.0,
-                1.0);
-
-        var mainFade =
-            Math.Clamp(
-                (raw - 0.18) / 0.68,
+                (raw - 0.54) / 0.46,
                 0.0,
                 1.0);
 
@@ -212,14 +218,6 @@ internal sealed class StartupSplashWindow : Window
                 (1.0 -
                  SmoothStep(splashFade)));
 
-        var mainAlpha =
-            (byte)Math.Round(
-                255.0 *
-                SmoothStep(mainFade));
-
-        _mainWindow?.SetStartupWindowOpacity(
-            mainAlpha);
-
         UpdateBounds(
             size,
             splashAlpha);
@@ -228,6 +226,12 @@ internal sealed class StartupSplashWindow : Window
             return;
 
         _timer.Stop();
+
+        if (!_mainWindowShown)
+        {
+            _mainWindowShown = true;
+            _mainWindow?.ShowStartupWindowBehindSplash();
+        }
 
         _mainWindow?.CompleteStartupWindowReveal();
 
