@@ -6,6 +6,8 @@ namespace AsterPlay.WinUI.Views;
 
 public sealed partial class ServerManagementView : UserControl
 {
+    private readonly EmbyClient _serverLookupClient = new();
+
     public event EventHandler? DoneRequested;
 
     public ServerManagementView()
@@ -28,13 +30,43 @@ public sealed partial class ServerManagementView : UserControl
         UrlBox.Text = profile.Url;
     }
 
-    private void Save_Click(object sender, RoutedEventArgs e)
+    private async void Save_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(UrlBox.Text))
             return;
 
-        ServerProfileStore.AddOrUpdate(UrlBox.Text, NameBox.Text);
-        Reload();
+        var url = UrlBox.Text.Trim();
+        var customName = NameBox.Text.Trim();
+
+        if (sender is Button button)
+            button.IsEnabled = false;
+
+        try
+        {
+            ServerProfileStore.AddOrUpdate(url, customName);
+
+            // Keep the server's own name cached as a fallback. A custom name,
+            // when present, still wins in DisplayName.
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            try
+            {
+                var serverName = await _serverLookupClient.GetServerNameAsync(
+                    url,
+                    timeout.Token);
+                ServerProfileStore.UpdateServerName(url, serverName);
+            }
+            catch (Exception ex)
+            {
+                PlaybackLog.Error("ServerNameLookup", ex);
+            }
+
+            Reload();
+        }
+        finally
+        {
+            if (sender is Button saveButton)
+                saveButton.IsEnabled = true;
+        }
     }
 
     private void Remove_Click(object sender, RoutedEventArgs e)
