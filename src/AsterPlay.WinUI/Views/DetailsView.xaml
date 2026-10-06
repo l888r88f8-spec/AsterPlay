@@ -2,7 +2,6 @@
     x:Class="AsterPlay.WinUI.Views.DetailsView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:lg="using:LiquidGlassWinUI"
     xmlns:controls="using:AsterPlay.WinUI.Controls">
 
     <Grid>
