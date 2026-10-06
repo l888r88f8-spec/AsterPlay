@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.InteropServices;
 using AsterPlay.Models;
 using AsterPlay.Services;
@@ -27,7 +28,8 @@ public sealed partial class MainWindow : Window
     private bool _nativeStartupPaintActive = true;
     private readonly SubclassProc _startupSubclassProc;
     private IntPtr _nativeStartupBrush;
-    private IntPtr _nativeStartupIcon;
+    private IntPtr _nativeStartupPng;
+    private UIntPtr _gdiplusToken;
     private bool _startupSubclassInstalled;
     private RectInt32 _startupTargetBounds;
     private bool _authenticated;
@@ -42,12 +44,6 @@ public sealed partial class MainWindow : Window
     private const uint WmPaint = 0x000F;
     private const uint WmEraseBkgnd = 0x0014;
     private const uint WmSetCursor = 0x0020;
-    private const uint ImageIcon = 1;
-    private const uint LrLoadFromFile = 0x0010;
-    private const uint DiNormal = 0x0003;
-    private const uint RedrawInvalidate = 0x0001;
-    private const uint RedrawUpdateNow = 0x0100;
-    private const uint RedrawAllChildren = 0x0080;
     private static readonly IntPtr IdcArrow = new(32512);
 
 
@@ -316,12 +312,10 @@ public sealed partial class MainWindow : Window
 
         ReleaseNativeStartupSurface();
 
-        RedrawWindow(
-            _hwnd,
-            IntPtr.Zero,
-            IntPtr.Zero,
-            RedrawInvalidate | RedrawUpdateNow | RedrawAllChildren);
-
+        // Do not force a synchronous WM_PAINT/RedrawWindow here. The XAML
+        // startup cover has already been composed; forcing a native repaint at
+        // this exact handoff creates the visible hitch users perceive as a
+        // dropped frame.
         var flushAfter = DwmFlush();
         StartupDiagnostics.Write(
             $"Native startup painter released; XAML cover owns MainWindow; DwmFlush={flushAfter}");
@@ -461,32 +455,54 @@ public sealed partial class MainWindow : Window
         if (StartupCoverLayer.Visibility != Visibility.Visible)
             return;
 
-        // StartupCoverLayer intentionally uses Opacity=0.999 rather than 1.
-        // That tiny blend is visually imperceptible but prevents WinUI/DWM from
-        // treating HomeView as a fully occluded surface and postponing its first
-        // real composition until the cover disappears.
-        await WaitForRenderingFramesAsync(3);
+        // HomeView and its first viewport are already ready at this point.
+        // Give it two real composition frames underneath the cover, then fade
+        // only the cover on the compositor thread. This avoids a layout pass
+        // during the transition and keeps the reveal smooth.
+        await WaitForRenderingFramesAsync(2);
 
-        var coveredDwmResult = DwmFlush();
+        var readyDwmResult = DwmFlush();
         StartupDiagnostics.Write(
-            $"DismissStartupCoverAsync: blended cover + home presented; " +
-            $"coverOpacity={StartupCoverLayer.Opacity:0.###}, DwmFlush={coveredDwmResult}");
+            $"DismissStartupCoverAsync: home ready under cover; DwmFlush={readyDwmResult}");
 
         StartupCoverLayer.IsHitTestVisible = false;
-        StartupCoverLayer.Opacity = 0;
+
+        var visual =
+            Microsoft.UI.Xaml.Hosting.ElementCompositionPreview
+                .GetElementVisual(StartupCoverLayer);
+        var compositor = visual.Compositor;
+
+        var easing = compositor.CreateCubicBezierEasingFunction(
+            new Vector2(0.22f, 1.0f),
+            new Vector2(0.36f, 1.0f));
+
+        var fade = compositor.CreateScalarKeyFrameAnimation();
+        fade.InsertKeyFrame(0.0f, 1.0f);
+        fade.InsertKeyFrame(1.0f, 0.0f, easing);
+        fade.Duration = TimeSpan.FromMilliseconds(320);
+
+        var completion = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var batch = compositor.CreateScopedBatch(
+            Microsoft.UI.Composition.CompositionBatchTypes.Animation);
+        batch.Completed += (_, _) => completion.TrySetResult(true);
+
+        visual.StartAnimation("Opacity", fade);
+        batch.End();
 
         StartupDiagnostics.Write(
-            "DismissStartupCoverAsync: internal cover opacity set to 0");
+            "DismissStartupCoverAsync: 320 ms compositor fade started");
 
-        await WaitForRenderingFramesAsync(2);
+        await completion.Task;
+
+        visual.StopAnimation("Opacity");
+        StartupCoverLayer.Opacity = 0;
+        StartupCoverLayer.Visibility = Visibility.Collapsed;
 
         var homeDwmResult = DwmFlush();
         StartupDiagnostics.Write(
-            $"DismissStartupCoverAsync: uncovered home presented; DwmFlush={homeDwmResult}");
-
-        StartupCoverLayer.Visibility = Visibility.Collapsed;
-        StartupDiagnostics.Write(
-            "DismissStartupCoverAsync: internal cover collapsed");
+            $"DismissStartupCoverAsync: fade completed; home owns window; DwmFlush={homeDwmResult}");
 
         DispatcherQueue.TryEnqueue(
             Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
@@ -507,26 +523,38 @@ public sealed partial class MainWindow : Window
 
         try
         {
-            var iconPath = Path.Combine(
-                AppContext.BaseDirectory,
-                "Assets",
-                "AsterPlay.ico");
-
-            if (File.Exists(iconPath))
+            var gdiplusInput = new GdiplusStartupInput
             {
-                _nativeStartupIcon = LoadImage(
-                    IntPtr.Zero,
-                    iconPath,
-                    ImageIcon,
-                    144,
-                    144,
-                    LrLoadFromFile);
+                GdiplusVersion = 1
+            };
+
+            var startupStatus = GdiplusStartup(
+                out _gdiplusToken,
+                ref gdiplusInput,
+                IntPtr.Zero);
+
+            if (startupStatus == 0)
+            {
+                var pngPath = Path.Combine(
+                    AppContext.BaseDirectory,
+                    "Assets",
+                    "AsterPlay.AppIcon.png");
+
+                if (File.Exists(pngPath))
+                {
+                    var loadStatus = GdipLoadImageFromFile(
+                        pngPath,
+                        out _nativeStartupPng);
+
+                    if (loadStatus != 0)
+                        _nativeStartupPng = IntPtr.Zero;
+                }
             }
         }
         catch (Exception ex)
         {
             StartupDiagnostics.WriteException(
-                "InitializeNativeStartupSurface icon",
+                "InitializeNativeStartupSurface PNG",
                 ex);
         }
 
@@ -538,7 +566,7 @@ public sealed partial class MainWindow : Window
 
         StartupDiagnostics.Write(
             $"Native startup painter installed={_startupSubclassInstalled}; " +
-            $"brush={_nativeStartupBrush != IntPtr.Zero}, icon={_nativeStartupIcon != IntPtr.Zero}");
+            $"brush={_nativeStartupBrush != IntPtr.Zero}, png={_nativeStartupPng != IntPtr.Zero}");
     }
 
     private IntPtr StartupWindowSubclassProc(
@@ -627,7 +655,7 @@ public sealed partial class MainWindow : Window
                 _nativeStartupBrush);
         }
 
-        if (_nativeStartupIcon == IntPtr.Zero)
+        if (_nativeStartupPng == IntPtr.Zero)
             return;
 
         var width = clientRect.Right - clientRect.Left;
@@ -636,16 +664,34 @@ public sealed partial class MainWindow : Window
         var x = Math.Max(0, (width - iconSize) / 2);
         var y = Math.Max(0, (height - iconSize) / 2);
 
-        DrawIconEx(
-            hdc,
-            x,
-            y,
-            _nativeStartupIcon,
-            iconSize,
-            iconSize,
-            0,
-            IntPtr.Zero,
-            DiNormal);
+        if (GdipCreateFromHDC(
+                hdc,
+                out var graphics) != 0 ||
+            graphics == IntPtr.Zero)
+        {
+            return;
+        }
+
+        try
+        {
+            // High-quality bicubic interpolation matches the XAML PNG much
+            // more closely than scaling an ICO with DrawIconEx.
+            GdipSetInterpolationMode(
+                graphics,
+                InterpolationModeHighQualityBicubic);
+
+            GdipDrawImageRectI(
+                graphics,
+                _nativeStartupPng,
+                x,
+                y,
+                iconSize,
+                iconSize);
+        }
+        finally
+        {
+            GdipDeleteGraphics(graphics);
+        }
     }
 
     private void ReleaseNativeStartupSurface()
@@ -653,7 +699,8 @@ public sealed partial class MainWindow : Window
         if (!_nativeStartupPaintActive &&
             !_startupSubclassInstalled &&
             _nativeStartupBrush == IntPtr.Zero &&
-            _nativeStartupIcon == IntPtr.Zero)
+            _nativeStartupPng == IntPtr.Zero &&
+            _gdiplusToken == UIntPtr.Zero)
         {
             return;
         }
@@ -675,10 +722,16 @@ public sealed partial class MainWindow : Window
             _nativeStartupBrush = IntPtr.Zero;
         }
 
-        if (_nativeStartupIcon != IntPtr.Zero)
+        if (_nativeStartupPng != IntPtr.Zero)
         {
-            DestroyIcon(_nativeStartupIcon);
-            _nativeStartupIcon = IntPtr.Zero;
+            GdipDisposeImage(_nativeStartupPng);
+            _nativeStartupPng = IntPtr.Zero;
+        }
+
+        if (_gdiplusToken != UIntPtr.Zero)
+        {
+            GdiplusShutdown(_gdiplusToken);
+            _gdiplusToken = UIntPtr.Zero;
         }
 
         StartupDiagnostics.Write(
@@ -1194,6 +1247,19 @@ public sealed partial class MainWindow : Window
     }
 
 
+    private const int InterpolationModeHighQualityBicubic = 7;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct GdiplusStartupInput
+    {
+        public uint GdiplusVersion;
+        public IntPtr DebugEventCallback;
+        [MarshalAs(UnmanagedType.Bool)]
+        public bool SuppressBackgroundThread;
+        [MarshalAs(UnmanagedType.Bool)]
+        public bool SuppressExternalCodecs;
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     private struct NativePoint
     {
@@ -1293,15 +1359,6 @@ public sealed partial class MainWindow : Window
     private static extern bool DeleteObject(
         IntPtr obj);
 
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-    private static extern IntPtr LoadImage(
-        IntPtr instance,
-        string name,
-        uint type,
-        int width,
-        int height,
-        uint loadFlags);
-
     [DllImport("user32.dll")]
     private static extern IntPtr LoadCursor(
         IntPtr instance,
@@ -1332,31 +1389,47 @@ public sealed partial class MainWindow : Window
         ref NativeRect rect,
         IntPtr brush);
 
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool DrawIconEx(
+    [DllImport("gdiplus.dll", ExactSpelling = true)]
+    private static extern int GdiplusStartup(
+        out UIntPtr token,
+        ref GdiplusStartupInput input,
+        IntPtr output);
+
+    [DllImport("gdiplus.dll", ExactSpelling = true)]
+    private static extern void GdiplusShutdown(
+        UIntPtr token);
+
+    [DllImport("gdiplus.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
+    private static extern int GdipLoadImageFromFile(
+        string filename,
+        out IntPtr image);
+
+    [DllImport("gdiplus.dll", ExactSpelling = true)]
+    private static extern int GdipDisposeImage(
+        IntPtr image);
+
+    [DllImport("gdiplus.dll", ExactSpelling = true)]
+    private static extern int GdipCreateFromHDC(
         IntPtr hdc,
+        out IntPtr graphics);
+
+    [DllImport("gdiplus.dll", ExactSpelling = true)]
+    private static extern int GdipDeleteGraphics(
+        IntPtr graphics);
+
+    [DllImport("gdiplus.dll", ExactSpelling = true)]
+    private static extern int GdipSetInterpolationMode(
+        IntPtr graphics,
+        int interpolationMode);
+
+    [DllImport("gdiplus.dll", ExactSpelling = true)]
+    private static extern int GdipDrawImageRectI(
+        IntPtr graphics,
+        IntPtr image,
         int x,
         int y,
-        IntPtr icon,
         int width,
-        int height,
-        uint step,
-        IntPtr flickerFreeBrush,
-        uint flags);
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool DestroyIcon(
-        IntPtr icon);
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool RedrawWindow(
-        IntPtr hWnd,
-        IntPtr updateRect,
-        IntPtr updateRegion,
-        uint flags);
+        int height);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr GetModuleHandle(string? moduleName);
