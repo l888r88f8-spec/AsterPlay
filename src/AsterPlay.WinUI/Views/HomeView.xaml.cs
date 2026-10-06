@@ -220,9 +220,13 @@ public sealed partial class HomeView : UserControl
         };
 
         HomeContentStack.Padding =
-            new Thickness(horizontalPadding, 0, horizontalPadding, 122);
+            new Thickness(horizontalPadding, 0, horizontalPadding, 130);
+
+        // Keep the Hero dominant on large windows while retaining the mobile
+        // reference's proportions on shorter desktop windows.
+        HeroContainer.Height = Math.Clamp(e.NewSize.Height * 0.78, 590, 760);
         HeroContainer.Margin =
-            new Thickness(-horizontalPadding, 0, -horizontalPadding, -172);
+            new Thickness(-horizontalPadding, 0, -horizontalPadding, -86);
 
         LogHomeScrollState(
             $"size-changed {e.NewSize.Width:0.0}x{e.NewSize.Height:0.0}");
@@ -451,7 +455,10 @@ public sealed partial class HomeView : UserControl
         }
 
         var currentUrl = NormalizeServerUrl(_client.ServerUrl);
-        var flyout = new MenuFlyout();
+        var flyout = new MenuFlyout
+        {
+            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft
+        };
 
         foreach (var profile in servers)
         {
@@ -636,6 +643,9 @@ public sealed partial class HomeView : UserControl
             HeroTitleBlock.Text = "媒体库已连接";
             HeroMetaBlock.Text = "";
             HeroOverviewBlock.Text = "从下方浏览你的媒体库。";
+            HeroCommunityRatingBadge.Visibility = Visibility.Collapsed;
+            HeroCriticRatingBadge.Visibility = Visibility.Collapsed;
+            HeroOfficialRatingBadge.Visibility = Visibility.Collapsed;
             HeroFavoriteButton.Content = "♡  收藏";
             HeroImage.SourceUrl = "";
             HeroImageAlt.SourceUrl = "";
@@ -654,6 +664,39 @@ public sealed partial class HomeView : UserControl
             ? "♥  已收藏"
             : "♡  收藏";
         HeroOverviewBlock.Text = _heroItem.Overview ?? "";
+
+        if (_heroItem.CommunityRating is > 0)
+        {
+            HeroCommunityRatingBlock.Text = $"★ {_heroItem.CommunityRating:0.0}";
+            HeroCommunityRatingBadge.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            HeroCommunityRatingBadge.Visibility = Visibility.Collapsed;
+        }
+
+        if (_heroItem.CriticRating is > 0)
+        {
+            HeroCriticRatingBlock.Text = $"✓ {_heroItem.CriticRating:0}%";
+            HeroCriticRatingBadge.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            HeroCriticRatingBadge.Visibility = Visibility.Collapsed;
+        }
+
+        var officialRating = string.IsNullOrWhiteSpace(_heroItem.OfficialRating)
+            ? (string.Equals(_heroItem.Type, "Series", StringComparison.OrdinalIgnoreCase)
+                ? "剧集"
+                : string.Equals(_heroItem.Type, "Movie", StringComparison.OrdinalIgnoreCase)
+                    ? "电影"
+                    : _heroItem.Type)
+            : _heroItem.OfficialRating;
+
+        HeroOfficialRatingBlock.Text = officialRating;
+        HeroOfficialRatingBadge.Visibility = string.IsNullOrWhiteSpace(officialRating)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
 
         var backdropUrl =
             _client.BuildBackdropUrl(_heroItem, 1800);
@@ -677,7 +720,7 @@ public sealed partial class HomeView : UserControl
             HeroImage.Opacity = 1;
             HeroImageAlt.Opacity = 0;
             PageBackdropImage.SourceUrl = backdropUrl;
-            PageBackdropImage.Opacity = 0.84;
+            PageBackdropImage.Opacity = 0.30;
             PageBackdropImageAlt.Opacity = 0;
             _heroShowingPrimary = true;
             _heroVisualInitialized = true;
@@ -1222,9 +1265,6 @@ public sealed partial class HomeView : UserControl
 
         if (item.ProductionYear is > 0)
             values.Add(item.ProductionYear.Value.ToString());
-
-        if (item.CommunityRating is > 0)
-            values.Add($"★ {item.CommunityRating:0.0}");
 
         if (item.RunTimeTicks is > 0)
         {
