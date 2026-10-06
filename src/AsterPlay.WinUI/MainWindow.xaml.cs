@@ -808,7 +808,7 @@ public sealed partial class MainWindow : Window
         var inactiveForeground =
             new SolidColorBrush(Windows.UI.Color.FromArgb(255, 16, 18, 23));
         var selectedForeground =
-            new SolidColorBrush(Windows.UI.Color.FromArgb(255, 35, 120, 245));
+            new SolidColorBrush(Windows.UI.Color.FromArgb(255, 11, 77, 184));
 
         foreach (var button in new[] { HomeButton, LibraryButton, ServersButton, SettingsButton })
         {
