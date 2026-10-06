@@ -78,9 +78,28 @@ public partial class App : Application
             using (StartupDiagnostics.Measure("MainWindow.Activate"))
                 _window.Activate();
 
+            var actualBounds =
+                _window.CurrentBounds;
+
+            if (!BoundsEqual(
+                    startupBounds,
+                    actualBounds))
+            {
+                StartupDiagnostics.Write(
+                    $"OnLaunched: correcting MainWindow bounds behind splash; " +
+                    $"actual={actualBounds.X},{actualBounds.Y}," +
+                    $"{actualBounds.Width}x{actualBounds.Height}");
+
+                _window.EnsureStartupBounds(
+                    startupBounds);
+
+                actualBounds =
+                    _window.CurrentBounds;
+            }
+
             LogStartupBoundsMatch(
                 startupBounds,
-                _window.CurrentBounds);
+                actualBounds);
 
             StartupDiagnostics.Write(
                 "OnLaunched: MainWindow activated behind native splash");
@@ -137,15 +156,22 @@ public partial class App : Application
         }
     }
 
+    private static bool BoundsEqual(
+        RectInt32 left,
+        RectInt32 right) =>
+        left.X == right.X &&
+        left.Y == right.Y &&
+        left.Width == right.Width &&
+        left.Height == right.Height;
+
     private static void LogStartupBoundsMatch(
         RectInt32 requested,
         RectInt32 actual)
     {
         var exactMatch =
-            requested.X == actual.X &&
-            requested.Y == actual.Y &&
-            requested.Width == actual.Width &&
-            requested.Height == actual.Height;
+            BoundsEqual(
+                requested,
+                actual);
 
         StartupDiagnostics.Write(
             $"Startup bounds verification: exactMatch={exactMatch}; " +
