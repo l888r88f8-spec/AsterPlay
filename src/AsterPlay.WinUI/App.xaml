@@ -85,6 +85,14 @@
                     <SolidColorBrush x:Key="AccentFillColorDisabledBrush" Color="#552378F5"/>
                     <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush" Color="#3B8CFF"/>
                     <SolidColorBrush x:Key="AccentTextFillColorSecondaryBrush" Color="#2378F5"/>
+                    <SolidColorBrush x:Key="AccentButtonBackground" Color="#2378F5"/>
+                    <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#3B8CFF"/>
+                    <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#1C68D8"/>
+                    <SolidColorBrush x:Key="AccentButtonBackgroundDisabled" Color="#552378F5"/>
+                    <SolidColorBrush x:Key="AccentButtonForeground" Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="AccentButtonForegroundDisabled" Color="#A5ADBA"/>
                     <Color x:Key="AsterHeroFadeMidColor">#B5080A0F</Color>
                     <Color x:Key="AsterHeroFadeEndColor">#FF080A0F</Color>
                     <Color x:Key="AsterAmbientOverlayTopColor">#38080A0F</Color>
@@ -164,6 +172,14 @@
                     <SolidColorBrush x:Key="AccentFillColorDisabledBrush" Color="#552378F5"/>
                     <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush" Color="#176CE8"/>
                     <SolidColorBrush x:Key="AccentTextFillColorSecondaryBrush" Color="#2378F5"/>
+                    <SolidColorBrush x:Key="AccentButtonBackground" Color="#2378F5"/>
+                    <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#176CE8"/>
+                    <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#155FCB"/>
+                    <SolidColorBrush x:Key="AccentButtonBackgroundDisabled" Color="#552378F5"/>
+                    <SolidColorBrush x:Key="AccentButtonForeground" Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="AccentButtonForegroundDisabled" Color="#7A8492"/>
                     <Color x:Key="AsterHeroFadeMidColor">#72F4F6F9</Color>
                     <Color x:Key="AsterHeroFadeEndColor">#FFF4F6F9</Color>
                     <Color x:Key="AsterAmbientOverlayTopColor">#22F4F6F9</Color>
