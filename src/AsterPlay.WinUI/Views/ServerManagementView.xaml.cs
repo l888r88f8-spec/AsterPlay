@@ -485,10 +485,10 @@ public sealed partial class ServerManagementView : UserControl
     {
         var cardWidth = _compactLayout
             ? 300d
-            : 372d;
+            : 360d;
         var cardHeight = _compactLayout
-            ? 160d
-            : 182d;
+            ? 196d
+            : 236d;
 
         if (availableWidth > 0 &&
             availableWidth < 520)
@@ -497,7 +497,7 @@ public sealed partial class ServerManagementView : UserControl
                 260,
                 availableWidth - 44);
             cardHeight = Math.Round(
-                cardWidth * (182d / 372d));
+                cardWidth * (236d / 360d));
         }
 
         if (ServerCards.Layout is UniformGridLayout layout)
@@ -579,8 +579,8 @@ public sealed partial class ServerManagementView : UserControl
         private string _statusText;
         private Brush _statusBrush;
         private string _metaText;
-        private double _cardWidth = 372;
-        private double _cardHeight = 182;
+        private double _cardWidth = 360;
+        private double _cardHeight = 236;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
