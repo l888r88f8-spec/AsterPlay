@@ -1415,6 +1415,16 @@ public sealed partial class HomeView : UserControl
                 BuildLibrarySubtitle(view),
                 _client.BuildBackdropUrl(view, 900)));
         }
+
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            LibrariesScroller.ChangeView(
+                horizontalOffset: 0,
+                verticalOffset: null,
+                zoomFactor: null,
+                disableAnimation: true);
+            UpdateLibraryButtons();
+        });
     }
 
     private async Task<HomeLibrarySection?> LoadLibrarySectionAsync(EmbyItem library)
@@ -1601,6 +1611,48 @@ public sealed partial class HomeView : UserControl
         ResumePreviousButton.IsEnabled = ResumeScroller.HorizontalOffset > epsilon;
         ResumeNextButton.IsEnabled =
             ResumeScroller.HorizontalOffset < ResumeScroller.ScrollableWidth - epsilon;
+    }
+
+    private void LibrariesArrow_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string tag } ||
+            !int.TryParse(tag, out var direction) ||
+            LibrariesScroller.ScrollableWidth <= 0)
+        {
+            return;
+        }
+
+        var distance = Math.Max(302, LibrariesScroller.ViewportWidth * 0.82);
+        var target = Math.Clamp(
+            LibrariesScroller.HorizontalOffset + Math.Sign(direction) * distance,
+            0,
+            LibrariesScroller.ScrollableWidth);
+
+        LibrariesScroller.ChangeView(
+            horizontalOffset: target,
+            verticalOffset: null,
+            zoomFactor: null,
+            disableAnimation: false);
+    }
+
+    private void LibrariesScroller_ViewChanged(
+        object sender,
+        ScrollViewerViewChangedEventArgs e) =>
+        UpdateLibraryButtons();
+
+    private void LibrariesScroller_SizeChanged(
+        object sender,
+        SizeChangedEventArgs e) =>
+        UpdateLibraryButtons();
+
+    private void UpdateLibraryButtons()
+    {
+        const double epsilon = 1.0;
+        LibrariesPreviousButton.IsEnabled =
+            LibrariesScroller.HorizontalOffset > epsilon;
+        LibrariesNextButton.IsEnabled =
+            LibrariesScroller.HorizontalOffset <
+            LibrariesScroller.ScrollableWidth - epsilon;
     }
 
     private static IReadOnlyList<EmbyItem> BuildResumeItems(IEnumerable<EmbyItem> source)
