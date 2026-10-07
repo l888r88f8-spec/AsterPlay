@@ -640,8 +640,10 @@
                             </ItemsControl>
                         </ScrollViewer>
 
-                        <Border Width="74"
+                        <Border x:Name="ResumeLeftFade"
+                                Width="74"
                                 HorizontalAlignment="Left"
+                                Visibility="Collapsed"
                                 IsHitTestVisible="False">
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0,0"
@@ -651,8 +653,10 @@
                                 </LinearGradientBrush>
                             </Border.Background>
                         </Border>
-                        <Border Width="74"
+                        <Border x:Name="ResumeRightFade"
+                                Width="74"
                                 HorizontalAlignment="Right"
+                                Visibility="Collapsed"
                                 IsHitTestVisible="False">
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="1,0"
@@ -665,6 +669,7 @@
 
                         <Button x:Name="ResumePreviousButton"
                                 Style="{StaticResource RailEdgeButtonStyle}"
+                                Visibility="Collapsed"
                                 Content="‹"
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Center"
@@ -673,6 +678,7 @@
                                 Click="ResumeArrow_Click"/>
                         <Button x:Name="ResumeNextButton"
                                 Style="{StaticResource RailEdgeButtonStyle}"
+                                Visibility="Collapsed"
                                 Content="›"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
@@ -746,8 +752,10 @@
                             </ItemsRepeater>
                         </ScrollViewer>
 
-                        <Border Width="72"
+                        <Border x:Name="LibrariesLeftFade"
+                                Width="72"
                                 HorizontalAlignment="Left"
+                                Visibility="Collapsed"
                                 IsHitTestVisible="False">
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0,0"
@@ -757,8 +765,10 @@
                                 </LinearGradientBrush>
                             </Border.Background>
                         </Border>
-                        <Border Width="72"
+                        <Border x:Name="LibrariesRightFade"
+                                Width="72"
                                 HorizontalAlignment="Right"
+                                Visibility="Collapsed"
                                 IsHitTestVisible="False">
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="1,0"
@@ -771,6 +781,7 @@
 
                         <Button x:Name="LibrariesPreviousButton"
                                 Style="{StaticResource RailEdgeButtonStyle}"
+                                Visibility="Collapsed"
                                 Content="‹"
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Center"
@@ -779,6 +790,7 @@
                                 Click="LibrariesArrow_Click"/>
                         <Button x:Name="LibrariesNextButton"
                                 Style="{StaticResource RailEdgeButtonStyle}"
+                                Visibility="Collapsed"
                                 Content="›"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
