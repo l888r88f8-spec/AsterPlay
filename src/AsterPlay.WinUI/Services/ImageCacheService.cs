@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using AsterPlay.Services;
+using Windows.Graphics.Imaging;
+using Windows.Storage.Streams;
 
 namespace AsterPlay.WinUI.Services;
 
@@ -19,6 +21,7 @@ public sealed class ImageCacheService
     private readonly string _cacheRoot;
     private readonly ConcurrentDictionary<string, WeakReference<byte[]>> _memory = new();
     private readonly ConcurrentDictionary<string, Lazy<Task<byte[]?>>> _inflight = new();
+    private readonly ConcurrentDictionary<string, double> _topRightLuminance = new();
     private readonly SemaphoreSlim _downloadGate = new(6, 6);
 
     public static ImageCacheService Shared { get; } = new();
@@ -76,9 +79,96 @@ public sealed class ImageCacheService
             targets.Select(url => GetBytesAsync(url, cancellationToken)));
     }
 
+    public async Task<double?> GetTopRightLuminanceAsync(
+        string? url,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return null;
+
+        var key = CreateCacheKey(url);
+        if (_topRightLuminance.TryGetValue(key, out var cached))
+            return cached;
+
+        var bytes = await GetBytesAsync(url, cancellationToken);
+        if (bytes is null || bytes.Length == 0)
+            return null;
+
+        try
+        {
+            using var stream = new InMemoryRandomAccessStream();
+            using (var writer = new DataWriter(stream.GetOutputStreamAt(0)))
+            {
+                writer.WriteBytes(bytes);
+                await writer.StoreAsync();
+                await writer.FlushAsync();
+                writer.DetachStream();
+            }
+
+            stream.Seek(0);
+            var decoder = await BitmapDecoder.CreateAsync(stream);
+
+            const uint sampleWidth = 96;
+            const uint sampleHeight = 54;
+            var transform = new BitmapTransform
+            {
+                ScaledWidth = sampleWidth,
+                ScaledHeight = sampleHeight
+            };
+
+            var pixelData = await decoder.GetPixelDataAsync(
+                BitmapPixelFormat.Bgra8,
+                BitmapAlphaMode.Ignore,
+                transform,
+                ExifOrientationMode.RespectExifOrientation,
+                ColorManagementMode.DoNotColorManage);
+
+            var pixels = pixelData.DetachPixelData();
+
+            // Caption buttons occupy the extreme top-right of the Hero.
+            // Sample only that region rather than averaging the whole backdrop.
+            var startX = (int)(sampleWidth * 0.70);
+            var endY = Math.Max(1, (int)(sampleHeight * 0.24));
+            double total = 0;
+            var count = 0;
+
+            for (var y = 0; y < endY; y++)
+            {
+                for (var x = startX; x < sampleWidth; x++)
+                {
+                    var index = (y * (int)sampleWidth + x) * 4;
+                    var b = pixels[index];
+                    var g = pixels[index + 1];
+                    var r = pixels[index + 2];
+
+                    total +=
+                        (0.2126 * r) +
+                        (0.7152 * g) +
+                        (0.0722 * b);
+                    count++;
+                }
+            }
+
+            if (count == 0)
+                return null;
+
+            var luminance = total / count;
+            _topRightLuminance[key] = luminance;
+            return luminance;
+        }
+        catch (Exception ex)
+        {
+            PlaybackLog.Write(
+                "WinUIImageContrast",
+                $"top-right luminance failed: {ex.GetType().Name}: {ex.Message}");
+            return null;
+        }
+    }
+
     public async Task ClearAsync()
     {
         _memory.Clear();
+        _topRightLuminance.Clear();
 
         if (!Directory.Exists(_cacheRoot))
             return;
@@ -105,6 +195,7 @@ public sealed class ImageCacheService
 
         var key = CreateCacheKey(url);
         _memory.TryRemove(key, out _);
+        _topRightLuminance.TryRemove(key, out _);
 
         try
         {
