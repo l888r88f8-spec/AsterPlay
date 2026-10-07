@@ -1290,8 +1290,6 @@ public sealed partial class HomeView : UserControl
         _heroTransitionStoryboard = storyboard;
         storyboard.Completed += (_, _) =>
         {
-            // Update the subtle ambient copy only after the Hero crossfade.
-            // This avoids running a second full-screen crossfade in parallel.
             _heroTransitionStoryboard = null;
         };
         storyboard.Begin();
