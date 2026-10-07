@@ -34,13 +34,6 @@ public sealed class CachedImage : UserControl
             typeof(CachedImage),
             new PropertyMetadata(true, OnLazyLoadingEnabledChanged));
 
-    public static readonly DependencyProperty CornerRadiusProperty =
-        DependencyProperty.Register(
-            nameof(CornerRadius),
-            typeof(CornerRadius),
-            typeof(CachedImage),
-            new PropertyMetadata(new CornerRadius(0), OnCornerRadiusChanged));
-
     private const double PreloadMargin = 220;
 
     private readonly Border _clipBorder = new()
@@ -69,6 +62,12 @@ public sealed class CachedImage : UserControl
         Content = _clipBorder;
         _image.Stretch = Stretch;
 
+        // UserControl already inherits Control.CornerRadius. Observe that native
+        // dependency property instead of declaring another one with the same name.
+        RegisterPropertyChangedCallback(
+            Control.CornerRadiusProperty,
+            (_, _) => _clipBorder.CornerRadius = CornerRadius);
+
         Loaded += CachedImage_Loaded;
         Unloaded += CachedImage_Unloaded;
     }
@@ -89,12 +88,6 @@ public sealed class CachedImage : UserControl
     {
         get => (bool)GetValue(LazyLoadingEnabledProperty);
         set => SetValue(LazyLoadingEnabledProperty, value);
-    }
-
-    public CornerRadius CornerRadius
-    {
-        get => (CornerRadius)GetValue(CornerRadiusProperty);
-        set => SetValue(CornerRadiusProperty, value);
     }
 
     public async Task<bool> EnsureLoadedAsync(
@@ -142,17 +135,6 @@ public sealed class CachedImage : UserControl
             e.NewValue is Stretch stretch)
         {
             image._image.Stretch = stretch;
-        }
-    }
-
-    private static void OnCornerRadiusChanged(
-        DependencyObject dependencyObject,
-        DependencyPropertyChangedEventArgs e)
-    {
-        if (dependencyObject is CachedImage image &&
-            e.NewValue is CornerRadius cornerRadius)
-        {
-            image._clipBorder.CornerRadius = cornerRadius;
         }
     }
 
