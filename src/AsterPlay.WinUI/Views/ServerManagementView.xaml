@@ -42,7 +42,7 @@
                TargetType="Button"
                BasedOn="{StaticResource AsterGlassButtonStyle}">
             <Setter Property="Padding" Value="0"/>
-            <Setter Property="MinHeight" Value="182"/>
+            <Setter Property="MinHeight" Value="236"/>
             <Setter Property="CornerRadius" Value="26"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -143,8 +143,8 @@
                     <ItemsRepeater x:Name="ServerCards"
                                    HorizontalAlignment="Stretch">
                         <ItemsRepeater.Layout>
-                            <UniformGridLayout MinItemWidth="372"
-                                               MinItemHeight="182"
+                            <UniformGridLayout MinItemWidth="360"
+                                               MinItemHeight="236"
                                                MinColumnSpacing="18"
                                                MinRowSpacing="18"
                                                ItemsJustification="Start"
