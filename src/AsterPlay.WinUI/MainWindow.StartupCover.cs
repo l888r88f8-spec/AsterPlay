@@ -6,77 +6,22 @@ public sealed partial class MainWindow
 {
     private bool _startupCoverRevealStarted;
     private bool _startupCoverImageReady;
-    private readonly TaskCompletionSource<bool> _startupCoverImageCompletion =
-        new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private void StartupCoverImage_ImageOpened(
         object sender,
         RoutedEventArgs e)
     {
         _startupCoverImageReady = true;
-        _startupCoverImageCompletion.TrySetResult(true);
         StartupDiagnostics.Write(
-            "In-window startup cover icon decoded");
+            "Single-window startup cover icon decoded");
     }
 
     private void StartupCoverImage_ImageFailed(
         object sender,
         ExceptionRoutedEventArgs e)
     {
-        _startupCoverImageCompletion.TrySetResult(false);
         StartupDiagnostics.Write(
-            $"In-window startup cover icon failed: {e.ErrorMessage}");
-    }
-
-    internal async Task PrepareStartupCoverForNativeHandoffAsync()
-    {
-        // Keep an opaque WinUI-owned surface directly below the native splash.
-        // It is intentionally the same artwork, so destroying the native HWND
-        // is visually lossless and does not expose an unpresented owner window.
-        StartupCover.Visibility = Visibility.Visible;
-        StartupCover.IsHitTestVisible = true;
-        StartupCover.Opacity = 0.999;
-
-        WriteStartupVisualState(
-            "PrepareStartupCoverForNativeHandoff.beforeFence");
-
-        var imageTask = _startupCoverImageCompletion.Task;
-        var imageWait = await Task.WhenAny(
-            imageTask,
-            Task.Delay(1000));
-        var imageReady =
-            ReferenceEquals(imageWait, imageTask) &&
-            await imageTask;
-
-        var frames = await WaitForStartupCoverFramesAsync(3, 1000);
-        var flush = Task.Run(DwmFlush);
-        var completed = await Task.WhenAny(
-            flush,
-            Task.Delay(1000));
-        var dwmFlushed = ReferenceEquals(completed, flush);
-
-        StartupDiagnostics.Write(
-            $"In-window cover prepared behind native splash; " +
-            $"iconReady={imageReady}, frames={frames}, dwmFlushed={dwmFlushed}");
-        WriteStartupVisualState(
-            "PrepareStartupCoverForNativeHandoff.afterFence");
-    }
-
-    internal async Task ConfirmStartupCoverPresentedAsync()
-    {
-        // These are the first composition frames after the layered native HWND
-        // has gone away. Fence them before starting the visible WinUI fade.
-        var frames = await WaitForStartupCoverFramesAsync(2, 1000);
-        var flush = Task.Run(DwmFlush);
-        var completed = await Task.WhenAny(
-            flush,
-            Task.Delay(1000));
-
-        StartupDiagnostics.Write(
-            $"In-window cover confirmed after native handoff; frames={frames}, " +
-            $"dwmFlushed={ReferenceEquals(completed, flush)}");
-        WriteStartupVisualState(
-            "ConfirmStartupCoverPresented.afterFence");
+            $"Single-window startup cover icon failed: {e.ErrorMessage}");
     }
 
     internal async Task RevealStartupCoverAsync()
@@ -94,11 +39,14 @@ public sealed partial class MainWindow
             WriteStartupVisualState(
                 "RevealStartupCover.beforeFade");
             StartupDiagnostics.Write(
-                $"Home visual ready; fading in-window startup cover; iconReady={_startupCoverImageReady}");
+                $"Home visual ready; fading single-window startup cover; iconReady={_startupCoverImageReady}");
 
-            // This animation now runs entirely inside MainWindow's compositor,
-            // so every opacity step blends against the already-presented Home.
-            await WaitForStartupCoverFramesAsync(2, 700);
+            // Home and the cover share one compositor tree. Wait for two fresh
+            // frames after the ready signal, then fade the cover without any
+            // top-level window activation or destruction.
+            var frames = await WaitForStartupCoverFramesAsync(2, 700);
+            StartupDiagnostics.Write(
+                $"Single-window cover fade fence completed; frames={frames}");
 
             const int durationMilliseconds = 560;
             var start = DateTime.UtcNow;
@@ -125,7 +73,7 @@ public sealed partial class MainWindow
             StartupCover.Visibility = Visibility.Collapsed;
 
             StartupDiagnostics.Write(
-                "In-window startup cover removed; Home is now directly visible");
+                "Single-window startup cover removed; Home is directly visible");
             WriteStartupVisualState(
                 "RevealStartupCover.afterCollapse");
         }

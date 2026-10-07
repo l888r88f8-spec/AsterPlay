@@ -7,7 +7,6 @@ namespace AsterPlay.WinUI;
 public partial class App : Application
 {
     private MainWindow? _window;
-    private NativeStartupSplash? _splash;
 
     public App()
     {
@@ -49,7 +48,7 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         StartupDiagnostics.Write(
-            "OnLaunched: resolving one shared rect for native splash and MainWindow");
+            "OnLaunched: resolving startup bounds for single MainWindow");
 
         try
         {
@@ -57,25 +56,16 @@ public partial class App : Application
                 StartupWindowPlacement.Resolve();
 
             StartupDiagnostics.Write(
-                $"OnLaunched: shared startup bounds=" +
+                $"OnLaunched: MainWindow startup bounds=" +
                 $"{startupBounds.X},{startupBounds.Y}," +
                 $"{startupBounds.Width}x{startupBounds.Height}");
 
-            using (StartupDiagnostics.Measure("NativeStartupSplash constructor"))
-                _splash = new NativeStartupSplash(
-                    startupBounds,
-                    RequestedTheme);
-
-            _splash.Show();
-            StartupDiagnostics.Write(
-                $"OnLaunched: native splash shown; available={_splash.IsAvailable}");
-
+            // The static startup page is part of MainWindow itself. Creating
+            // only one top-level HWND avoids activation, z-order and compositor
+            // gaps caused by handing off from a separate splash window.
             using (StartupDiagnostics.Measure("MainWindow constructor"))
                 _window = new MainWindow(
                     startupBounds);
-
-            _splash.AttachOwner(
-                _window.NativeHandle);
 
             _window.StartupVisualReady +=
                 MainWindow_StartupVisualReady;
@@ -91,7 +81,7 @@ public partial class App : Application
                     actualBounds))
             {
                 StartupDiagnostics.Write(
-                    $"OnLaunched: correcting MainWindow bounds behind splash; " +
+                    $"OnLaunched: correcting MainWindow bounds; " +
                     $"actual={actualBounds.X},{actualBounds.Y}," +
                     $"{actualBounds.Width}x{actualBounds.Height}");
 
@@ -107,15 +97,11 @@ public partial class App : Application
                 actualBounds);
 
             StartupDiagnostics.Write(
-                "OnLaunched: MainWindow activated behind native splash");
+                "OnLaunched: single MainWindow activated with startup cover");
         }
         catch (Exception ex)
         {
             StartupDiagnostics.WriteException("OnLaunched", ex);
-
-            _splash?.Dispose();
-            _splash = null;
-
             throw;
         }
     }
@@ -130,61 +116,25 @@ public partial class App : Application
         _window.StartupVisualReady -=
             MainWindow_StartupVisualReady;
 
-        var splash = _splash;
-        _splash = null;
-
         StartupDiagnostics.Write(
-            $"StartupVisualReady event received; nativeSplashExists={splash is not null}, " +
-            $"nativeSplashAvailable={splash?.IsAvailable == true}");
+            "StartupVisualReady event received; startupSurface=MainWindow.StartupCover");
         _window.WriteStartupVisualState(
             "App.StartupVisualReady.received");
 
         try
         {
-            if (splash is not null &&
-                splash.IsAvailable)
-            {
-                // A layered native HWND cannot reliably alpha-blend into the
-                // WinUI compositor surface on every Windows 10/11 DWM path.
-                // Prepare the visually identical in-window cover first, then
-                // swap surfaces atomically and run the actual transition inside
-                // the MainWindow composition tree.
-                StartupDiagnostics.Write(
-                    "App: preparing in-window cover for native splash handoff");
-                await _window.PrepareStartupCoverForNativeHandoffAsync();
-                _window.WriteStartupVisualState(
-                    "App.beforeNativeSplashDispose");
-
-                splash.Dispose();
-                _window.Activate();
-
-                StartupDiagnostics.Write(
-                    "App: native splash disposed; confirming in-window cover presentation");
-                await _window.ConfirmStartupCoverPresentedAsync();
-                _window.WriteStartupVisualState(
-                    "App.beforeInWindowCoverFade");
-
-                await _window.RevealStartupCoverAsync();
-                _window.WriteStartupVisualState(
-                    "App.afterInWindowCoverFade");
-                StartupDiagnostics.Write(
-                    "In-window startup cover faded into presented Home");
-            }
-            else
-            {
-                splash?.Dispose();
-                await _window.RevealStartupCoverAsync();
-                StartupDiagnostics.Write(
-                    "In-window startup cover used because native splash was unavailable");
-            }
+            await _window.RevealStartupCoverAsync();
+            _window.WriteStartupVisualState(
+                "App.afterInWindowCoverFade");
+            StartupDiagnostics.Write(
+                "Single-window startup cover faded into presented Home");
 
             _window.NotifyStartupRevealCompleted();
             StartupDiagnostics.Write(
-                "Native splash to MainWindow handoff completed");
+                "Single-window startup reveal completed");
         }
         catch (Exception ex)
         {
-            splash?.Dispose();
             _window.NotifyStartupRevealCompleted();
             StartupDiagnostics.WriteException(
                 "MainWindow_StartupVisualReady",
