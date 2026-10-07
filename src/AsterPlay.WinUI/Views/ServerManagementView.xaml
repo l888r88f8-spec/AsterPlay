@@ -3,6 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:lg="using:LiquidGlassWinUI"
+    xmlns:controls="using:AsterPlay.WinUI.Controls"
     Loaded="ServerManagementView_Loaded">
 
     <UserControl.Resources>
@@ -181,11 +182,17 @@
                                                             Background="{ThemeResource AsterCardBackgroundBrush}"
                                                             BorderBrush="{ThemeResource AsterDockBorderBrush}"
                                                             BorderThickness="1">
-                                                        <FontIcon Glyph="&#xE7F8;"
-                                                                  FontSize="20"
-                                                                  Foreground="{ThemeResource AsterPrimaryTextBrush}"
-                                                                  HorizontalAlignment="Center"
-                                                                  VerticalAlignment="Center"/>
+                                                        <Grid>
+                                                            <FontIcon Glyph="&#xE7F8;"
+                                                                      FontSize="20"
+                                                                      Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                                                                      HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"/>
+                                                            <controls:CachedImage SourceUrl="{Binding AvatarUrl}"
+                                                                                  LazyLoadingEnabled="False"
+                                                                                  Stretch="UniformToFill"
+                                                                                  CornerRadius="12"/>
+                                                        </Grid>
                                                     </Border>
 
                                                     <StackPanel Grid.Column="2"
