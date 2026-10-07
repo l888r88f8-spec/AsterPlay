@@ -27,6 +27,7 @@ public sealed partial class HomeView : UserControl
     private EmbyItem? _heroItem;
     private int _heroIndex;
     private int _heroPreloadGeneration;
+    private int _heroCaptionContrastGeneration;
     private bool _heroImagesReady;
     private bool _heroShowingPrimary = true;
     private bool _heroVisualInitialized;
@@ -54,6 +55,7 @@ public sealed partial class HomeView : UserControl
     public event EventHandler<ServerProfile>? ServerSwitchRequested;
     public event EventHandler? SearchRequested;
     public event EventHandler? InitialVisualReady;
+    public event Action<bool>? HeroCaptionContrastChanged;
 
     public HomeView(EmbyClient client, bool noServerMode = false)
     {
@@ -1207,7 +1209,41 @@ public sealed partial class HomeView : UserControl
             _client.BuildBackdropUrl(_heroItem, 1800);
 
         TransitionHeroVisual(backdropUrl);
+        UpdateHeroCaptionContrast(backdropUrl);
         UpdateHeroIndicators(animate: true);
+    }
+
+    private async void UpdateHeroCaptionContrast(string backdropUrl)
+    {
+        if (string.IsNullOrWhiteSpace(backdropUrl))
+            return;
+
+        var generation = ++_heroCaptionContrastGeneration;
+
+        try
+        {
+            var luminance =
+                await ImageCacheService.Shared.GetTopRightLuminanceAsync(
+                    backdropUrl);
+
+            if (generation != _heroCaptionContrastGeneration ||
+                luminance is null)
+            {
+                return;
+            }
+
+            // Bright artwork needs dark caption glyphs; dark artwork needs white.
+            var useDarkGlyphs = luminance.Value >= 150;
+            HeroCaptionContrastChanged?.Invoke(useDarkGlyphs);
+
+            StartupDiagnostics.Write(
+                $"Hero caption contrast: luminance={luminance.Value:0.0}; " +
+                $"darkGlyphs={useDarkGlyphs}");
+        }
+        catch (Exception ex)
+        {
+            PlaybackLog.Error("WinUIHeroCaptionContrast", ex);
+        }
     }
 
     private void TransitionHeroVisual(string backdropUrl)
