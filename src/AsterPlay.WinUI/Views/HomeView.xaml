@@ -369,13 +369,54 @@
                       HorizontalAlignment="Stretch"
                       Visibility="Collapsed"
                       IsHitTestVisible="False">
-                    <!-- A low-intensity continuation of the same artwork. This layer is
-                         allowed to crop because it is only atmospheric background; it never
-                         changes the framing of the actual Hero carousel image. -->
+                    <!-- Two atmospheric copies cross-fade independently from the
+                         foreground carousel. They may crop because they are blurred colour
+                         fields only; the real Hero framing remains untouched. -->
                     <controls:CachedImage x:Name="HeroExtensionImage"
                                           LazyLoadingEnabled="False"
                                           Stretch="UniformToFill"
-                                          Opacity="0.18"/>
+                                          Opacity="0.34"
+                                          RenderTransformOrigin="0.5,0.5">
+                        <controls:CachedImage.RenderTransform>
+                            <ScaleTransform ScaleX="1.07"
+                                            ScaleY="1.07"/>
+                        </controls:CachedImage.RenderTransform>
+                    </controls:CachedImage>
+                    <controls:CachedImage x:Name="HeroExtensionImageAlt"
+                                          LazyLoadingEnabled="False"
+                                          Stretch="UniformToFill"
+                                          Opacity="0"
+                                          RenderTransformOrigin="0.5,0.5">
+                        <controls:CachedImage.RenderTransform>
+                            <ScaleTransform ScaleX="1.07"
+                                            ScaleY="1.07"/>
+                        </controls:CachedImage.RenderTransform>
+                    </controls:CachedImage>
+
+                    <!-- Reuse AsterPlay's compositor blur pipeline as a neutral ambience
+                         pass: no refraction/glare, only blur and restrained colour shaping. -->
+                    <Rectangle IsHitTestVisible="False"
+                               Opacity="0.96">
+                        <Rectangle.Fill>
+                            <lg:LiquidGlassBrush BlurAmount="5.5"
+                                                 BloomAmount="0"
+                                                 RefThickness="0"
+                                                 RefFactor="1"
+                                                 RefDispersion="0"
+                                                 DispersionRange="0"
+                                                 RefFresnelFactor="0"
+                                                 GlareFactor="0"
+                                                 GlareOppositeFactor="0"
+                                                 TintA="0"
+                                                 Brightness="-0.04"
+                                                 Contrast="0.74"
+                                                 Saturation="1.08"
+                                                 Exposure="0.92"
+                                                 Vibrance="0.06"
+                                                 ShapeRadius="0"
+                                                 ShapeRoundness="4"/>
+                        </Rectangle.Fill>
+                    </Rectangle>
 
                     <!-- Light top shading only for caption/control readability. -->
                     <Rectangle VerticalAlignment="Top"
