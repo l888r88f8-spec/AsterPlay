@@ -1165,6 +1165,7 @@ public sealed partial class HomeView : UserControl
             HeroImage.SourceUrl = "";
             HeroImageAlt.SourceUrl = "";
             HeroExtensionImage.SourceUrl = "";
+            HeroExtensionImageAlt.SourceUrl = "";
             PageBackdropLayer.Visibility = Visibility.Collapsed;
             _heroVisualInitialized = false;
             _currentHeroBackdropUrl = "";
@@ -1234,7 +1235,9 @@ public sealed partial class HomeView : UserControl
             HeroImageAlt.SourceUrl = "";
             HeroImageAlt.Opacity = 0;
             HeroExtensionImage.SourceUrl = backdropUrl;
-            HeroExtensionImage.Opacity = 0.18;
+            HeroExtensionImage.Opacity = 0.34;
+            HeroExtensionImageAlt.SourceUrl = "";
+            HeroExtensionImageAlt.Opacity = 0;
 
             _heroShowingPrimary = true;
             _currentHeroBackdropUrl = backdropUrl;
@@ -1247,7 +1250,9 @@ public sealed partial class HomeView : UserControl
             HeroImage.Opacity = 1;
             HeroImageAlt.Opacity = 0;
             HeroExtensionImage.SourceUrl = backdropUrl;
-            HeroExtensionImage.Opacity = 0.18;
+            HeroExtensionImage.Opacity = 0.34;
+            HeroExtensionImageAlt.SourceUrl = "";
+            HeroExtensionImageAlt.Opacity = 0;
 
             _heroShowingPrimary = true;
             _heroVisualInitialized = true;
@@ -1267,10 +1272,16 @@ public sealed partial class HomeView : UserControl
 
         var incomingHero = _heroShowingPrimary ? HeroImageAlt : HeroImage;
         var outgoingHero = _heroShowingPrimary ? HeroImage : HeroImageAlt;
+        var incomingAmbient = _heroShowingPrimary ? HeroExtensionImageAlt : HeroExtensionImage;
+        var outgoingAmbient = _heroShowingPrimary ? HeroExtensionImage : HeroExtensionImageAlt;
 
         incomingHero.SourceUrl = backdropUrl;
         incomingHero.Opacity = 0;
         outgoingHero.Opacity = 1;
+
+        incomingAmbient.SourceUrl = backdropUrl;
+        incomingAmbient.Opacity = 0;
+        outgoingAmbient.Opacity = 0.34;
 
         var easing = new CubicEase
         {
@@ -1294,16 +1305,28 @@ public sealed partial class HomeView : UserControl
             760,
             easing);
 
+        // Let the page colour field lag slightly behind the foreground Hero.
+        // This is the soft, whole-page colour transition seen in the reference.
+        AddOpacityAnimation(
+            storyboard,
+            incomingAmbient,
+            0,
+            0.34,
+            1050,
+            easing);
+        AddOpacityAnimation(
+            storyboard,
+            outgoingAmbient,
+            0.34,
+            0,
+            1050,
+            easing);
+
         _heroShowingPrimary = !_heroShowingPrimary;
         _currentHeroBackdropUrl = backdropUrl;
         _heroTransitionStoryboard = storyboard;
         storyboard.Completed += (_, _) =>
         {
-            // The continuation is deliberately a separate, low-intensity copy.
-            // Update it only after the foreground carousel has completed its
-            // crossfade so it never changes the Hero's framing or crop.
-            HeroExtensionImage.SourceUrl = backdropUrl;
-            HeroExtensionImage.Opacity = 0.18;
             _heroTransitionStoryboard = null;
         };
         storyboard.Begin();
