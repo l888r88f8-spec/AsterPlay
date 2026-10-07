@@ -9,6 +9,8 @@ public partial class App : Application
     private MainWindow? _window;
     private NativeStartupSplash? _splash;
 
+    internal MainWindow? HostWindow => _window;
+
     public App()
     {
         StartupDiagnostics.StartSession();
