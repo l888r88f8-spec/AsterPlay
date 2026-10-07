@@ -741,64 +741,63 @@
 
                         <StackPanel HorizontalAlignment="Right"
                                     Orientation="Horizontal"
-                                    Spacing="8">
-                            <Button Width="36"
-                                    Height="36"
-                                    Padding="0"
-                                    CornerRadius="18"
-                                    Style="{StaticResource SectionMoreButtonStyle}"
-                                    Click="OpenLibrary_Click">
-                                <FontIcon Glyph="&#xE8A9;" FontSize="15"/>
-                            </Button>
-                            <Button Width="36"
-                                    Height="36"
-                                    Padding="0"
-                                    CornerRadius="18"
-                                    Style="{StaticResource SectionMoreButtonStyle}"
-                                    Click="OpenLibrary_Click">
-                                <FontIcon Glyph="&#xF0E2;" FontSize="15"/>
-                            </Button>
+                                    Spacing="7">
+                            <Button x:Name="LibrariesPreviousButton"
+                                    Style="{StaticResource RoundActionButtonStyle}"
+                                    Content="‹"
+                                    Tag="-1"
+                                    Click="LibrariesArrow_Click"/>
+                            <Button x:Name="LibrariesNextButton"
+                                    Style="{StaticResource RoundActionButtonStyle}"
+                                    Content="›"
+                                    Tag="1"
+                                    Click="LibrariesArrow_Click"/>
                         </StackPanel>
                     </Grid>
 
-                    <ItemsRepeater x:Name="LibrariesGrid">
-                        <ItemsRepeater.Layout>
-                            <UniformGridLayout MinItemWidth="286"
-                                               MinItemHeight="154"
-                                               MinColumnSpacing="16"
-                                               MinRowSpacing="16"
-                                               ItemsJustification="Start"
-                                               ItemsStretch="None"/>
-                        </ItemsRepeater.Layout>
-                        <ItemsRepeater.ItemTemplate>
-                            <DataTemplate>
-                                <Button Width="286"
-                                        Height="154"
-                                        Padding="0"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        HorizontalAlignment="Stretch"
-                                        Tag="{Binding}"
-                                        Click="LibraryTile_Click"
+                    <ScrollViewer x:Name="LibrariesScroller"
+                                  HorizontalScrollMode="Enabled"
+                                  HorizontalScrollBarVisibility="Hidden"
+                                  VerticalScrollMode="Disabled"
+                                  VerticalScrollBarVisibility="Disabled"
+                                  ZoomMode="Disabled"
+                                  ViewChanged="LibrariesScroller_ViewChanged"
+                                  SizeChanged="LibrariesScroller_SizeChanged">
+                        <ItemsRepeater x:Name="LibrariesGrid">
+                            <ItemsRepeater.Layout>
+                                <StackLayout Orientation="Horizontal"
+                                             Spacing="16"/>
+                            </ItemsRepeater.Layout>
+                            <ItemsRepeater.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Width="286"
+                                            Height="154"
+                                            Padding="0"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            HorizontalAlignment="Stretch"
+                                            Tag="{Binding}"
+                                            Click="LibraryTile_Click"
                                             Template="{StaticResource FlatButtonTemplate}">
-                                    <Border CornerRadius="20"
-                                            Background="{ThemeResource AsterCardBackgroundBrush}"
-                                            BorderBrush="{ThemeResource AsterCardBorderBrush}"
-                                            BorderThickness="1">
-                                        <Grid>
-                                            <controls:CachedImage SourceUrl="{Binding BackdropUrl}"
-                                                                  Stretch="UniformToFill"
-                                                                  CornerRadius="20"
-                                                                  Opacity="0.88"/>
-                                            <Border BorderBrush="#24FFFFFF"
-                                                    BorderThickness="1"
-                                                    CornerRadius="20"/>
-                                        </Grid>
-                                    </Border>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsRepeater.ItemTemplate>
-                    </ItemsRepeater>
+                                        <Border CornerRadius="20"
+                                                Background="{ThemeResource AsterCardBackgroundBrush}"
+                                                BorderBrush="{ThemeResource AsterCardBorderBrush}"
+                                                BorderThickness="1">
+                                            <Grid>
+                                                <controls:CachedImage SourceUrl="{Binding BackdropUrl}"
+                                                                      Stretch="UniformToFill"
+                                                                      CornerRadius="20"
+                                                                      Opacity="0.88"/>
+                                                <Border BorderBrush="#24FFFFFF"
+                                                        BorderThickness="1"
+                                                        CornerRadius="20"/>
+                                            </Grid>
+                                        </Border>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsRepeater.ItemTemplate>
+                        </ItemsRepeater>
+                    </ScrollViewer>
                 </StackPanel>
 
                 <!-- Library sections -->
