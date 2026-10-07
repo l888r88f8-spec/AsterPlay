@@ -320,11 +320,6 @@ public sealed partial class HomeView : UserControl
             HomeScrollViewer,
             images);
 
-        // These live outside the ScrollViewer but are visible in the startup
-        // composition and should not pop in after the splash disappears.
-        if (!string.IsNullOrWhiteSpace(PageBackdropImage.SourceUrl))
-            images.Add(PageBackdropImage);
-
         if (!string.IsNullOrWhiteSpace(CurrentUserAvatarImage.SourceUrl))
             images.Add(CurrentUserAvatarImage);
 
@@ -1165,7 +1160,6 @@ public sealed partial class HomeView : UserControl
             HeroFavoriteButton.Content = "♡  收藏";
             HeroImage.SourceUrl = "";
             HeroImageAlt.SourceUrl = "";
-            PageBackdropImage.SourceUrl = "";
             PageBackdropLayer.Visibility = Visibility.Collapsed;
             _heroVisualInitialized = false;
             _currentHeroBackdropUrl = "";
@@ -1235,9 +1229,6 @@ public sealed partial class HomeView : UserControl
             HeroImageAlt.SourceUrl = "";
             HeroImageAlt.Opacity = 0;
 
-            PageBackdropImage.SourceUrl = backdropUrl;
-            PageBackdropImage.Opacity = 0.14;
-
             _heroShowingPrimary = true;
             _currentHeroBackdropUrl = backdropUrl;
             return;
@@ -1248,9 +1239,6 @@ public sealed partial class HomeView : UserControl
             HeroImage.SourceUrl = backdropUrl;
             HeroImage.Opacity = 1;
             HeroImageAlt.Opacity = 0;
-
-            PageBackdropImage.SourceUrl = backdropUrl;
-            PageBackdropImage.Opacity = 0.14;
 
             _heroShowingPrimary = true;
             _heroVisualInitialized = true;
@@ -1304,8 +1292,6 @@ public sealed partial class HomeView : UserControl
         {
             // Update the subtle ambient copy only after the Hero crossfade.
             // This avoids running a second full-screen crossfade in parallel.
-            PageBackdropImage.SourceUrl = backdropUrl;
-            PageBackdropImage.Opacity = 0.14;
             _heroTransitionStoryboard = null;
         };
         storyboard.Begin();
