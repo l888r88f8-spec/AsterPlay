@@ -2,7 +2,8 @@
 <Application
     x:Class="AsterPlay.WinUI.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:lg="using:LiquidGlassWinUI">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -211,6 +212,12 @@
                     <SolidColorBrush x:Key="AsterAmbientBottomBrush" Color="Transparent"/>
                     <SolidColorBrush x:Key="AsterRailArrowForegroundBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
                     <SolidColorBrush x:Key="AsterRailArrowBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+                    <SolidColorBrush x:Key="AsterDockOverlayBrush" Color="Transparent"/>
+                    <SolidColorBrush x:Key="AsterDockBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+                    <SolidColorBrush x:Key="AsterDockForegroundBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
+                    <SolidColorBrush x:Key="AsterDockSelectedForegroundBrush" Color="{ThemeResource SystemColorHighlightTextColor}"/>
+                    <SolidColorBrush x:Key="AsterDockHoverBrush" Color="{ThemeResource SystemColorButtonFaceColor}"/>
+                    <SolidColorBrush x:Key="AsterDockPressedBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
                     <SolidColorBrush x:Key="AsterAccentBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
                     <SolidColorBrush x:Key="AsterAccentHoverBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
                     <SolidColorBrush x:Key="AsterAccentPressedBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
@@ -229,6 +236,136 @@
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
+            <!-- Shared high-transparency glass material. Reuse one brush across
+                 ordinary action buttons so the visual matches the navigation dock
+                 without creating one composition effect graph per button. -->
+            <lg:LiquidGlassBrush x:Key="AsterGlassButtonBrush"
+                                 BlurAmount="1.9"
+                                 BloomAmount="0.08"
+                                 RefThickness="38"
+                                 RefFactor="2.24"
+                                 RefDispersion="3.8"
+                                 DispersionRange="0.30"
+                                 RefFresnelFactor="22"
+                                 GlareFactor="60"
+                                 TintA="0.16"
+                                 TintR="239"
+                                 TintG="239"
+                                 TintB="244"
+                                 ShapeRadius="0.99"
+                                 ShapeRoundness="4.0"/>
+
+            <ControlTemplate x:Key="AsterGlassButtonTemplate"
+                             TargetType="Button">
+                <Grid x:Name="ButtonVisualRoot"
+                      RenderTransformOrigin="0.5,0.5">
+                    <Grid.RenderTransform>
+                        <ScaleTransform x:Name="ButtonScaleTransform"
+                                        ScaleX="1"
+                                        ScaleY="1"/>
+                    </Grid.RenderTransform>
+
+                    <Border Background="{TemplateBinding Background}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            IsHitTestVisible="False"/>
+                    <Border Background="{ThemeResource AsterDockOverlayBrush}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            IsHitTestVisible="False"/>
+                    <Border BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    </Border>
+
+                    <VisualStateManager.VisualStateGroups>
+                        <VisualStateGroup x:Name="CommonStates">
+                            <VisualState x:Name="Normal">
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
+                                                     Storyboard.TargetProperty="ScaleX"
+                                                     To="1"
+                                                     Duration="0:0:0.18">
+                                        <DoubleAnimation.EasingFunction>
+                                            <CubicEase EasingMode="EaseOut"/>
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                    <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
+                                                     Storyboard.TargetProperty="ScaleY"
+                                                     To="1"
+                                                     Duration="0:0:0.18">
+                                        <DoubleAnimation.EasingFunction>
+                                            <CubicEase EasingMode="EaseOut"/>
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                </Storyboard>
+                            </VisualState>
+
+                            <VisualState x:Name="PointerOver">
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
+                                                     Storyboard.TargetProperty="ScaleX"
+                                                     To="1.04"
+                                                     Duration="0:0:0.14">
+                                        <DoubleAnimation.EasingFunction>
+                                            <CubicEase EasingMode="EaseOut"/>
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                    <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
+                                                     Storyboard.TargetProperty="ScaleY"
+                                                     To="1.04"
+                                                     Duration="0:0:0.14">
+                                        <DoubleAnimation.EasingFunction>
+                                            <CubicEase EasingMode="EaseOut"/>
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                </Storyboard>
+                            </VisualState>
+
+                            <VisualState x:Name="Pressed">
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
+                                                     Storyboard.TargetProperty="ScaleX"
+                                                     To="0.97"
+                                                     Duration="0:0:0.07"/>
+                                    <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
+                                                     Storyboard.TargetProperty="ScaleY"
+                                                     To="0.97"
+                                                     Duration="0:0:0.07"/>
+                                </Storyboard>
+                            </VisualState>
+
+                            <VisualState x:Name="Disabled">
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="ButtonVisualRoot"
+                                                     Storyboard.TargetProperty="Opacity"
+                                                     To="0.45"
+                                                     Duration="0:0:0.14"/>
+                                </Storyboard>
+                            </VisualState>
+                        </VisualStateGroup>
+                    </VisualStateManager.VisualStateGroups>
+                </Grid>
+            </ControlTemplate>
+
+            <Style x:Key="AsterGlassButtonStyle"
+                   TargetType="Button"
+                   BasedOn="{StaticResource DefaultButtonStyle}">
+                <Setter Property="FontFamily" Value="{StaticResource AsterUiFontFamily}"/>
+                <Setter Property="FontWeight" Value="Medium"/>
+                <Setter Property="MinHeight" Value="36"/>
+                <Setter Property="Padding" Value="16,7"/>
+                <Setter Property="CornerRadius" Value="18"/>
+                <Setter Property="Foreground" Value="{ThemeResource AsterDockForegroundBrush}"/>
+                <Setter Property="Background" Value="{StaticResource AsterGlassButtonBrush}"/>
+                <Setter Property="BorderBrush" Value="{ThemeResource AsterDockBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Template" Value="{StaticResource AsterGlassButtonTemplate}"/>
+            </Style>
+
             <!-- AsterPlay typography baseline. Keep ResourceDictionary property
                  elements first; ordinary resource items must follow them. -->
             <FontFamily x:Key="AsterUiFontFamily">Microsoft YaHei UI</FontFamily>
@@ -241,10 +378,7 @@
             </Style>
 
             <Style TargetType="Button"
-                   BasedOn="{StaticResource DefaultButtonStyle}">
-                <Setter Property="FontFamily" Value="{StaticResource AsterUiFontFamily}"/>
-                <Setter Property="FontWeight" Value="Medium"/>
-            </Style>
+                   BasedOn="{StaticResource AsterGlassButtonStyle}"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
