@@ -10,26 +10,28 @@
     KeyDown="PlayerView_KeyDown">
 
     <UserControl.Resources>
-        <Style x:Key="PlayerIconButtonStyle" TargetType="Button">
+        <Style x:Key="PlayerIconButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource AsterGlassButtonStyle}">
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Width" Value="44"/>
             <Setter Property="Height" Value="44"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="CornerRadius" Value="15"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Background" Value="#22FFFFFF"/>
-            <Setter Property="BorderBrush" Value="#24FFFFFF"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource AsterDockBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
 
-        <Style x:Key="PlayerPillButtonStyle" TargetType="Button">
+        <Style x:Key="PlayerPillButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource AsterGlassButtonStyle}">
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Height" Value="42"/>
             <Setter Property="Padding" Value="14,0"/>
             <Setter Property="CornerRadius" Value="15"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Background" Value="#22FFFFFF"/>
-            <Setter Property="BorderBrush" Value="#24FFFFFF"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource AsterDockBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
     </UserControl.Resources>
