@@ -534,25 +534,18 @@
                     </Grid>
 
                     <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="48"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="48"/>
-                        </Grid.ColumnDefinitions>
-
-                        <Button x:Name="ResumePreviousButton"
-                                Grid.Column="0"
+<Button x:Name="ResumePreviousButton"
                                 Style="{StaticResource RailEdgeButtonStyle}"
                                 Visibility="Collapsed"
                                 Content="‹"
-                                HorizontalAlignment="Center"
+                                HorizontalAlignment="Left"
                                 VerticalAlignment="Center"
-                                Margin="0,0,0,44"
+                                Margin="8,0,0,44"
+                                Canvas.ZIndex="10"
                                 Tag="-1"
                                 Click="ResumeArrow_Click"/>
 
                         <ScrollViewer x:Name="ResumeScroller"
-                                      Grid.Column="1"
                                       HorizontalScrollMode="Disabled"
                                       HorizontalScrollBarVisibility="Hidden"
                                       VerticalScrollMode="Disabled"
@@ -659,13 +652,13 @@
                         </ScrollViewer>
 
                         <Button x:Name="ResumeNextButton"
-                                Grid.Column="2"
                                 Style="{StaticResource RailEdgeButtonStyle}"
                                 Visibility="Collapsed"
                                 Content="›"
-                                HorizontalAlignment="Center"
+                                HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
-                                Margin="0,0,0,44"
+                                Margin="0,0,8,44"
+                                Canvas.ZIndex="10"
                                 Tag="1"
                                 Click="ResumeArrow_Click"/>
                     </Grid>
@@ -691,24 +684,18 @@
                     </Grid>
 
                     <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="48"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="48"/>
-                        </Grid.ColumnDefinitions>
-
-                        <Button x:Name="LibrariesPreviousButton"
-                                Grid.Column="0"
+<Button x:Name="LibrariesPreviousButton"
                                 Style="{StaticResource RailEdgeButtonStyle}"
                                 Visibility="Collapsed"
                                 Content="‹"
-                                HorizontalAlignment="Center"
+                                HorizontalAlignment="Left"
                                 VerticalAlignment="Center"
+                                Margin="8,0,0,0"
+                                Canvas.ZIndex="10"
                                 Tag="-1"
                                 Click="LibrariesArrow_Click"/>
 
                         <ScrollViewer x:Name="LibrariesScroller"
-                                      Grid.Column="1"
                                       HorizontalScrollMode="Enabled"
                                       HorizontalScrollBarVisibility="Hidden"
                                       VerticalScrollMode="Disabled"
@@ -753,12 +740,13 @@
                         </ScrollViewer>
 
                         <Button x:Name="LibrariesNextButton"
-                                Grid.Column="2"
                                 Style="{StaticResource RailEdgeButtonStyle}"
                                 Visibility="Collapsed"
                                 Content="›"
-                                HorizontalAlignment="Center"
+                                HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
+                                Margin="0,0,8,0"
+                                Canvas.ZIndex="10"
                                 Tag="1"
                                 Click="LibrariesArrow_Click"/>
                     </Grid>
@@ -796,12 +784,15 @@
                                 </Grid>
 
                                 <!-- Every media row is a single horizontal rail. -->
-                                <ScrollViewer Visibility="{Binding PosterVisibility}"
-                                              HorizontalScrollMode="Enabled"
-                                              HorizontalScrollBarVisibility="Hidden"
-                                              VerticalScrollMode="Disabled"
-                                              VerticalScrollBarVisibility="Disabled"
-                                              ZoomMode="Disabled">
+                                <Grid Visibility="{Binding PosterVisibility}">
+                                    <ScrollViewer HorizontalScrollMode="Enabled"
+                                                  HorizontalScrollBarVisibility="Hidden"
+                                                  VerticalScrollMode="Disabled"
+                                                  VerticalScrollBarVisibility="Disabled"
+                                                  ZoomMode="Disabled"
+                                                  Loaded="SectionRail_Loaded"
+                                                  ViewChanged="SectionRail_ViewChanged"
+                                                  SizeChanged="SectionRail_SizeChanged">
                                     <ItemsRepeater ItemsSource="{Binding Items}">
                                         <ItemsRepeater.Layout>
                                             <StackLayout Orientation="Horizontal"
@@ -847,15 +838,37 @@
                                             </DataTemplate>
                                         </ItemsRepeater.ItemTemplate>
                                     </ItemsRepeater>
-                                </ScrollViewer>
+                                    </ScrollViewer>
+                                    <Button Style="{StaticResource RailEdgeButtonStyle}"
+                                            Visibility="Collapsed"
+                                            Content="‹"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
+                                            Margin="8,0,0,52"
+                                            Canvas.ZIndex="10"
+                                            Tag="-1"
+                                            Click="SectionRailArrow_Click"/>
+                                    <Button Style="{StaticResource RailEdgeButtonStyle}"
+                                            Visibility="Collapsed"
+                                            Content="›"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            Margin="0,0,8,52"
+                                            Canvas.ZIndex="10"
+                                            Tag="1"
+                                            Click="SectionRailArrow_Click"/>
+                                </Grid>
 
                                 <!-- TV libraries use the same single-row horizontal rail rule. -->
-                                <ScrollViewer Visibility="{Binding SeriesVisibility}"
-                                              HorizontalScrollMode="Enabled"
-                                              HorizontalScrollBarVisibility="Hidden"
-                                              VerticalScrollMode="Disabled"
-                                              VerticalScrollBarVisibility="Disabled"
-                                              ZoomMode="Disabled">
+                                <Grid Visibility="{Binding SeriesVisibility}">
+                                    <ScrollViewer HorizontalScrollMode="Enabled"
+                                                  HorizontalScrollBarVisibility="Hidden"
+                                                  VerticalScrollMode="Disabled"
+                                                  VerticalScrollBarVisibility="Disabled"
+                                                  ZoomMode="Disabled"
+                                                  Loaded="SectionRail_Loaded"
+                                                  ViewChanged="SectionRail_ViewChanged"
+                                                  SizeChanged="SectionRail_SizeChanged">
                                     <ItemsRepeater ItemsSource="{Binding Items}">
                                         <ItemsRepeater.Layout>
                                             <StackLayout Orientation="Horizontal"
@@ -914,7 +927,26 @@
                                             </DataTemplate>
                                         </ItemsRepeater.ItemTemplate>
                                     </ItemsRepeater>
-                                </ScrollViewer>
+                                    </ScrollViewer>
+                                    <Button Style="{StaticResource RailEdgeButtonStyle}"
+                                            Visibility="Collapsed"
+                                            Content="‹"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
+                                            Margin="8,0,0,46"
+                                            Canvas.ZIndex="10"
+                                            Tag="-1"
+                                            Click="SectionRailArrow_Click"/>
+                                    <Button Style="{StaticResource RailEdgeButtonStyle}"
+                                            Visibility="Collapsed"
+                                            Content="›"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            Margin="0,0,8,46"
+                                            Canvas.ZIndex="10"
+                                            Tag="1"
+                                            Click="SectionRailArrow_Click"/>
+                                </Grid>
                             </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
