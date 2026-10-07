@@ -88,7 +88,12 @@ public sealed partial class MainWindow : Window
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
-        ConfigureNativeTitleBar(isLight: true);
+
+        // Keep the native minimize/maximize/close glyphs in contrast with the
+        // actual light/dark title-bar surface from the very first frame.
+        ConfigureNativeTitleBar(
+            Application.Current.RequestedTheme == ApplicationTheme.Light);
+        RootGrid.ActualThemeChanged += RootGrid_ActualThemeChanged;
 
         Closed += MainWindow_Closed;
         PageTitleBlock.Text = "首页";
@@ -170,6 +175,13 @@ public sealed partial class MainWindow : Window
         DispatcherQueue.TryEnqueue(ApplySystemTheme);
     }
 
+    private void RootGrid_ActualThemeChanged(
+        FrameworkElement sender,
+        object args)
+    {
+        ConfigureNativeTitleBar(sender.ActualTheme == ElementTheme.Light);
+    }
+
     private void ApplySystemTheme()
     {
         if (_uiSettings is null)
@@ -195,14 +207,17 @@ public sealed partial class MainWindow : Window
     {
         var transparent = Windows.UI.Color.FromArgb(0, 0, 0, 0);
         var foreground = isLight
-            ? Windows.UI.Color.FromArgb(255, 24, 28, 36)
-            : Windows.UI.Color.FromArgb(255, 245, 247, 250);
+            ? Windows.UI.Color.FromArgb(255, 18, 22, 30)
+            : Windows.UI.Color.FromArgb(255, 250, 251, 253);
+        var inactiveForeground = isLight
+            ? Windows.UI.Color.FromArgb(190, 18, 22, 30)
+            : Windows.UI.Color.FromArgb(190, 250, 251, 253);
         var hover = isLight
-            ? Windows.UI.Color.FromArgb(24, 0, 0, 0)
-            : Windows.UI.Color.FromArgb(28, 255, 255, 255);
+            ? Windows.UI.Color.FromArgb(28, 0, 0, 0)
+            : Windows.UI.Color.FromArgb(34, 255, 255, 255);
         var pressed = isLight
-            ? Windows.UI.Color.FromArgb(42, 0, 0, 0)
-            : Windows.UI.Color.FromArgb(46, 255, 255, 255);
+            ? Windows.UI.Color.FromArgb(48, 0, 0, 0)
+            : Windows.UI.Color.FromArgb(54, 255, 255, 255);
 
         var titleBar = _appWindow.TitleBar;
         titleBar.BackgroundColor = transparent;
@@ -210,7 +225,7 @@ public sealed partial class MainWindow : Window
         titleBar.ButtonBackgroundColor = transparent;
         titleBar.ButtonInactiveBackgroundColor = transparent;
         titleBar.ButtonForegroundColor = foreground;
-        titleBar.ButtonInactiveForegroundColor = foreground;
+        titleBar.ButtonInactiveForegroundColor = inactiveForeground;
         titleBar.ButtonHoverBackgroundColor = hover;
         titleBar.ButtonHoverForegroundColor = foreground;
         titleBar.ButtonPressedBackgroundColor = pressed;
@@ -233,6 +248,7 @@ public sealed partial class MainWindow : Window
         if (_uiSettings is not null)
             _uiSettings.ColorValuesChanged -= SystemColorValuesChanged;
 
+        RootGrid.ActualThemeChanged -= RootGrid_ActualThemeChanged;
     }
 
     private void RootGrid_Loaded(object sender, RoutedEventArgs e)
