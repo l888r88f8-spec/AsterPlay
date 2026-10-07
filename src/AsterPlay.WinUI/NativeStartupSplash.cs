@@ -53,7 +53,10 @@ internal sealed class NativeStartupSplash : IDisposable
         if (_hwnd == IntPtr.Zero)
             return;
 
-        Present(255);
+        // Keep the overlay visually opaque but not fully occluding. An
+        // alpha of 254 allows DWM to keep composing the WinUI owner underneath
+        // while its first LiquidGlass/Home textures become available.
+        Present(254);
         ShowWindow(
             _hwnd,
             SwShowNoActivate);
@@ -128,7 +131,7 @@ internal sealed class NativeStartupSplash : IDisposable
                     255.0 *
                     (1.0 - eased)),
                 0,
-                255);
+                254);
 
             Present(alpha);
 
