@@ -1553,62 +1553,6 @@ public sealed partial class HomeView : UserControl
         flyout.ShowAt(button);
     }
 
-    private void MediaCard_PointerEntered(
-        object sender,
-        Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
-    {
-        if (sender is Button button)
-            AnimateCardScale(button, 1.018, 120);
-    }
-
-    private void MediaCard_PointerExited(
-        object sender,
-        Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
-    {
-        if (sender is Button button)
-            AnimateCardScale(button, 1.0, 150);
-    }
-
-    private static void AnimateCardScale(
-        Button button,
-        double targetScale,
-        int durationMs)
-    {
-        if (button.RenderTransform is not ScaleTransform scale)
-            return;
-
-        var easing = new CubicEase
-        {
-            EasingMode = EasingMode.EaseOut
-        };
-
-        var storyboard = new Storyboard();
-
-        var x = new DoubleAnimation
-        {
-            To = targetScale,
-            Duration = TimeSpan.FromMilliseconds(durationMs),
-            EasingFunction = easing,
-            EnableDependentAnimation = true
-        };
-        Storyboard.SetTarget(x, scale);
-        Storyboard.SetTargetProperty(x, "ScaleX");
-        storyboard.Children.Add(x);
-
-        var y = new DoubleAnimation
-        {
-            To = targetScale,
-            Duration = TimeSpan.FromMilliseconds(durationMs),
-            EasingFunction = easing,
-            EnableDependentAnimation = true
-        };
-        Storyboard.SetTarget(y, scale);
-        Storyboard.SetTargetProperty(y, "ScaleY");
-        storyboard.Children.Add(y);
-
-        storyboard.Begin();
-    }
-
     private void ResumeArrow_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string tag } ||
