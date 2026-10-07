@@ -175,7 +175,7 @@ public sealed partial class HomeView : UserControl
         // reference's proportions on shorter desktop windows.
         HeroContainer.Height = Math.Clamp(e.NewSize.Height * 0.78, 590, 760);
         HeroContainer.Margin =
-            new Thickness(-horizontalPadding, 0, -horizontalPadding, -86);
+            new Thickness(-horizontalPadding, 0, -horizontalPadding, -112);
 
     }
 
@@ -1236,7 +1236,7 @@ public sealed partial class HomeView : UserControl
             HeroImageAlt.Opacity = 0;
 
             PageBackdropImage.SourceUrl = backdropUrl;
-            PageBackdropImage.Opacity = 0.22;
+            PageBackdropImage.Opacity = 0.14;
 
             _heroShowingPrimary = true;
             _currentHeroBackdropUrl = backdropUrl;
@@ -1250,7 +1250,7 @@ public sealed partial class HomeView : UserControl
             HeroImageAlt.Opacity = 0;
 
             PageBackdropImage.SourceUrl = backdropUrl;
-            PageBackdropImage.Opacity = 0.22;
+            PageBackdropImage.Opacity = 0.14;
 
             _heroShowingPrimary = true;
             _heroVisualInitialized = true;
@@ -1305,7 +1305,7 @@ public sealed partial class HomeView : UserControl
             // Update the subtle ambient copy only after the Hero crossfade.
             // This avoids running a second full-screen crossfade in parallel.
             PageBackdropImage.SourceUrl = backdropUrl;
-            PageBackdropImage.Opacity = 0.22;
+            PageBackdropImage.Opacity = 0.14;
             _heroTransitionStoryboard = null;
         };
         storyboard.Begin();
