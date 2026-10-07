@@ -160,8 +160,8 @@
                                             ToolTipService.ToolTip="{Binding Url}">
                                         <Border CornerRadius="26"
                                                 Background="{StaticResource ServerCardGlassBrush}"
-                                                BorderBrush="{ThemeResource AsterCardBorderBrush}"
-                                                BorderThickness="1">
+                                                BorderBrush="{Binding CardBorderBrush}"
+                                                BorderThickness="{Binding CardBorderThickness}">
                                             <Grid Padding="22,20,22,20">
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="Auto"/>
@@ -228,12 +228,6 @@
                                             </Grid>
                                         </Border>
                                     </Button>
-
-                                    <Border CornerRadius="26"
-                                            BorderBrush="#FF1687E9"
-                                            BorderThickness="2"
-                                            Opacity="{Binding CurrentOutlineOpacity}"
-                                            IsHitTestVisible="False"/>
 
                                     <Button Width="34"
                                             Height="34"
