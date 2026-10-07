@@ -160,8 +160,11 @@
             <Setter Property="Height" Value="64"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="CornerRadius" Value="23"/>
-            <Setter Property="FontSize" Value="30"/>
-            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Foreground" Value="{ThemeResource AsterRailArrowForegroundBrush}"/>
             <Setter Property="Background" Value="{StaticResource RailEdgeGlassBrush}"/>
             <Setter Property="BorderBrush" Value="{ThemeResource AsterDockBorderBrush}"/>
@@ -554,7 +557,7 @@
 <Button x:Name="ResumePreviousButton"
                                 Style="{StaticResource RailEdgeButtonStyle}"
                                 Visibility="Collapsed"
-                                Content="‹"
+                                Content="&#xE76B;"
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Center"
                                 Margin="8,0,0,44"
@@ -671,7 +674,7 @@
                         <Button x:Name="ResumeNextButton"
                                 Style="{StaticResource RailEdgeButtonStyle}"
                                 Visibility="Collapsed"
-                                Content="›"
+                                Content="&#xE76C;"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
                                 Margin="0,0,8,44"
@@ -704,7 +707,7 @@
 <Button x:Name="LibrariesPreviousButton"
                                 Style="{StaticResource RailEdgeButtonStyle}"
                                 Visibility="Collapsed"
-                                Content="‹"
+                                Content="&#xE76B;"
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Center"
                                 Margin="8,0,0,0"
@@ -759,7 +762,7 @@
                         <Button x:Name="LibrariesNextButton"
                                 Style="{StaticResource RailEdgeButtonStyle}"
                                 Visibility="Collapsed"
-                                Content="›"
+                                Content="&#xE76C;"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
                                 Margin="0,0,8,0"
@@ -858,7 +861,7 @@
                                     </ScrollViewer>
                                     <Button Style="{StaticResource RailEdgeButtonStyle}"
                                             Visibility="Collapsed"
-                                            Content="‹"
+                                            Content="&#xE76B;"
                                             HorizontalAlignment="Left"
                                             VerticalAlignment="Center"
                                             Margin="8,0,0,52"
@@ -867,7 +870,7 @@
                                             Click="SectionRailArrow_Click"/>
                                     <Button Style="{StaticResource RailEdgeButtonStyle}"
                                             Visibility="Collapsed"
-                                            Content="›"
+                                            Content="&#xE76C;"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center"
                                             Margin="0,0,8,52"
@@ -947,7 +950,7 @@
                                     </ScrollViewer>
                                     <Button Style="{StaticResource RailEdgeButtonStyle}"
                                             Visibility="Collapsed"
-                                            Content="‹"
+                                            Content="&#xE76B;"
                                             HorizontalAlignment="Left"
                                             VerticalAlignment="Center"
                                             Margin="8,0,0,46"
@@ -956,7 +959,7 @@
                                             Click="SectionRailArrow_Click"/>
                                     <Button Style="{StaticResource RailEdgeButtonStyle}"
                                             Visibility="Collapsed"
-                                            Content="›"
+                                            Content="&#xE76C;"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center"
                                             Margin="0,0,8,46"
