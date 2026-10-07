@@ -26,7 +26,7 @@ public sealed partial class ServerManagementView : UserControl
     public ServerManagementView()
         : this(
             ResolveMainClient(),
-            showBackButton: true)
+            showBackButton: ResolveShowBackButton())
     {
     }
 
@@ -61,6 +61,11 @@ public sealed partial class ServerManagementView : UserControl
         return client;
     }
 
+    private static bool ResolveShowBackButton() =>
+        Application.Current is not App app ||
+        app.HostWindow is null ||
+        app.HostWindow.ServerManagementNeedsBackButton;
+
     private async void ServerManagementView_Loaded(
         object sender,
         RoutedEventArgs e)
@@ -78,12 +83,20 @@ public sealed partial class ServerManagementView : UserControl
         var profiles = ServerProfileStore.Load();
 
         var items = profiles
-            .Select(profile => new ServerCardItem(
-                profile,
-                string.Equals(
+            .Select(profile =>
+            {
+                var isCurrent = string.Equals(
                     NormalizeUrl(profile.Url),
                     currentUrl,
-                    StringComparison.OrdinalIgnoreCase)))
+                    StringComparison.OrdinalIgnoreCase);
+
+                return new ServerCardItem(
+                    profile,
+                    isCurrent,
+                    isCurrent && _client.IsAuthenticated
+                        ? _client.BuildCurrentUserPrimaryUrl(160)
+                        : "");
+            })
             .ToList();
 
         _servers.Clear();
@@ -535,10 +548,12 @@ public sealed partial class ServerManagementView : UserControl
 
         public ServerCardItem(
             ServerProfile profile,
-            bool isCurrent)
+            bool isCurrent,
+            string avatarUrl)
         {
             CustomName = profile.Name;
             Url = profile.Url;
+            AvatarUrl = avatarUrl;
             _serverName = profile.ServerName;
             IsCurrent = isCurrent;
 
@@ -559,6 +574,8 @@ public sealed partial class ServerManagementView : UserControl
         public string CustomName { get; }
 
         public string Url { get; }
+
+        public string AvatarUrl { get; }
 
         public bool IsCurrent { get; }
 
