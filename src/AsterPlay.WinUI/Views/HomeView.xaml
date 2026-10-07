@@ -20,7 +20,7 @@
         <ControlTemplate x:Key="FlatButtonTemplate"
                          TargetType="Button">
             <Border x:Name="ButtonVisualRoot"
-                    Background="#01000000"
+                    Background="{TemplateBinding Background}"
                     BorderBrush="{TemplateBinding BorderBrush}"
                     BorderThickness="{TemplateBinding BorderThickness}"
                     CornerRadius="{TemplateBinding CornerRadius}"
@@ -116,15 +116,10 @@
                     </VisualStateGroup>
                 </VisualStateManager.VisualStateGroups>
 
-                <Grid>
-                    <Border Background="{TemplateBinding Background}"
-                            CornerRadius="{TemplateBinding CornerRadius}"
-                            IsHitTestVisible="False"/>
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                </Grid>
+                <ContentPresenter Content="{TemplateBinding Content}"
+                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
             </Border>
         </ControlTemplate>
 
@@ -539,7 +534,25 @@
                     </Grid>
 
                     <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="48"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="48"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button x:Name="ResumePreviousButton"
+                                Grid.Column="0"
+                                Style="{StaticResource RailEdgeButtonStyle}"
+                                Visibility="Collapsed"
+                                Content="‹"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Margin="0,0,0,44"
+                                Tag="-1"
+                                Click="ResumeArrow_Click"/>
+
                         <ScrollViewer x:Name="ResumeScroller"
+                                      Grid.Column="1"
                                       HorizontalScrollMode="Disabled"
                                       HorizontalScrollBarVisibility="Hidden"
                                       VerticalScrollMode="Disabled"
@@ -645,49 +658,14 @@
                             </ItemsControl>
                         </ScrollViewer>
 
-                        <Border x:Name="ResumeLeftFade"
-                                Width="74"
-                                HorizontalAlignment="Left"
-                                Visibility="Collapsed"
-                                IsHitTestVisible="False">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0"
-                                                     EndPoint="1,0">
-                                    <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="0"/>
-                                    <GradientStop Color="#00000000" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
-                        </Border>
-                        <Border x:Name="ResumeRightFade"
-                                Width="74"
-                                HorizontalAlignment="Right"
-                                Visibility="Collapsed"
-                                IsHitTestVisible="False">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="1,0"
-                                                     EndPoint="0,0">
-                                    <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="0"/>
-                                    <GradientStop Color="#00000000" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
-                        </Border>
-
-                        <Button x:Name="ResumePreviousButton"
-                                Style="{StaticResource RailEdgeButtonStyle}"
-                                Visibility="Collapsed"
-                                Content="‹"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Center"
-                                Margin="-10,0,0,44"
-                                Tag="-1"
-                                Click="ResumeArrow_Click"/>
                         <Button x:Name="ResumeNextButton"
+                                Grid.Column="2"
                                 Style="{StaticResource RailEdgeButtonStyle}"
                                 Visibility="Collapsed"
                                 Content="›"
-                                HorizontalAlignment="Right"
+                                HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                Margin="0,0,-10,44"
+                                Margin="0,0,0,44"
                                 Tag="1"
                                 Click="ResumeArrow_Click"/>
                     </Grid>
@@ -713,7 +691,24 @@
                     </Grid>
 
                     <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="48"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="48"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button x:Name="LibrariesPreviousButton"
+                                Grid.Column="0"
+                                Style="{StaticResource RailEdgeButtonStyle}"
+                                Visibility="Collapsed"
+                                Content="‹"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Tag="-1"
+                                Click="LibrariesArrow_Click"/>
+
                         <ScrollViewer x:Name="LibrariesScroller"
+                                      Grid.Column="1"
                                       HorizontalScrollMode="Enabled"
                                       HorizontalScrollBarVisibility="Hidden"
                                       VerticalScrollMode="Disabled"
@@ -757,49 +752,13 @@
                             </ItemsRepeater>
                         </ScrollViewer>
 
-                        <Border x:Name="LibrariesLeftFade"
-                                Width="72"
-                                HorizontalAlignment="Left"
-                                Visibility="Collapsed"
-                                IsHitTestVisible="False">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0"
-                                                     EndPoint="1,0">
-                                    <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="0"/>
-                                    <GradientStop Color="#00000000" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
-                        </Border>
-                        <Border x:Name="LibrariesRightFade"
-                                Width="72"
-                                HorizontalAlignment="Right"
-                                Visibility="Collapsed"
-                                IsHitTestVisible="False">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="1,0"
-                                                     EndPoint="0,0">
-                                    <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="0"/>
-                                    <GradientStop Color="#00000000" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
-                        </Border>
-
-                        <Button x:Name="LibrariesPreviousButton"
-                                Style="{StaticResource RailEdgeButtonStyle}"
-                                Visibility="Collapsed"
-                                Content="‹"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Center"
-                                Margin="-10,0,0,0"
-                                Tag="-1"
-                                Click="LibrariesArrow_Click"/>
                         <Button x:Name="LibrariesNextButton"
+                                Grid.Column="2"
                                 Style="{StaticResource RailEdgeButtonStyle}"
                                 Visibility="Collapsed"
                                 Content="›"
-                                HorizontalAlignment="Right"
+                                HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                Margin="0,0,-10,0"
                                 Tag="1"
                                 Click="LibrariesArrow_Click"/>
                     </Grid>
