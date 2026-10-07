@@ -103,6 +103,9 @@ public sealed partial class ServerManagementView : UserControl
         foreach (var item in SortItems(items))
             _servers.Add(item);
 
+        ApplyCardMetrics(
+            Root.ActualWidth);
+
         var hasServers = _servers.Count > 0;
         ServerCards.Visibility = hasServers
             ? Visibility.Visible
@@ -467,19 +470,49 @@ public sealed partial class ServerManagementView : UserControl
     {
         _compactLayout = !_compactLayout;
 
-        if (ServerCards.Layout is UniformGridLayout layout)
-        {
-            layout.MinItemWidth =
-                _compactLayout ? 240 : 310;
-            layout.MinItemHeight =
-                _compactLayout ? 164 : 188;
-        }
+        ApplyCardMetrics(
+            Root.ActualWidth);
 
         ToolTipService.SetToolTip(
             LayoutButton,
             _compactLayout
                 ? "切换为宽卡片"
                 : "切换为紧凑卡片");
+    }
+
+    private void ApplyCardMetrics(
+        double availableWidth)
+    {
+        var cardWidth = _compactLayout
+            ? 300d
+            : 372d;
+        var cardHeight = _compactLayout
+            ? 160d
+            : 182d;
+
+        if (availableWidth > 0 &&
+            availableWidth < 520)
+        {
+            cardWidth = Math.Max(
+                260,
+                availableWidth - 44);
+            cardHeight = Math.Round(
+                cardWidth * (182d / 372d));
+        }
+
+        if (ServerCards.Layout is UniformGridLayout layout)
+        {
+            layout.MinItemWidth = cardWidth;
+            layout.MinItemHeight = cardHeight;
+            layout.MinColumnSpacing = 18;
+            layout.MinRowSpacing = 18;
+        }
+
+        foreach (var item in _servers)
+        {
+            item.CardWidth = cardWidth;
+            item.CardHeight = cardHeight;
+        }
     }
 
     private void Back_Click(
@@ -502,7 +535,7 @@ public sealed partial class ServerManagementView : UserControl
 
         PageContent.Padding = new Thickness(
             horizontal,
-            32,
+            28,
             horizontal,
             124);
 
@@ -510,6 +543,9 @@ public sealed partial class ServerManagementView : UserControl
             e.NewSize.Width < 760
                 ? 34
                 : 40;
+
+        ApplyCardMetrics(
+            e.NewSize.Width);
     }
 
     private static bool TryNormalizeServerUrl(
@@ -543,6 +579,8 @@ public sealed partial class ServerManagementView : UserControl
         private string _statusText;
         private Brush _statusBrush;
         private string _metaText;
+        private double _cardWidth = 372;
+        private double _cardHeight = 182;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -588,6 +626,32 @@ public sealed partial class ServerManagementView : UserControl
         public Brush CardBorderBrush { get; }
 
         public Thickness CardBorderThickness { get; }
+
+        public double CardWidth
+        {
+            get => _cardWidth;
+            set
+            {
+                if (Math.Abs(_cardWidth - value) < 0.1)
+                    return;
+
+                _cardWidth = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public double CardHeight
+        {
+            get => _cardHeight;
+            set
+            {
+                if (Math.Abs(_cardHeight - value) < 0.1)
+                    return;
+
+                _cardHeight = value;
+                OnPropertyChanged();
+            }
+        }
 
         public string DisplayName =>
             !string.IsNullOrWhiteSpace(CustomName)
