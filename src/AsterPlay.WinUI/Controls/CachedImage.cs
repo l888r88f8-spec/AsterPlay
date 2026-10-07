@@ -34,7 +34,20 @@ public sealed class CachedImage : UserControl
             typeof(CachedImage),
             new PropertyMetadata(true, OnLazyLoadingEnabledChanged));
 
+    public static readonly DependencyProperty CornerRadiusProperty =
+        DependencyProperty.Register(
+            nameof(CornerRadius),
+            typeof(CornerRadius),
+            typeof(CachedImage),
+            new PropertyMetadata(new CornerRadius(0), OnCornerRadiusChanged));
+
     private const double PreloadMargin = 220;
+
+    private readonly Border _clipBorder = new()
+    {
+        HorizontalAlignment = HorizontalAlignment.Stretch,
+        VerticalAlignment = VerticalAlignment.Stretch
+    };
 
     private readonly Image _image = new()
     {
@@ -51,7 +64,9 @@ public sealed class CachedImage : UserControl
 
     public CachedImage()
     {
-        Content = _image;
+        _clipBorder.Child = _image;
+        _clipBorder.CornerRadius = CornerRadius;
+        Content = _clipBorder;
         _image.Stretch = Stretch;
 
         Loaded += CachedImage_Loaded;
@@ -74,6 +89,12 @@ public sealed class CachedImage : UserControl
     {
         get => (bool)GetValue(LazyLoadingEnabledProperty);
         set => SetValue(LazyLoadingEnabledProperty, value);
+    }
+
+    public CornerRadius CornerRadius
+    {
+        get => (CornerRadius)GetValue(CornerRadiusProperty);
+        set => SetValue(CornerRadiusProperty, value);
     }
 
     public async Task<bool> EnsureLoadedAsync(
@@ -121,6 +142,17 @@ public sealed class CachedImage : UserControl
             e.NewValue is Stretch stretch)
         {
             image._image.Stretch = stretch;
+        }
+    }
+
+    private static void OnCornerRadiusChanged(
+        DependencyObject dependencyObject,
+        DependencyPropertyChangedEventArgs e)
+    {
+        if (dependencyObject is CachedImage image &&
+            e.NewValue is CornerRadius cornerRadius)
+        {
+            image._clipBorder.CornerRadius = cornerRadius;
         }
     }
 
