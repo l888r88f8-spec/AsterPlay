@@ -15,16 +15,107 @@
         <SolidColorBrush x:Key="ButtonBorderBrushPressed"
                          Color="#55FFFFFF"/>
 
-        <!-- A deliberately minimal button template. It keeps the supplied glass
-             brush stable across hover/pressed states and prevents media tiles
-             from receiving WinUI's default rectangular pointer fill. -->
+        <!-- Flat hover treatment: preserve the supplied background/glass exactly,
+             and use only a restrained scale response for pointer/press feedback. -->
         <ControlTemplate x:Key="FlatButtonTemplate"
                          TargetType="Button">
-            <Border Background="{TemplateBinding Background}"
+            <Border x:Name="ButtonVisualRoot"
+                    Background="{TemplateBinding Background}"
                     BorderBrush="{TemplateBinding BorderBrush}"
                     BorderThickness="{TemplateBinding BorderThickness}"
                     CornerRadius="{TemplateBinding CornerRadius}"
-                    Padding="{TemplateBinding Padding}">
+                    Padding="{TemplateBinding Padding}"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <ScaleTransform x:Name="ButtonScaleTransform"
+                                    ScaleX="1"
+                                    ScaleY="1"/>
+                </Border.RenderTransform>
+
+                <VisualStateManager.VisualStateGroups>
+                    <VisualStateGroup x:Name="CommonStates">
+                        <VisualState x:Name="Normal">
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
+                                                 Storyboard.TargetProperty="ScaleX"
+                                                 To="1"
+                                                 Duration="0:0:0.15">
+                                    <DoubleAnimation.EasingFunction>
+                                        <CubicEase EasingMode="EaseOut"/>
+                                    </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
+                                                 Storyboard.TargetProperty="ScaleY"
+                                                 To="1"
+                                                 Duration="0:0:0.15">
+                                    <DoubleAnimation.EasingFunction>
+                                        <CubicEase EasingMode="EaseOut"/>
+                                    </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                            </Storyboard>
+                        </VisualState>
+
+                        <VisualState x:Name="PointerOver">
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
+                                                 Storyboard.TargetProperty="ScaleX"
+                                                 To="1.025"
+                                                 Duration="0:0:0.12">
+                                    <DoubleAnimation.EasingFunction>
+                                        <CubicEase EasingMode="EaseOut"/>
+                                    </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
+                                                 Storyboard.TargetProperty="ScaleY"
+                                                 To="1.025"
+                                                 Duration="0:0:0.12">
+                                    <DoubleAnimation.EasingFunction>
+                                        <CubicEase EasingMode="EaseOut"/>
+                                    </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                            </Storyboard>
+                        </VisualState>
+
+                        <VisualState x:Name="Pressed">
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
+                                                 Storyboard.TargetProperty="ScaleX"
+                                                 To="0.98"
+                                                 Duration="0:0:0.08">
+                                    <DoubleAnimation.EasingFunction>
+                                        <CubicEase EasingMode="EaseOut"/>
+                                    </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
+                                                 Storyboard.TargetProperty="ScaleY"
+                                                 To="0.98"
+                                                 Duration="0:0:0.08">
+                                    <DoubleAnimation.EasingFunction>
+                                        <CubicEase EasingMode="EaseOut"/>
+                                    </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                            </Storyboard>
+                        </VisualState>
+
+                        <VisualState x:Name="Disabled">
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
+                                                 Storyboard.TargetProperty="ScaleX"
+                                                 To="1"
+                                                 Duration="0"/>
+                                <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
+                                                 Storyboard.TargetProperty="ScaleY"
+                                                 To="1"
+                                                 Duration="0"/>
+                                <DoubleAnimation Storyboard.TargetName="ButtonVisualRoot"
+                                                 Storyboard.TargetProperty="Opacity"
+                                                 To="0.45"
+                                                 Duration="0:0:0.12"/>
+                            </Storyboard>
+                        </VisualState>
+                    </VisualStateGroup>
+                </VisualStateManager.VisualStateGroups>
+
                 <ContentPresenter Content="{TemplateBinding Content}"
                                   ContentTemplate="{TemplateBinding ContentTemplate}"
                                   HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -545,16 +636,9 @@
                                             Background="Transparent"
                                             BorderThickness="0"
                                             Tag="{Binding}"
-                                            RenderTransformOrigin="0.5,0.5"
-                                            PointerEntered="MediaCard_PointerEntered"
-                                            PointerExited="MediaCard_PointerExited"
                                             Click="ResumeTile_Click"
                                             RightTapped="ResumeTile_RightTapped"
                                             Template="{StaticResource FlatButtonTemplate}">
-                                        <Button.RenderTransform>
-                                            <ScaleTransform ScaleX="1"
-                                                            ScaleY="1"/>
-                                        </Button.RenderTransform>
                                         <StackPanel Width="320"
                                                     Spacing="9">
                                             <Border Width="320"
@@ -692,15 +776,8 @@
                                         BorderThickness="0"
                                         HorizontalAlignment="Stretch"
                                         Tag="{Binding}"
-                                        RenderTransformOrigin="0.5,0.5"
-                                        PointerEntered="MediaCard_PointerEntered"
-                                        PointerExited="MediaCard_PointerExited"
                                         Click="LibraryTile_Click"
                                             Template="{StaticResource FlatButtonTemplate}">
-                                    <Button.RenderTransform>
-                                        <ScaleTransform ScaleX="1"
-                                                        ScaleY="1"/>
-                                    </Button.RenderTransform>
                                     <Border CornerRadius="20"
                                             Background="{ThemeResource AsterCardBackgroundBrush}"
                                             BorderBrush="{ThemeResource AsterCardBorderBrush}"
@@ -768,15 +845,8 @@
                                                     BorderThickness="0"
                                                     HorizontalAlignment="Stretch"
                                                     Tag="{Binding}"
-                                                    RenderTransformOrigin="0.5,0.5"
-                                                    PointerEntered="MediaCard_PointerEntered"
-                                                    PointerExited="MediaCard_PointerExited"
                                                     Click="SectionMedia_Click"
                                             Template="{StaticResource FlatButtonTemplate}">
-                                                <Button.RenderTransform>
-                                                    <ScaleTransform ScaleX="1"
-                                                                    ScaleY="1"/>
-                                                </Button.RenderTransform>
                                                 <StackPanel Spacing="8">
                                                     <Border Height="232"
                                                             CornerRadius="18"
