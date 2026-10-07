@@ -236,6 +236,9 @@
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
+            <FontFamily x:Key="AsterUiFontFamily">Microsoft YaHei UI</FontFamily>
+            <FontFamily x:Key="ContentControlThemeFontFamily">Microsoft YaHei UI</FontFamily>
+
             <!-- Shared high-transparency glass material. Reuse one brush across
                  ordinary action buttons so the visual matches the navigation dock
                  without creating one composition effect graph per button. -->
@@ -366,11 +369,7 @@
                 <Setter Property="Template" Value="{StaticResource AsterGlassButtonTemplate}"/>
             </Style>
 
-            <!-- AsterPlay typography baseline. Keep ResourceDictionary property
-                 elements first; ordinary resource items must follow them. -->
-            <FontFamily x:Key="AsterUiFontFamily">Microsoft YaHei UI</FontFamily>
-            <FontFamily x:Key="ContentControlThemeFontFamily">Microsoft YaHei UI</FontFamily>
-
+            <!-- AsterPlay typography baseline. -->
             <Style TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="{StaticResource AsterUiFontFamily}"/>
                 <Setter Property="FontWeight" Value="Medium"/>
