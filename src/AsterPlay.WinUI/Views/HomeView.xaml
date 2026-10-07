@@ -137,19 +137,36 @@
             <Setter Property="FontSize" Value="20"/>
         </Style>
 
+        <lg:LiquidGlassBrush x:Key="RailEdgeGlassBrush"
+                             BlurAmount="2.15"
+                             BloomAmount="0.10"
+                             RefThickness="40"
+                             RefFactor="2.30"
+                             RefDispersion="4.2"
+                             DispersionRange="0.34"
+                             RefFresnelFactor="24"
+                             GlareFactor="68"
+                             TintA="0.26"
+                             TintR="240"
+                             TintG="242"
+                             TintB="248"
+                             ShapeRadius="0.99"
+                             ShapeRoundness="4.0"/>
+
         <Style x:Key="RailEdgeButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource AsterGlassButtonStyle}">
-            <Setter Property="Width" Value="42"/>
-            <Setter Property="Height" Value="58"/>
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="64"/>
             <Setter Property="Padding" Value="0"/>
-            <Setter Property="CornerRadius" Value="21"/>
-            <Setter Property="FontSize" Value="24"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{ThemeResource AsterDockForegroundBrush}"/>
+            <Setter Property="CornerRadius" Value="23"/>
+            <Setter Property="FontSize" Value="30"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{ThemeResource AsterRailArrowForegroundBrush}"/>
+            <Setter Property="Background" Value="{StaticResource RailEdgeGlassBrush}"/>
             <Setter Property="BorderBrush" Value="{ThemeResource AsterDockBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Opacity" Value="0.88"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
+            <Setter Property="Opacity" Value="1"/>
         </Style>
 
         <Style x:Key="SectionMoreButtonStyle"
