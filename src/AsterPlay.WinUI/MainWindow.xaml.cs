@@ -25,6 +25,7 @@ public sealed partial class MainWindow : Window
     private object? _startupRevealPage;
     private bool _authenticated;
     private string _currentSection = "home-shell";
+    private bool? _homeCaptionUseDarkGlyphs;
     private readonly IntPtr _hwnd;
     private readonly HookProc _lowLevelMouseHookProc;
     private IntPtr _lowLevelMouseHook;
@@ -179,7 +180,11 @@ public sealed partial class MainWindow : Window
         FrameworkElement sender,
         object args)
     {
-        ConfigureNativeTitleBar(sender.ActualTheme == ElementTheme.Light);
+        var lightBackground =
+            _homeCaptionUseDarkGlyphs ??
+            (sender.ActualTheme == ElementTheme.Light);
+
+        ConfigureNativeTitleBar(lightBackground);
     }
 
     private void ApplySystemTheme()
@@ -198,7 +203,8 @@ public sealed partial class MainWindow : Window
             ? ElementTheme.Light
             : ElementTheme.Dark;
 
-        ConfigureNativeTitleBar(isLight);
+        ConfigureNativeTitleBar(
+            _homeCaptionUseDarkGlyphs ?? isLight);
 
         StartupDiagnostics.Write($"System theme applied: {RootGrid.RequestedTheme}");
     }
@@ -704,6 +710,19 @@ public sealed partial class MainWindow : Window
         SetActiveNavigation(HomeButton);
 
         var view = new HomeView(_client);
+        view.HeroCaptionContrastChanged += useDarkGlyphs =>
+        {
+            _homeCaptionUseDarkGlyphs = useDarkGlyphs;
+
+            if (string.Equals(
+                    _currentSection,
+                    "home",
+                    StringComparison.Ordinal) &&
+                ReferenceEquals(PageHost.Content, view))
+            {
+                ConfigureNativeTitleBar(useDarkGlyphs);
+            }
+        };
         view.LibraryRequested += (_, _) => ShowLibrary();
         view.ServerRequested += (_, _) =>
             ShowServers(returnToLogin: false);
@@ -975,6 +994,8 @@ public sealed partial class MainWindow : Window
 
     private void EnterHomeChrome()
     {
+        _homeCaptionUseDarkGlyphs = null;
+
         Grid.SetRow(ContentLayer, 0);
         Grid.SetRowSpan(ContentLayer, 2);
 
@@ -985,12 +1006,16 @@ public sealed partial class MainWindow : Window
         TitleBrandPanel.Visibility = Visibility.Collapsed;
         PageTitleBlock.Visibility = Visibility.Collapsed;
 
-        // The native caption buttons stay available above the Hero.
-        ConfigureNativeTitleBar(isLight: false);
+        // Use the page theme only as an initial fallback. Once the Hero is
+        // available its actual top-right image luminance drives this color.
+        ConfigureNativeTitleBar(
+            RootGrid.ActualTheme == ElementTheme.Light);
     }
 
     private void RestoreStandardChrome()
     {
+        _homeCaptionUseDarkGlyphs = null;
+
         Grid.SetRow(ContentLayer, 1);
         Grid.SetRowSpan(ContentLayer, 1);
 
@@ -999,7 +1024,7 @@ public sealed partial class MainWindow : Window
         TitleBrandPanel.Visibility = Visibility.Visible;
         PageTitleBlock.Visibility = Visibility.Visible;
 
-        var isLight = RootGrid.RequestedTheme != ElementTheme.Dark;
+        var isLight = RootGrid.ActualTheme == ElementTheme.Light;
         AppTitleBar.Background = new SolidColorBrush(
             isLight
                 ? Windows.UI.Color.FromArgb(255, 244, 246, 249)
