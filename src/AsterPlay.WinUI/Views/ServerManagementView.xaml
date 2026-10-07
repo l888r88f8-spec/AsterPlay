@@ -26,12 +26,12 @@
         <Style x:Key="CircleActionButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource AsterGlassButtonStyle}">
-            <Setter Property="Width" Value="54"/>
-            <Setter Property="Height" Value="54"/>
-            <Setter Property="MinWidth" Value="54"/>
-            <Setter Property="MinHeight" Value="54"/>
+            <Setter Property="Width" Value="50"/>
+            <Setter Property="Height" Value="50"/>
+            <Setter Property="MinWidth" Value="50"/>
+            <Setter Property="MinHeight" Value="50"/>
             <Setter Property="Padding" Value="0"/>
-            <Setter Property="CornerRadius" Value="27"/>
+            <Setter Property="CornerRadius" Value="25"/>
             <Setter Property="BorderBrush" Value="{ThemeResource AsterDockBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -42,7 +42,7 @@
                TargetType="Button"
                BasedOn="{StaticResource AsterGlassButtonStyle}">
             <Setter Property="Padding" Value="0"/>
-            <Setter Property="MinHeight" Value="188"/>
+            <Setter Property="MinHeight" Value="182"/>
             <Setter Property="CornerRadius" Value="26"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -53,10 +53,10 @@
         <Style x:Key="RefreshPillButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource AsterGlassButtonStyle}">
-            <Setter Property="Width" Value="292"/>
-            <Setter Property="Height" Value="54"/>
+            <Setter Property="Width" Value="320"/>
+            <Setter Property="Height" Value="56"/>
             <Setter Property="Padding" Value="22,0"/>
-            <Setter Property="CornerRadius" Value="27"/>
+            <Setter Property="CornerRadius" Value="28"/>
             <Setter Property="BorderBrush" Value="{ThemeResource AsterDockBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="{ThemeResource AsterPrimaryTextBrush}"/>
@@ -74,9 +74,9 @@
                       HorizontalScrollBarVisibility="Disabled"
                       ZoomMode="Disabled">
             <Grid x:Name="PageContent"
-                  Padding="48,32,48,124">
+                  Padding="48,28,48,124">
                 <StackPanel>
-                    <Grid Margin="0,4,0,34">
+                    <Grid Margin="0,4,0,28">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
@@ -143,18 +143,21 @@
                     <ItemsRepeater x:Name="ServerCards"
                                    HorizontalAlignment="Stretch">
                         <ItemsRepeater.Layout>
-                            <UniformGridLayout MinItemWidth="310"
-                                               MinItemHeight="188"
-                                               MinColumnSpacing="16"
-                                               MinRowSpacing="16"
+                            <UniformGridLayout MinItemWidth="372"
+                                               MinItemHeight="182"
+                                               MinColumnSpacing="18"
+                                               MinRowSpacing="18"
                                                ItemsJustification="Start"
-                                               ItemsStretch="Fill"/>
+                                               ItemsStretch="None"/>
                         </ItemsRepeater.Layout>
 
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate>
-                                <Grid MinHeight="188">
+                                <Grid Width="{Binding CardWidth}"
+                                      Height="{Binding CardHeight}">
                                     <Button Style="{StaticResource ServerCardButtonStyle}"
+                                            Width="{Binding CardWidth}"
+                                            Height="{Binding CardHeight}"
                                             Tag="{Binding}"
                                             Click="ServerCard_Click"
                                             ToolTipService.ToolTip="{Binding Url}">
@@ -162,7 +165,7 @@
                                                 Background="{StaticResource ServerCardGlassBrush}"
                                                 BorderBrush="{Binding CardBorderBrush}"
                                                 BorderThickness="{Binding CardBorderThickness}">
-                                            <Grid Padding="22,20,22,20">
+                                            <Grid Padding="22,18,22,18">
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="Auto"/>
                                                     <RowDefinition Height="*"/>
@@ -239,7 +242,7 @@
                                             BorderThickness="0"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Top"
-                                            Margin="0,14,14,0"
+                                            Margin="0,12,12,0"
                                             Tag="{Binding}"
                                             Click="More_Click"
                                             ToolTipService.ToolTip="更多">
@@ -289,7 +292,7 @@
                     <Button x:Name="RefreshButton"
                             Style="{StaticResource RefreshPillButtonStyle}"
                             HorizontalAlignment="Center"
-                            Margin="0,38,0,0"
+                            Margin="0,32,0,0"
                             Click="Refresh_Click">
                         <StackPanel Orientation="Horizontal"
                                     Spacing="10"
