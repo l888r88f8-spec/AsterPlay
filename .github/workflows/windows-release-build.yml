@@ -152,8 +152,32 @@ jobs:
             throw "AsterPlay exited during startup smoke test with code $($process.ExitCode)."
           }
 
+          # Process-alive is not sufficient: catch regressions where an
+          # opaque startup splash is left over a blank/uncomposed XAML window.
+          $handoffMarker = "Native splash to MainWindow handoff completed"
+          $handoffDeadline = (Get-Date).AddSeconds(12)
+          $handoffFound = $false
+
+          do {
+            if (Test-Path $asterPlayLog) {
+              $handoffFound = [bool](Select-String -Path $asterPlayLog -Pattern $handoffMarker -SimpleMatch -Quiet)
+            }
+            if ($handoffFound) { break }
+            $process.Refresh()
+            if ($process.HasExited) { break }
+            Start-Sleep -Milliseconds 250
+          } while ((Get-Date) -lt $handoffDeadline)
+
+          if (-not $handoffFound) {
+            if (Test-Path $asterPlayLog) {
+              Write-Host "=== Startup handoff diagnostics ==="
+              Get-Content $asterPlayLog -Tail 100 | Write-Host
+            }
+            throw "AsterPlay did not finish native splash handoff during the startup smoke test."
+          }
+
           Stop-Process -Id $process.Id -Force
-          Write-Host "Packaged AsterPlay started successfully and stayed alive for 5 seconds."
+          Write-Host "Packaged AsterPlay stayed alive and completed native splash handoff."
 
       - name: Pin verified LiquidGlass native runtime
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
