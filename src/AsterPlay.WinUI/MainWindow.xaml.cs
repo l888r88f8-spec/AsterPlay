@@ -26,6 +26,7 @@ public sealed partial class MainWindow : Window
     private bool _authenticated;
     private string _currentSection = "home-shell";
     private bool? _homeCaptionUseDarkGlyphs;
+    private Button? _activeNavigationButton;
     private readonly IntPtr _hwnd;
     private readonly HookProc _lowLevelMouseHookProc;
     private IntPtr _lowLevelMouseHook;
@@ -185,6 +186,9 @@ public sealed partial class MainWindow : Window
             (sender.ActualTheme == ElementTheme.Light);
 
         ConfigureNativeTitleBar(lightBackground);
+
+        if (_activeNavigationButton is not null)
+            SetActiveNavigation(_activeNavigationButton);
     }
 
     private void ApplySystemTheme()
@@ -1091,23 +1095,27 @@ public sealed partial class MainWindow : Window
 
     private void SetActiveNavigation(Button active)
     {
-        // Keep navigation button fills transparent so the compositor-native
-        // LiquidGlassBrush remains fully visible. Selection is foreground-only.
-        var inactiveBackground =
+        _activeNavigationButton = active;
+
+        // Keep button fills transparent so the compositor-native glass remains
+        // visible. Foregrounds adapt with the actual XAML theme.
+        var transparent =
             new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
-        var selectedBackground =
-            new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
-        var inactiveForeground =
-            new SolidColorBrush(Windows.UI.Color.FromArgb(255, 16, 18, 23));
-        var selectedForeground =
-            new SolidColorBrush(Windows.UI.Color.FromArgb(255, 11, 77, 184));
+        var isLight = RootGrid.ActualTheme == ElementTheme.Light;
+
+        var inactiveForeground = new SolidColorBrush(
+            isLight
+                ? Windows.UI.Color.FromArgb(255, 32, 36, 44)
+                : Windows.UI.Color.FromArgb(255, 242, 245, 248));
+        var selectedForeground = new SolidColorBrush(
+            isLight
+                ? Windows.UI.Color.FromArgb(255, 23, 108, 232)
+                : Windows.UI.Color.FromArgb(255, 110, 168, 255));
 
         foreach (var button in new[] { HomeButton, LibraryButton, ServersButton, SettingsButton })
         {
             var selected = ReferenceEquals(button, active);
-            button.Background = selected
-                ? selectedBackground
-                : inactiveBackground;
+            button.Background = transparent;
             button.Foreground = selected
                 ? selectedForeground
                 : inactiveForeground;
