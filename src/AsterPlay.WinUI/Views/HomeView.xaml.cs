@@ -256,9 +256,25 @@ public sealed partial class HomeView : UserControl
 
     private async Task WaitForInitialViewportImagesAsync()
     {
-        // Give data templates / ItemsRepeater containers time to be realized
-        // before inspecting the actual first-screen visual tree.
-        await WaitForNextRenderingFrameAsync();
+        // A Rendering callback alone does not mean the first viewport has
+        // been measured. On cold startup (especially with multiple new
+        // LiquidGlass brushes) the ScrollViewer can still be zero-sized.
+        // Wait for the real hero/content geometry before collecting images.
+        for (var frame = 0; IsLoaded && frame < 24; frame++)
+        {
+            HomeScrollViewer.UpdateLayout();
+
+            if (HomeScrollViewer.ActualWidth > 100 &&
+                HomeScrollViewer.ActualHeight > 100 &&
+                HeroContainer.ActualWidth > 100 &&
+                HeroContainer.ActualHeight > 100 &&
+                HomeScrollViewer.Opacity > 0.9)
+            {
+                break;
+            }
+
+            await WaitForNextRenderingFrameAsync();
+        }
 
         if (!IsLoaded)
             return;
@@ -270,7 +286,8 @@ public sealed partial class HomeView : UserControl
             return;
 
         StartupDiagnostics.Write(
-            $"HomeView: viewport layout ready; actual={HomeScrollViewer.ActualWidth:0.0}x{HomeScrollViewer.ActualHeight:0.0}, " +
+            $"HomeView: viewport layout ready; hero={HeroContainer.ActualWidth:0.0}x{HeroContainer.ActualHeight:0.0}, " +
+            $"visible={HomeScrollViewer.Opacity > 0.9}, actual={HomeScrollViewer.ActualWidth:0.0}x{HomeScrollViewer.ActualHeight:0.0}, " +
             $"viewport={HomeScrollViewer.ViewportWidth:0.0}x{HomeScrollViewer.ViewportHeight:0.0}, " +
             $"extent={HomeScrollViewer.ExtentWidth:0.0}x{HomeScrollViewer.ExtentHeight:0.0}, " +
             $"offset={HomeScrollViewer.VerticalOffset:0.0}, scrollable={HomeScrollViewer.ScrollableHeight:0.0}");
