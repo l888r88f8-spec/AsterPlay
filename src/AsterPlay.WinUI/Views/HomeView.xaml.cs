@@ -28,6 +28,7 @@ public sealed partial class HomeView : UserControl
     private int _heroIndex;
     private int _heroPreloadGeneration;
     private int _heroCaptionContrastGeneration;
+    private bool? _currentHeroCaptionUseDarkGlyphs;
     private bool _heroImagesReady;
     private bool _heroShowingPrimary = true;
     private bool _heroVisualInitialized;
@@ -55,7 +56,8 @@ public sealed partial class HomeView : UserControl
     public event EventHandler<ServerProfile>? ServerSwitchRequested;
     public event EventHandler? SearchRequested;
     public event EventHandler? InitialVisualReady;
-    public event Action<bool>? HeroCaptionContrastChanged;
+    // null = use the page/theme background; bool = explicit Hero contrast.
+    public event Action<bool?>? HeroCaptionContrastChanged;
 
     public HomeView(EmbyClient client, bool noServerMode = false)
     {
@@ -158,6 +160,27 @@ public sealed partial class HomeView : UserControl
         return true;
     }
 
+    private void HomeScrollViewer_ViewChanged(
+        object sender,
+        ScrollViewerViewChangedEventArgs e)
+    {
+        UpdateCaptionContrastForScrollPosition();
+    }
+
+    private void UpdateCaptionContrastForScrollPosition()
+    {
+        // The native caption buttons occupy the top title-bar strip. Once that
+        // strip is no longer over the Hero, stop using Hero-derived contrast.
+        var heroStillBehindCaption =
+            HomeScrollViewer.VerticalOffset <
+            Math.Max(0, HeroContainer.Height - 72);
+
+        HeroCaptionContrastChanged?.Invoke(
+            heroStillBehindCaption
+                ? _currentHeroCaptionUseDarkGlyphs
+                : null);
+    }
+
     private void HomeScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         var width = e.NewSize.Width;
@@ -179,6 +202,7 @@ public sealed partial class HomeView : UserControl
         HeroContainer.Margin =
             new Thickness(-horizontalPadding, 0, -horizontalPadding, -112);
 
+        UpdateCaptionContrastForScrollPosition();
     }
 
     private void HomeView_Loaded(object sender, RoutedEventArgs e)
@@ -1234,7 +1258,8 @@ public sealed partial class HomeView : UserControl
 
             // Bright artwork needs dark caption glyphs; dark artwork needs white.
             var useDarkGlyphs = luminance.Value >= 150;
-            HeroCaptionContrastChanged?.Invoke(useDarkGlyphs);
+            _currentHeroCaptionUseDarkGlyphs = useDarkGlyphs;
+            UpdateCaptionContrastForScrollPosition();
 
             StartupDiagnostics.Write(
                 $"Hero caption contrast: luminance={luminance.Value:0.0}; " +
