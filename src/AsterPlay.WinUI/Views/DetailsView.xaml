@@ -53,10 +53,8 @@
                                 Spacing="10">
                         <Button Content="← 返回"
                                 HorizontalAlignment="Left"
-                                Background="Transparent"
-                                BorderThickness="0"
                                 Foreground="White"
-                                Padding="0,4"
+                                Padding="16,7"
                                 Click="Back_Click"/>
 
                         <TextBlock x:Name="TaglineBlock"
