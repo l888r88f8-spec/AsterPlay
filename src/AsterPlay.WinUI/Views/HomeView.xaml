@@ -123,95 +123,44 @@
             </Border>
         </ControlTemplate>
 
-        <Style x:Key="RoundActionButtonStyle" TargetType="Button">
+        <Style x:Key="RoundActionButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource AsterGlassButtonStyle}">
             <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Template" Value="{StaticResource FlatButtonTemplate}"/>
             <Setter Property="Width" Value="38"/>
             <Setter Property="Height" Value="38"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="CornerRadius" Value="19"/>
             <Setter Property="Foreground" Value="{ThemeResource AsterRailArrowForegroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{ThemeResource AsterRailArrowBorderBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource AsterDockBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontSize" Value="20"/>
-            <Setter Property="Background">
-                <Setter.Value>
-                    <lg:LiquidGlassBrush BlurAmount="1.15"
-                                         BloomAmount="0.04"
-                                         RefThickness="18"
-                                         RefFactor="1.95"
-                                         RefDispersion="3.0"
-                                         DispersionRange="0.38"
-                                         RefFresnelFactor="18"
-                                         GlareFactor="42"
-                                         TintA="0.08"
-                                         TintR="205"
-                                         TintG="225"
-                                         TintB="255"
-                                         ShapeRadius="0.99"
-                                         ShapeRoundness="4.0"/>
-                </Setter.Value>
-            </Setter>
         </Style>
 
-        <Style x:Key="SectionMoreButtonStyle" TargetType="Button">
+        <Style x:Key="SectionMoreButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource AsterGlassButtonStyle}">
             <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Template" Value="{StaticResource FlatButtonTemplate}"/>
             <Setter Property="Height" Value="36"/>
             <Setter Property="Padding" Value="16,0"/>
             <Setter Property="CornerRadius" Value="18"/>
-            <Setter Property="BorderBrush" Value="#34FFFFFF"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource AsterDockBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="{ThemeResource AsterPrimaryTextBrush}"/>
             <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Background">
-                <Setter.Value>
-                    <lg:LiquidGlassBrush BlurAmount="1.20"
-                                         BloomAmount="0.05"
-                                         RefThickness="18"
-                                         RefFactor="1.85"
-                                         RefDispersion="2.6"
-                                         DispersionRange="0.34"
-                                         RefFresnelFactor="18"
-                                         GlareFactor="42"
-                                         TintA="0.12"
-                                         TintR="236"
-                                         TintG="239"
-                                         TintB="246"
-                                         ShapeRadius="0.99"
-                                         ShapeRoundness="4.0"/>
-                </Setter.Value>
-            </Setter>
         </Style>
 
-        <Style x:Key="HeroActionButtonStyle" TargetType="Button">
-            <Setter Property="Template" Value="{StaticResource FlatButtonTemplate}"/>
+        <Style x:Key="HeroActionButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource AsterGlassButtonStyle}">
             <Setter Property="Height" Value="42"/>
             <Setter Property="MinWidth" Value="104"/>
             <Setter Property="Padding" Value="20,0"/>
             <Setter Property="CornerRadius" Value="21"/>
-            <Setter Property="BorderBrush" Value="#55FFFFFF"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource AsterDockBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Background">
-                <Setter.Value>
-                    <lg:LiquidGlassBrush BlurAmount="1.20"
-                                         BloomAmount="0.05"
-                                         RefThickness="20"
-                                         RefFactor="1.90"
-                                         RefDispersion="2.8"
-                                         DispersionRange="0.36"
-                                         RefFresnelFactor="20"
-                                         GlareFactor="48"
-                                         TintA="0.10"
-                                         TintR="220"
-                                         TintG="230"
-                                         TintB="248"
-                                         ShapeRadius="0.99"
-                                         ShapeRoundness="4.0"/>
-                </Setter.Value>
-            </Setter>
         </Style>
     </UserControl.Resources>
 
@@ -234,26 +183,9 @@
                     MinWidth="174"
                     Padding="10,0,14,0"
                     CornerRadius="27"
-                    BorderBrush="#72FFFFFF"
+                    BorderBrush="{ThemeResource AsterDockBorderBrush}"
                     BorderThickness="1"
-                    Template="{StaticResource FlatButtonTemplate}"
                     Click="ServerPill_Click">
-                <Button.Background>
-                    <lg:LiquidGlassBrush BlurAmount="1.45"
-                                         BloomAmount="0.06"
-                                         RefThickness="24"
-                                         RefFactor="2.05"
-                                         RefDispersion="3.2"
-                                         DispersionRange="0.38"
-                                         RefFresnelFactor="21"
-                                         GlareFactor="52"
-                                         TintA="0.16"
-                                         TintR="238"
-                                         TintG="240"
-                                         TintB="246"
-                                         ShapeRadius="0.99"
-                                         ShapeRoundness="4.0"/>
-                </Button.Background>
                 <Grid VerticalAlignment="Center">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="34"/>
@@ -283,7 +215,7 @@
                                Grid.Column="1"
                                Margin="11,0,4,0"
                                Text="服务器"
-                               Foreground="#FF101217"
+                               Foreground="{ThemeResource AsterDockForegroundBrush}"
                                FontSize="16"
                                FontWeight="SemiBold"
                                TextTrimming="CharacterEllipsis"
@@ -298,28 +230,11 @@
                     Height="54"
                     Padding="0"
                     CornerRadius="27"
-                    BorderBrush="#72FFFFFF"
+                    BorderBrush="{ThemeResource AsterDockBorderBrush}"
                     BorderThickness="1"
-                    Template="{StaticResource FlatButtonTemplate}"
                     Click="Search_Click">
-                <Button.Background>
-                    <lg:LiquidGlassBrush BlurAmount="1.45"
-                                         BloomAmount="0.06"
-                                         RefThickness="24"
-                                         RefFactor="2.05"
-                                         RefDispersion="3.2"
-                                         DispersionRange="0.38"
-                                         RefFresnelFactor="21"
-                                         GlareFactor="52"
-                                         TintA="0.16"
-                                         TintR="238"
-                                         TintG="240"
-                                         TintB="246"
-                                         ShapeRadius="0.99"
-                                         ShapeRoundness="4.0"/>
-                </Button.Background>
                 <FontIcon Glyph="&#xE721;"
-                          Foreground="#FF101217"
+                          Foreground="{ThemeResource AsterDockForegroundBrush}"
                           FontSize="22"/>
             </Button>
         </Grid>
