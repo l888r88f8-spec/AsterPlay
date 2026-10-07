@@ -428,7 +428,7 @@ public sealed partial class MainWindow : Window
 
             // First allow new layout, decoded images, and custom Composition
             // brushes to be submitted on subsequent XAML rendering passes.
-            await WaitForCompositionFramesAsync(3);
+            var initialFrames = await WaitForCompositionFramesAsync(3, 650);
 
             // DwmFlush is synchronous. Run it off the WinUI dispatcher so the
             // UI keeps composing while DWM processes the queued frame.
@@ -450,7 +450,10 @@ public sealed partial class MainWindow : Window
                     "Startup DWM presentation barrier timed out; awaiting further XAML frames");
             }
 
-            await WaitForCompositionFramesAsync(2);
+            var settledFrames = await WaitForCompositionFramesAsync(2, 500);
+            StartupDiagnostics.Write(
+                $"Startup presentation barrier: frames={initialFrames}+{settledFrames}; " +
+                $"page={page.GetType().Name}, size={page.ActualWidth:0}x{page.ActualHeight:0}");
             // Do not withdraw the opaque native splash while the UI dispatcher
             // is still processing a burst of initial bitmap and shader work.
             await Task.Delay(120);
@@ -483,24 +486,36 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private static Task WaitForCompositionFramesAsync(int frameCount)
+    private static async Task<int> WaitForCompositionFramesAsync(
+        int frameCount,
+        int timeoutMilliseconds)
     {
         var completion = new TaskCompletionSource<bool>(
             TaskCreationOptions.RunContinuationsAsynchronously);
-        var remaining = frameCount;
+        var framesSeen = 0;
 
         EventHandler<object>? handler = null;
         handler = (_, _) =>
         {
-            if (--remaining > 0)
-                return;
-
-            Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= handler;
-            completion.TrySetResult(true);
+            framesSeen++;
+            if (framesSeen >= frameCount)
+                completion.TrySetResult(true);
         };
 
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += handler;
-        return completion.Task;
+        try
+        {
+            // Static pages may not produce continuous Rendering callbacks.
+            // Bound this wait so the native splash cannot be stranded forever.
+            await Task.WhenAny(
+                completion.Task,
+                Task.Delay(timeoutMilliseconds));
+            return framesSeen;
+        }
+        finally
+        {
+            Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= handler;
+        }
     }
 
     private sealed record StartupState(
