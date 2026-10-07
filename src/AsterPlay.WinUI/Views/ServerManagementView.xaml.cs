@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using AsterPlay.Services;
+using AsterPlay.WinUI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -22,6 +23,13 @@ public sealed partial class ServerManagementView : UserControl
     public event EventHandler? DoneRequested;
     public event EventHandler<ServerProfile>? ServerSwitchRequested;
 
+    public ServerManagementView()
+        : this(
+            ResolveMainClient(),
+            showBackButton: true)
+    {
+    }
+
     public ServerManagementView(
         EmbyClient client,
         bool showBackButton = false)
@@ -35,6 +43,22 @@ public sealed partial class ServerManagementView : UserControl
 
         ServerCards.ItemsSource = _servers;
         Reload();
+    }
+
+    private static EmbyClient ResolveMainClient()
+    {
+        if (Application.Current is App app &&
+            app.HostWindow is { } mainWindow)
+        {
+            return mainWindow.ServerManagementClient;
+        }
+
+        var client = new EmbyClient();
+        var session = AppStateStore.Load();
+        if (session is not null)
+            client.Restore(session);
+
+        return client;
     }
 
     private async void ServerManagementView_Loaded(
@@ -219,9 +243,20 @@ public sealed partial class ServerManagementView : UserControl
             return;
         }
 
-        ServerSwitchRequested?.Invoke(
-            this,
-            item.NavigationProfile);
+        if (ServerSwitchRequested is not null)
+        {
+            ServerSwitchRequested.Invoke(
+                this,
+                item.NavigationProfile);
+            return;
+        }
+
+        if (Application.Current is App app &&
+            app.HostWindow is { } mainWindow)
+        {
+            mainWindow.RequestServerSwitchFromManagement(
+                item.NavigationProfile);
+        }
     }
 
     private void More_Click(
