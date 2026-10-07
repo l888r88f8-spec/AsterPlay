@@ -16,7 +16,7 @@
             <Setter Property="Padding" Value="9,4"/>
             <Setter Property="CornerRadius" Value="19"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#FF101217"/>
+            <Setter Property="Foreground" Value="{ThemeResource AsterDockForegroundBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
         </Style>
         </Grid.Resources>
@@ -79,14 +79,14 @@
                     Padding="0"
                     CornerRadius="34"
                     Background="{ThemeResource AsterCardBackgroundBrush}"
-                    BorderBrush="#78FFFFFF"
+                    BorderBrush="{ThemeResource AsterDockBorderBrush}"
                     BorderThickness="1"
                     Visibility="Visible">
                 <Border.Resources>
-                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
-                                     Color="#34FFFFFF"/>
-                    <SolidColorBrush x:Key="ButtonBackgroundPressed"
-                                     Color="#52FFFFFF"/>
+                    <StaticResource x:Key="ButtonBackgroundPointerOver"
+                                    ResourceKey="AsterDockHoverBrush"/>
+                    <StaticResource x:Key="ButtonBackgroundPressed"
+                                    ResourceKey="AsterDockPressedBrush"/>
                     <SolidColorBrush x:Key="ButtonBorderBrushPointerOver"
                                      Color="Transparent"/>
                     <SolidColorBrush x:Key="ButtonBorderBrushPressed"
@@ -95,6 +95,12 @@
                 <Grid>
                     <Border x:Name="NavigationDockGlassLayer"
                             CornerRadius="33"
+                            IsHitTestVisible="False"/>
+
+                    <!-- A low-alpha theme-aware veil keeps the glass readable on
+                         very bright/very dark content without hiding refraction. -->
+                    <Border CornerRadius="33"
+                            Background="{ThemeResource AsterDockOverlayBrush}"
                             IsHitTestVisible="False"/>
 
                     <StackPanel Orientation="Horizontal"
