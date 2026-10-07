@@ -72,6 +72,8 @@ public partial class App : Application
             _splash.AttachOwner(
                 _window.NativeHandle);
 
+            _window.StartupCoverPresented +=
+                MainWindow_StartupCoverPresented;
             _window.StartupVisualReady +=
                 MainWindow_StartupVisualReady;
 
@@ -115,6 +117,30 @@ public partial class App : Application
         }
     }
 
+    private void MainWindow_StartupCoverPresented(
+        object? sender,
+        EventArgs e)
+    {
+        if (_window is not null)
+        {
+            _window.StartupCoverPresented -=
+                MainWindow_StartupCoverPresented;
+        }
+
+        var splash = _splash;
+        _splash = null;
+
+        if (splash is null)
+            return;
+
+        // Do not keep a second top-level HWND over MainWindow while Home and the
+        // LiquidGlass shaders are warming. DWM can defer real presentation of an
+        // occluded owner even though XAML Rendering and DwmFlush have completed.
+        splash.Dispose();
+        StartupDiagnostics.Write(
+            "Native splash handed off to in-window startup cover");
+    }
+
     private async void MainWindow_StartupVisualReady(
         object? sender,
         EventArgs e)
@@ -125,24 +151,19 @@ public partial class App : Application
         _window.StartupVisualReady -=
             MainWindow_StartupVisualReady;
 
-        var splash = _splash;
-        _splash = null;
-
-        if (splash is null)
+        // Safety: normally the native splash was already removed as soon as the
+        // in-window cover was presented. If not, remove it before revealing Home.
+        if (_splash is not null)
         {
+            _splash.Dispose();
+            _splash = null;
             StartupDiagnostics.Write(
-                "MainWindow startup visual ready; native splash already absent");
-            return;
+                "Native splash removed during final startup reveal fallback");
         }
 
         try
         {
-            StartupDiagnostics.Write(
-                "MainWindow startup visual ready; fading native splash");
-
-            await splash.FadeOutAsync(
-                durationMilliseconds: 640);
-
+            await _window.RevealStartupCoverAsync();
             StartupDiagnostics.Write(
                 "Native splash to MainWindow handoff completed");
         }
@@ -151,8 +172,6 @@ public partial class App : Application
             StartupDiagnostics.WriteException(
                 "MainWindow_StartupVisualReady",
                 ex);
-
-            splash.Dispose();
         }
     }
 
