@@ -20,7 +20,9 @@ public sealed partial class MainWindow : Window
     private bool _startupResolutionScheduled;
     private bool _startupResolutionCompleted;
     private bool _startupRevealScheduled;
+    private bool _startupPresentationInProgress;
     private bool _startupVisualReadyRaised;
+    private object? _startupRevealPage;
     private bool _authenticated;
     private string _currentSection = "home-shell";
     private readonly IntPtr _hwnd;
@@ -376,29 +378,129 @@ public sealed partial class MainWindow : Window
 
     private void ScheduleStartupReveal()
     {
-        if (_startupVisualReadyRaised || _startupRevealScheduled)
+        if (_startupVisualReadyRaised ||
+            _startupRevealScheduled ||
+            _startupPresentationInProgress)
+        {
             return;
+        }
 
+        _startupRevealPage = PageHost.Content;
         _startupRevealScheduled = true;
         StartupDiagnostics.Write(
-            "Startup reveal scheduled after target page frame");
+            "Startup reveal scheduled; waiting for laid-out page and DWM presentation");
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering +=
             StartupReveal_Rendering;
     }
 
-    private void StartupReveal_Rendering(object? sender, object e)
+    private async void StartupReveal_Rendering(object? sender, object e)
     {
+        if (_startupVisualReadyRaised || _startupPresentationInProgress)
+            return;
+
+        // Rendering fires before a frame is committed to DWM. In particular a
+        // compositor-native LiquidGlass effect can still be compiling while the
+        // first XAML Rendering callback is executing. Never hide the native
+        // splash on that callback alone.
+        if (PageHost.Content is not FrameworkElement page ||
+            !ReferenceEquals(PageHost.Content, _startupRevealPage) ||
+            !page.IsLoaded ||
+            page.ActualWidth < 32 ||
+            page.ActualHeight < 32 ||
+            PageHost.ActualWidth < 32 ||
+            PageHost.ActualHeight < 32)
+        {
+            return;
+        }
+
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -=
             StartupReveal_Rendering;
         _startupRevealScheduled = false;
+        _startupPresentationInProgress = true;
+        var targetPage = PageHost.Content;
 
-        if (_startupVisualReadyRaised)
-            return;
+        try
+        {
+            StartupDiagnostics.Write(
+                $"Startup page arranged; page={page.GetType().Name}, " +
+                $"size={page.ActualWidth:0}x{page.ActualHeight:0}, " +
+                $"host={PageHost.ActualWidth:0}x{PageHost.ActualHeight:0}");
 
-        _startupVisualReadyRaised = true;
-        StartupDiagnostics.Write(
-            "Target page frame ready; Home can be revealed beneath native splash");
-        StartupVisualReady?.Invoke(this, EventArgs.Empty);
+            // First allow new layout, decoded images, and custom Composition
+            // brushes to be submitted on subsequent XAML rendering passes.
+            await WaitForCompositionFramesAsync(3);
+
+            // DwmFlush is synchronous. Run it off the WinUI dispatcher so the
+            // UI keeps composing while DWM processes the queued frame.
+            var flush = Task.Run(DwmFlush);
+            var completed = await Task.WhenAny(
+                flush,
+                Task.Delay(TimeSpan.FromSeconds(2)));
+
+            if (ReferenceEquals(completed, flush))
+            {
+                StartupDiagnostics.Write(
+                    $"Startup DWM presentation barrier completed; hr=0x{(uint)await flush:X8}");
+            }
+            else
+            {
+                // Remote / headless sessions can have no timely DWM fence.
+                // Keep the splash up through the additional composition passes.
+                StartupDiagnostics.Write(
+                    "Startup DWM presentation barrier timed out; awaiting further XAML frames");
+            }
+
+            await WaitForCompositionFramesAsync(2);
+            // Do not withdraw the opaque native splash while the UI dispatcher
+            // is still processing a burst of initial bitmap and shader work.
+            await Task.Delay(120);
+
+            if (_startupVisualReadyRaised ||
+                !ReferenceEquals(PageHost.Content, targetPage) ||
+                !page.IsLoaded)
+            {
+                StartupDiagnostics.Write(
+                    "Startup page changed before presentation barrier; reveal postponed");
+                return;
+            }
+
+            _startupVisualReadyRaised = true;
+            StartupDiagnostics.Write(
+                "Startup page DWM presentation settled; handing off native splash");
+            StartupVisualReady?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.WriteException(
+                "StartupReveal presentation barrier",
+                ex);
+        }
+        finally
+        {
+            _startupPresentationInProgress = false;
+            if (!_startupVisualReadyRaised && PageHost.Content is FrameworkElement)
+                ScheduleStartupReveal();
+        }
+    }
+
+    private static Task WaitForCompositionFramesAsync(int frameCount)
+    {
+        var completion = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var remaining = frameCount;
+
+        EventHandler<object>? handler = null;
+        handler = (_, _) =>
+        {
+            if (--remaining > 0)
+                return;
+
+            Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= handler;
+            completion.TrySetResult(true);
+        };
+
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += handler;
+        return completion.Task;
     }
 
     private sealed record StartupState(
@@ -891,6 +993,9 @@ public sealed partial class MainWindow : Window
         int code,
         IntPtr wParam,
         IntPtr lParam);
+
+    [DllImport("dwmapi.dll", ExactSpelling = true)]
+    private static extern int DwmFlush();
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmGetWindowAttribute(
