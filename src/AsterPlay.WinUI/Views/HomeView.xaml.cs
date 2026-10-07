@@ -1680,9 +1680,7 @@ public sealed partial class HomeView : UserControl
             canGoForward ? Visibility.Visible : Visibility.Collapsed;
 
         ResumePreviousButton.Visibility = backVisibility;
-        ResumeLeftFade.Visibility = backVisibility;
         ResumeNextButton.Visibility = forwardVisibility;
-        ResumeRightFade.Visibility = forwardVisibility;
     }
 
     private void LibrariesArrow_Click(object sender, RoutedEventArgs e)
@@ -1732,9 +1730,7 @@ public sealed partial class HomeView : UserControl
             canGoForward ? Visibility.Visible : Visibility.Collapsed;
 
         LibrariesPreviousButton.Visibility = backVisibility;
-        LibrariesLeftFade.Visibility = backVisibility;
         LibrariesNextButton.Visibility = forwardVisibility;
-        LibrariesRightFade.Visibility = forwardVisibility;
     }
 
     private static IReadOnlyList<EmbyItem> BuildResumeItems(IEnumerable<EmbyItem> source)
