@@ -81,7 +81,8 @@
                                     BorderBrush="{ThemeResource AsterCardBorderBrush}"
                                     BorderThickness="1">
                                 <controls:CachedImage SourceUrl="{Binding PosterUrl}"
-                                                      Stretch="UniformToFill"/>
+                                                      Stretch="UniformToFill"
+                                                      CornerRadius="18"/>
                             </Border>
                             <TextBlock Text="{Binding Title}"
                                        Foreground="{ThemeResource AsterPrimaryTextBrush}"
