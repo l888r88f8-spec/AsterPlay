@@ -828,7 +828,9 @@
                                             Click="LibrarySectionMore_Click"/>
                                 </Grid>
 
-                                <ItemsRepeater ItemsSource="{Binding Items}">
+                                <!-- Movie/other libraries keep the compact portrait artwork. -->
+                                <ItemsRepeater ItemsSource="{Binding Items}"
+                                               Visibility="{Binding PosterVisibility}">
                                     <ItemsRepeater.Layout>
                                         <UniformGridLayout MinItemWidth="158"
                                                            MinItemHeight="278"
@@ -846,7 +848,7 @@
                                                     HorizontalAlignment="Stretch"
                                                     Tag="{Binding}"
                                                     Click="SectionMedia_Click"
-                                            Template="{StaticResource FlatButtonTemplate}">
+                                                    Template="{StaticResource FlatButtonTemplate}">
                                                 <StackPanel Spacing="8">
                                                     <Border Height="232"
                                                             CornerRadius="18"
@@ -865,6 +867,70 @@
                                                                TextTrimming="CharacterEllipsis"
                                                                MaxLines="2"
                                                                MinHeight="36"/>
+                                                    <TextBlock Text="{Binding Meta}"
+                                                               Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                                                               FontSize="12"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsRepeater.ItemTemplate>
+                                </ItemsRepeater>
+
+                                <!-- TV libraries use a dedicated landscape card. The artwork
+                                     stays clean: no play glyph or action overlay is drawn on it. -->
+                                <ItemsRepeater ItemsSource="{Binding Items}"
+                                               Visibility="{Binding SeriesVisibility}">
+                                    <ItemsRepeater.Layout>
+                                        <UniformGridLayout MinItemWidth="300"
+                                                           MinItemHeight="225"
+                                                           MinColumnSpacing="18"
+                                                           MinRowSpacing="22"
+                                                           ItemsJustification="Start"
+                                                           ItemsStretch="None"/>
+                                    </ItemsRepeater.Layout>
+                                    <ItemsRepeater.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Width="300"
+                                                    Padding="0"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    HorizontalAlignment="Stretch"
+                                                    Tag="{Binding}"
+                                                    Click="SectionMedia_Click"
+                                                    Template="{StaticResource FlatButtonTemplate}">
+                                                <StackPanel Width="300"
+                                                            Spacing="9">
+                                                    <Border Width="300"
+                                                            Height="169"
+                                                            CornerRadius="18"
+                                                            Background="{ThemeResource AsterCardBackgroundBrush}"
+                                                            BorderBrush="{ThemeResource AsterCardBorderBrush}"
+                                                            BorderThickness="1">
+                                                        <Grid>
+                                                            <controls:CachedImage SourceUrl="{Binding BackdropUrl}"
+                                                                                  Stretch="UniformToFill"/>
+                                                            <Rectangle IsHitTestVisible="False">
+                                                                <Rectangle.Fill>
+                                                                    <LinearGradientBrush StartPoint="0,0"
+                                                                                         EndPoint="0,1">
+                                                                        <GradientStop Color="#00000000" Offset="0.58"/>
+                                                                        <GradientStop Color="#24000000" Offset="1"/>
+                                                                    </LinearGradientBrush>
+                                                                </Rectangle.Fill>
+                                                            </Rectangle>
+                                                            <Border BorderBrush="#24FFFFFF"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="18"/>
+                                                        </Grid>
+                                                    </Border>
+
+                                                    <TextBlock Text="{Binding Title}"
+                                                               Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                                                               FontSize="16"
+                                                               FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis"/>
+
                                                     <TextBlock Text="{Binding Meta}"
                                                                Foreground="{ThemeResource AsterSecondaryTextBrush}"
                                                                FontSize="12"
