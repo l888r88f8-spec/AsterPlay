@@ -1674,10 +1674,15 @@ public sealed partial class HomeView : UserControl
             ResumeScroller.HorizontalOffset <
             ResumeScroller.ScrollableWidth - epsilon;
 
-        ResumePreviousButton.Visibility =
+        var backVisibility =
             canGoBack ? Visibility.Visible : Visibility.Collapsed;
-        ResumeNextButton.Visibility =
+        var forwardVisibility =
             canGoForward ? Visibility.Visible : Visibility.Collapsed;
+
+        ResumePreviousButton.Visibility = backVisibility;
+        ResumeLeftFade.Visibility = backVisibility;
+        ResumeNextButton.Visibility = forwardVisibility;
+        ResumeRightFade.Visibility = forwardVisibility;
     }
 
     private void LibrariesArrow_Click(object sender, RoutedEventArgs e)
@@ -1721,10 +1726,15 @@ public sealed partial class HomeView : UserControl
             LibrariesScroller.HorizontalOffset <
             LibrariesScroller.ScrollableWidth - epsilon;
 
-        LibrariesPreviousButton.Visibility =
+        var backVisibility =
             canGoBack ? Visibility.Visible : Visibility.Collapsed;
-        LibrariesNextButton.Visibility =
+        var forwardVisibility =
             canGoForward ? Visibility.Visible : Visibility.Collapsed;
+
+        LibrariesPreviousButton.Visibility = backVisibility;
+        LibrariesLeftFade.Visibility = backVisibility;
+        LibrariesNextButton.Visibility = forwardVisibility;
+        LibrariesRightFade.Visibility = forwardVisibility;
     }
 
     private static IReadOnlyList<EmbyItem> BuildResumeItems(IEnumerable<EmbyItem> source)
