@@ -360,101 +360,13 @@
             <Grid Width="{Binding ElementName=HomeScrollViewer, Path=ViewportWidth}"
                   HorizontalAlignment="Stretch">
 
-                <!-- The Hero artwork is the page background itself. It deliberately
-                     continues behind the first content rows, so there is no physical
-                     Hero/content boundary to reveal as a horizontal seam. -->
-                <Grid x:Name="PageBackdropLayer"
-                      Height="1240"
-                      VerticalAlignment="Top"
-                      HorizontalAlignment="Stretch"
-                      Visibility="Collapsed"
-                      IsHitTestVisible="False">
-                    <!-- Two atmospheric copies cross-fade independently from the
-                         foreground carousel. They may crop because they are blurred colour
-                         fields only; the real Hero framing remains untouched. -->
-                    <controls:CachedImage x:Name="HeroExtensionImage"
-                                          LazyLoadingEnabled="False"
-                                          Stretch="UniformToFill"
-                                          Opacity="0.34"
-                                          RenderTransformOrigin="0.5,0.5">
-                        <controls:CachedImage.RenderTransform>
-                            <ScaleTransform ScaleX="1.07"
-                                            ScaleY="1.07"/>
-                        </controls:CachedImage.RenderTransform>
-                    </controls:CachedImage>
-                    <controls:CachedImage x:Name="HeroExtensionImageAlt"
-                                          LazyLoadingEnabled="False"
-                                          Stretch="UniformToFill"
-                                          Opacity="0"
-                                          RenderTransformOrigin="0.5,0.5">
-                        <controls:CachedImage.RenderTransform>
-                            <ScaleTransform ScaleX="1.07"
-                                            ScaleY="1.07"/>
-                        </controls:CachedImage.RenderTransform>
-                    </controls:CachedImage>
-
-                    <!-- Reuse AsterPlay's compositor blur pipeline as a neutral ambience
-                         pass: no refraction/glare, only blur and restrained colour shaping. -->
-                    <Rectangle IsHitTestVisible="False"
-                               Opacity="0.96">
-                        <Rectangle.Fill>
-                            <lg:LiquidGlassBrush BlurAmount="5.5"
-                                                 BloomAmount="0"
-                                                 RefThickness="0"
-                                                 RefFactor="1"
-                                                 RefDispersion="0"
-                                                 DispersionRange="0"
-                                                 RefFresnelFactor="0"
-                                                 GlareFactor="0"
-                                                 GlareOppositeFactor="0"
-                                                 TintA="0"
-                                                 Brightness="-0.04"
-                                                 Contrast="0.74"
-                                                 Saturation="1.08"
-                                                 Exposure="0.92"
-                                                 Vibrance="0.06"
-                                                 ShapeRadius="0"
-                                                 ShapeRoundness="4"/>
-                        </Rectangle.Fill>
-                    </Rectangle>
-
-                    <!-- Light top shading only for caption/control readability. -->
-                    <Rectangle VerticalAlignment="Top"
-                               Height="360">
-                        <Rectangle.Fill>
-                            <LinearGradientBrush StartPoint="0,0"
-                                                 EndPoint="0,1">
-                                <GradientStop Color="#26000000" Offset="0"/>
-                                <GradientStop Color="#08000000" Offset="0.56"/>
-                                <GradientStop Color="#00000000" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Rectangle.Fill>
-                    </Rectangle>
-
-                    <!-- One continuous fade over the same image. The image remains
-                         visible behind Continue Watching and My Media before it
-                         finally dissolves into the real page background. -->
-                    <Rectangle VerticalAlignment="Bottom"
-                               Height="820">
-                        <Rectangle.Fill>
-                            <LinearGradientBrush StartPoint="0,0"
-                                                 EndPoint="0,1">
-                                <GradientStop Color="#00000000" Offset="0"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.34"/>
-                                <GradientStop Color="{ThemeResource AsterHeroFadeMidColor}" Offset="0.64"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}" Offset="0.84"/>
-                                <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Rectangle.Fill>
-                    </Rectangle>
-                </Grid>
-
                 <StackPanel x:Name="HomeContentStack"
                             HorizontalAlignment="Stretch"
                             Padding="28,0,28,130"
                             Spacing="30">
 
-                <!-- Full-bleed poster Hero with a long mist fade into the page. -->
+                <!-- Full-bleed Hero. Its own lower edge progressively blurs and
+                     fades into the theme background; no image is extended below it. -->
                 <Grid x:Name="HeroContainer"
                       Height="690"
                       Margin="-28,0,-28,-112">
@@ -470,15 +382,92 @@
                                           Stretch="UniformToFill"
                                           Opacity="0"/>
 
-                    <!-- Feather the Hero into the continuation layer underneath. -->
+                    <!-- Progressive Gaussian-blur fade. There is no duplicated
+                         artwork below the Hero: these compositor brushes blur only the
+                         actual Hero image beneath them, then the theme-aware gradient
+                         resolves directly into the real page background. -->
                     <Rectangle VerticalAlignment="Bottom"
-                               Height="260">
+                               Height="340"
+                               Opacity="0.42"
+                               IsHitTestVisible="False">
+                        <Rectangle.Fill>
+                            <lg:LiquidGlassBrush BlurAmount="2.2"
+                                                 BloomAmount="0"
+                                                 RefThickness="0"
+                                                 RefFactor="1"
+                                                 RefDispersion="0"
+                                                 DispersionRange="0"
+                                                 RefFresnelFactor="0"
+                                                 GlareFactor="0"
+                                                 GlareOppositeFactor="0"
+                                                 TintA="0"
+                                                 Contrast="0.96"
+                                                 Saturation="1"
+                                                 Exposure="1"
+                                                 ShapeRadius="0"
+                                                 ShapeRoundness="4"/>
+                        </Rectangle.Fill>
+                    </Rectangle>
+
+                    <Rectangle VerticalAlignment="Bottom"
+                               Height="245"
+                               Opacity="0.68"
+                               IsHitTestVisible="False">
+                        <Rectangle.Fill>
+                            <lg:LiquidGlassBrush BlurAmount="4.2"
+                                                 BloomAmount="0"
+                                                 RefThickness="0"
+                                                 RefFactor="1"
+                                                 RefDispersion="0"
+                                                 DispersionRange="0"
+                                                 RefFresnelFactor="0"
+                                                 GlareFactor="0"
+                                                 GlareOppositeFactor="0"
+                                                 TintA="0"
+                                                 Contrast="0.90"
+                                                 Saturation="0.98"
+                                                 Exposure="1"
+                                                 ShapeRadius="0"
+                                                 ShapeRoundness="4"/>
+                        </Rectangle.Fill>
+                    </Rectangle>
+
+                    <Rectangle VerticalAlignment="Bottom"
+                               Height="155"
+                               Opacity="0.92"
+                               IsHitTestVisible="False">
+                        <Rectangle.Fill>
+                            <lg:LiquidGlassBrush BlurAmount="6.8"
+                                                 BloomAmount="0"
+                                                 RefThickness="0"
+                                                 RefFactor="1"
+                                                 RefDispersion="0"
+                                                 DispersionRange="0"
+                                                 RefFresnelFactor="0"
+                                                 GlareFactor="0"
+                                                 GlareOppositeFactor="0"
+                                                 TintA="0"
+                                                 Contrast="0.82"
+                                                 Saturation="0.94"
+                                                 Exposure="1"
+                                                 ShapeRadius="0"
+                                                 ShapeRoundness="4"/>
+                        </Rectangle.Fill>
+                    </Rectangle>
+
+                    <!-- Light and dark themes supply different fade colours through
+                         AsterHeroFadeMidColor/AsterHeroFadeEndColor. At the bottom
+                         the Hero has fully become the actual page background colour. -->
+                    <Rectangle VerticalAlignment="Bottom"
+                               Height="360"
+                               IsHitTestVisible="False">
                         <Rectangle.Fill>
                             <LinearGradientBrush StartPoint="0,0"
                                                  EndPoint="0,1">
                                 <GradientStop Color="#00000000" Offset="0"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.60"/>
-                                <GradientStop Color="{ThemeResource AsterHeroFadeMidColor}" Offset="1"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.34"/>
+                                <GradientStop Color="{ThemeResource AsterHeroFadeMidColor}" Offset="0.68"/>
+                                <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="1"/>
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
