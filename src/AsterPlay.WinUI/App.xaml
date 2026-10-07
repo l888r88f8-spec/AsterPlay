@@ -336,13 +336,19 @@
                         </VisualStateGroup>
                     </VisualStateManager.VisualStateGroups>
 
+                    <!-- Visual material never owns input. -->
                     <Border Background="{TemplateBinding Background}"
                             CornerRadius="{TemplateBinding CornerRadius}"
                             IsHitTestVisible="False"/>
                     <Border Background="{ThemeResource AsterDockOverlayBrush}"
                             CornerRadius="{TemplateBinding CornerRadius}"
                             IsHitTestVisible="False"/>
-                    <Border BorderBrush="{TemplateBinding BorderBrush}"
+
+                    <!-- 1/255 alpha is visually imperceptible but makes the complete
+                         button rectangle a real hit-test surface. This prevents
+                         pointer-over from falling through to controls underneath. -->
+                    <Border Background="#01000000"
+                            BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="{TemplateBinding CornerRadius}"
                             Padding="{TemplateBinding Padding}">
