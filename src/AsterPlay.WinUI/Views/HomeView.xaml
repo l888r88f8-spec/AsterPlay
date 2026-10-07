@@ -39,7 +39,7 @@
                                 <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
                                                  Storyboard.TargetProperty="ScaleX"
                                                  To="1"
-                                                 Duration="0:0:0.15">
+                                                 Duration="0:0:0.18">
                                     <DoubleAnimation.EasingFunction>
                                         <CubicEase EasingMode="EaseOut"/>
                                     </DoubleAnimation.EasingFunction>
@@ -47,7 +47,7 @@
                                 <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
                                                  Storyboard.TargetProperty="ScaleY"
                                                  To="1"
-                                                 Duration="0:0:0.15">
+                                                 Duration="0:0:0.18">
                                     <DoubleAnimation.EasingFunction>
                                         <CubicEase EasingMode="EaseOut"/>
                                     </DoubleAnimation.EasingFunction>
@@ -59,16 +59,16 @@
                             <Storyboard>
                                 <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
                                                  Storyboard.TargetProperty="ScaleX"
-                                                 To="1.025"
-                                                 Duration="0:0:0.12">
+                                                 To="1.04"
+                                                 Duration="0:0:0.14">
                                     <DoubleAnimation.EasingFunction>
                                         <CubicEase EasingMode="EaseOut"/>
                                     </DoubleAnimation.EasingFunction>
                                 </DoubleAnimation>
                                 <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
                                                  Storyboard.TargetProperty="ScaleY"
-                                                 To="1.025"
-                                                 Duration="0:0:0.12">
+                                                 To="1.04"
+                                                 Duration="0:0:0.14">
                                     <DoubleAnimation.EasingFunction>
                                         <CubicEase EasingMode="EaseOut"/>
                                     </DoubleAnimation.EasingFunction>
@@ -80,16 +80,16 @@
                             <Storyboard>
                                 <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
                                                  Storyboard.TargetProperty="ScaleX"
-                                                 To="0.98"
-                                                 Duration="0:0:0.08">
+                                                 To="0.97"
+                                                 Duration="0:0:0.07">
                                     <DoubleAnimation.EasingFunction>
                                         <CubicEase EasingMode="EaseOut"/>
                                     </DoubleAnimation.EasingFunction>
                                 </DoubleAnimation>
                                 <DoubleAnimation Storyboard.TargetName="ButtonScaleTransform"
                                                  Storyboard.TargetProperty="ScaleY"
-                                                 To="0.98"
-                                                 Duration="0:0:0.08">
+                                                 To="0.97"
+                                                 Duration="0:0:0.07">
                                     <DoubleAnimation.EasingFunction>
                                         <CubicEase EasingMode="EaseOut"/>
                                     </DoubleAnimation.EasingFunction>
@@ -110,7 +110,7 @@
                                 <DoubleAnimation Storyboard.TargetName="ButtonVisualRoot"
                                                  Storyboard.TargetProperty="Opacity"
                                                  To="0.45"
-                                                 Duration="0:0:0.12"/>
+                                                 Duration="0:0:0.14"/>
                             </Storyboard>
                         </VisualState>
                     </VisualStateGroup>
