@@ -13,7 +13,7 @@ public sealed partial class MainWindow
     {
         _startupCoverImageReady = true;
         StartupDiagnostics.Write(
-            "Single-window startup cover icon decoded");
+            "In-window startup cover icon decoded");
     }
 
     private void StartupCoverImage_ImageFailed(
@@ -21,7 +21,31 @@ public sealed partial class MainWindow
         ExceptionRoutedEventArgs e)
     {
         StartupDiagnostics.Write(
-            $"Single-window startup cover icon failed: {e.ErrorMessage}");
+            $"In-window startup cover icon failed: {e.ErrorMessage}");
+    }
+
+    internal async Task PrepareHomeBehindNativeSplashAsync()
+    {
+        WriteStartupVisualState(
+            "PrepareHomeBehindNativeSplash.beforeCollapse");
+        // The native splash remains the only visible startup surface. Remove
+        // the XAML cover behind it, then require fresh composition frames and a
+        // DWM fence before the native surface begins fading.
+        StartupCover.IsHitTestVisible = false;
+        StartupCover.Opacity = 0;
+        StartupCover.Visibility = Visibility.Collapsed;
+
+        var frames = await WaitForStartupCoverFramesAsync(3, 1000);
+        var flush = Task.Run(DwmFlush);
+        var completed = await Task.WhenAny(
+            flush,
+            Task.Delay(1000));
+
+        StartupDiagnostics.Write(
+            $"Home prepared behind native splash; frames={frames}, " +
+            $"dwmFlushed={ReferenceEquals(completed, flush)}");
+        WriteStartupVisualState(
+            "PrepareHomeBehindNativeSplash.afterFence");
     }
 
     internal async Task RevealStartupCoverAsync()
@@ -39,14 +63,17 @@ public sealed partial class MainWindow
             WriteStartupVisualState(
                 "RevealStartupCover.beforeFade");
             StartupDiagnostics.Write(
-                $"Home visual ready; fading single-window startup cover; iconReady={_startupCoverImageReady}");
+                $"Home visual ready; fading in-window startup cover; iconReady={_startupCoverImageReady}");
 
-            // Home and the cover share one compositor tree. Wait for two fresh
-            // frames after the ready signal, then fade the cover without any
-            // top-level window activation or destruction.
-            var frames = await WaitForStartupCoverFramesAsync(2, 700);
-            StartupDiagnostics.Write(
-                $"Single-window cover fade fence completed; frames={frames}");
+            // Now that the top-level native splash is gone, these frames are
+            // real visible MainWindow composition frames. Give LiquidGlass and
+            // decoded Home textures a final chance to settle before revealing.
+            await WaitForStartupCoverFramesAsync(3, 700);
+
+            var flush = Task.Run(DwmFlush);
+            await Task.WhenAny(
+                flush,
+                Task.Delay(700));
 
             const int durationMilliseconds = 560;
             var start = DateTime.UtcNow;
@@ -73,7 +100,7 @@ public sealed partial class MainWindow
             StartupCover.Visibility = Visibility.Collapsed;
 
             StartupDiagnostics.Write(
-                "Single-window startup cover removed; Home is directly visible");
+                "In-window startup cover removed; Home is now directly visible");
             WriteStartupVisualState(
                 "RevealStartupCover.afterCollapse");
         }

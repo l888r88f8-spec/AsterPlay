@@ -263,28 +263,15 @@ public sealed partial class MainWindow : Window
         WriteStartupVisualState(
             "FirstFrame.Rendering");
 
-        var liquidGlassError = LiquidGlassWinUI.LiquidGlassBrush.LastError;
+        // LiquidGlass is intentionally not created during cold startup.
+        // Its backdrop-flattening custom effect is attached only after the
+        // native splash has finished revealing a stable Home frame.
         StartupDiagnostics.Write(
-            string.IsNullOrWhiteSpace(liquidGlassError)
-                ? "LiquidGlass: compositor effect connected with no reported error"
-                : $"LiquidGlass: ERROR {liquidGlassError}");
-
-        _ = LogLiquidGlassStatusAfterDelayAsync();
+            "LiquidGlass: deferred until startup reveal completes");
 
         DispatcherQueue.TryEnqueue(
             Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
             async () => await ResolveStartupStateAsync());
-    }
-
-    private static async Task LogLiquidGlassStatusAfterDelayAsync()
-    {
-        await Task.Delay(1500);
-
-        var error = LiquidGlassWinUI.LiquidGlassBrush.LastError;
-        StartupDiagnostics.Write(
-            string.IsNullOrWhiteSpace(error)
-                ? "LiquidGlass: delayed compositor check has no reported error"
-                : $"LiquidGlass: ERROR delayed compositor check: {error}");
     }
 
     private async Task ResolveStartupStateAsync()
@@ -372,6 +359,10 @@ public sealed partial class MainWindow : Window
 
         if (PageHost.Content is HomeView homeView)
             homeView.NotifyStartupRevealCompleted();
+
+        // Do not let the custom backdrop effect participate in the first
+        // MainWindow frame or the native-splash handoff.
+        _ = EnableLiquidGlassAfterStartupAsync();
 
         StopStartupHeartbeat(
             "StartupReveal.completed");
