@@ -178,5 +178,23 @@
             </Border>
         </Grid>
 
+        <!-- Keep the startup cover inside MainWindow so Home and LiquidGlass are
+             composited continuously underneath it. The slight translucency is
+             visually imperceptible but prevents the compositor from treating the
+             underlying visual tree as fully occluded during cold startup. -->
+        <Grid x:Name="StartupCover"
+              Grid.RowSpan="2"
+              Background="{ThemeResource AsterPageBackgroundBrush}"
+              Opacity="0.999"
+              IsHitTestVisible="True"
+              Canvas.ZIndex="1000">
+            <Image Source="ms-appx:///Assets/AsterPlay.AppIcon.png"
+                   Width="144"
+                   Height="144"
+                   Stretch="Uniform"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"/>
+        </Grid>
+
     </Grid>
 </Window>
