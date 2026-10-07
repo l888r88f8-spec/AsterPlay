@@ -72,8 +72,6 @@ public partial class App : Application
             _splash.AttachOwner(
                 _window.NativeHandle);
 
-            _window.StartupCoverPresented +=
-                MainWindow_StartupCoverPresented;
             _window.StartupVisualReady +=
                 MainWindow_StartupVisualReady;
 
@@ -117,40 +115,6 @@ public partial class App : Application
         }
     }
 
-    private async void MainWindow_StartupCoverPresented(
-        object? sender,
-        EventArgs e)
-    {
-        if (_window is not null)
-        {
-            _window.StartupCoverPresented -=
-                MainWindow_StartupCoverPresented;
-        }
-
-        var splash = _splash;
-        _splash = null;
-
-        if (splash is null)
-            return;
-
-        try
-        {
-            // The in-window cover has now rendered its decoded icon. Cross-fade
-            // the native surface instead of destroying it between two frames.
-            await splash.FadeOutAsync(
-                durationMilliseconds: 640);
-            StartupDiagnostics.Write(
-                "Native splash faded into in-window startup cover");
-        }
-        catch (Exception ex)
-        {
-            StartupDiagnostics.WriteException(
-                "MainWindow_StartupCoverPresented",
-                ex);
-            splash.Dispose();
-        }
-    }
-
     private async void MainWindow_StartupVisualReady(
         object? sender,
         EventArgs e)
@@ -161,30 +125,39 @@ public partial class App : Application
         _window.StartupVisualReady -=
             MainWindow_StartupVisualReady;
 
-        // If the XAML icon never opened, the native splash is intentionally
-        // still present. Prepare Home underneath it, then fade the native
-        // surface directly into the ready page without exposing a blank cover.
-        var fallbackSplash = _splash;
+        var splash = _splash;
         _splash = null;
 
         try
         {
-            await _window.RevealStartupCoverAsync();
-
-            if (fallbackSplash is not null)
+            if (splash is not null &&
+                splash.IsAvailable)
             {
-                await fallbackSplash.FadeOutAsync(
-                    durationMilliseconds: 640);
+                // Keep the native surface visible while the in-window cover is
+                // removed and the already-ready Home tree is committed to DWM.
+                // Only then fade the one visible splash directly into Home.
+                await _window.PrepareHomeBehindNativeSplashAsync();
+                await splash.FadeOutAsync(
+                    durationMilliseconds: 700);
                 StartupDiagnostics.Write(
-                    "Native splash used direct-to-Home fallback");
+                    "Native splash faded directly into presented Home");
+            }
+            else
+            {
+                splash?.Dispose();
+                await _window.RevealStartupCoverAsync();
+                StartupDiagnostics.Write(
+                    "In-window startup cover used because native splash was unavailable");
             }
 
+            _window.NotifyStartupRevealCompleted();
             StartupDiagnostics.Write(
                 "Native splash to MainWindow handoff completed");
         }
         catch (Exception ex)
         {
-            fallbackSplash?.Dispose();
+            splash?.Dispose();
+            _window.NotifyStartupRevealCompleted();
             StartupDiagnostics.WriteException(
                 "MainWindow_StartupVisualReady",
                 ex);

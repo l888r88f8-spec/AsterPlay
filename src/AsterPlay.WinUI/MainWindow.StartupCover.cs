@@ -4,21 +4,8 @@ namespace AsterPlay.WinUI;
 
 public sealed partial class MainWindow
 {
-    private bool _startupCoverPresentedRaised;
     private bool _startupCoverRevealStarted;
-    private bool _startupCoverLoaded;
     private bool _startupCoverImageReady;
-    private bool _startupCoverPresentationStarted;
-
-    internal event EventHandler? StartupCoverPresented;
-
-    private void StartupCover_Loaded(
-        object sender,
-        RoutedEventArgs e)
-    {
-        _startupCoverLoaded = true;
-        TryPresentStartupCover();
-    }
 
     private void StartupCoverImage_ImageOpened(
         object sender,
@@ -27,7 +14,6 @@ public sealed partial class MainWindow
         _startupCoverImageReady = true;
         StartupDiagnostics.Write(
             "In-window startup cover icon decoded");
-        TryPresentStartupCover();
     }
 
     private void StartupCoverImage_ImageFailed(
@@ -36,58 +22,26 @@ public sealed partial class MainWindow
     {
         StartupDiagnostics.Write(
             $"In-window startup cover icon failed: {e.ErrorMessage}");
-        // Keep the native splash visible. The final startup-ready fallback will
-        // fade it directly into Home instead of exposing an iconless cover.
     }
 
-    private void TryPresentStartupCover()
+    internal async Task PrepareHomeBehindNativeSplashAsync()
     {
-        if (!_startupCoverLoaded ||
-            !_startupCoverImageReady ||
-            _startupCoverPresentationStarted ||
-            _startupCoverPresentedRaised)
-        {
-            return;
-        }
+        // The native splash remains the only visible startup surface. Remove
+        // the XAML cover behind it, then require fresh composition frames and a
+        // DWM fence before the native surface begins fading.
+        StartupCover.IsHitTestVisible = false;
+        StartupCover.Opacity = 0;
+        StartupCover.Visibility = Visibility.Collapsed;
 
-        _startupCoverPresentationStarted = true;
-        _ = PresentStartupCoverAsync();
-    }
+        var frames = await WaitForStartupCoverFramesAsync(3, 1000);
+        var flush = Task.Run(DwmFlush);
+        var completed = await Task.WhenAny(
+            flush,
+            Task.Delay(1000));
 
-    private async Task PresentStartupCoverAsync()
-    {
-        try
-        {
-            // ImageOpened guarantees the large source PNG has decoded. Wait for
-            // subsequent composition frames as well, so the native splash is
-            // never removed over a background-only in-window cover.
-            var frames = await WaitForStartupCoverFramesAsync(2, 700);
-
-            var flush = Task.Run(DwmFlush);
-            await Task.WhenAny(
-                flush,
-                Task.Delay(700));
-
-            if (_startupCoverPresentedRaised ||
-                StartupCover.Visibility != Visibility.Visible)
-            {
-                return;
-            }
-
-            _startupCoverPresentedRaised = true;
-            StartupDiagnostics.Write(
-                $"In-window startup cover presented with decoded icon; frames={frames}, " +
-                $"size={StartupCover.ActualWidth:0}x{StartupCover.ActualHeight:0}");
-            StartupCoverPresented?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception ex)
-        {
-            StartupDiagnostics.WriteException(
-                "PresentStartupCoverAsync",
-                ex);
-            // Leave the native splash in place. MainWindow_StartupVisualReady
-            // owns the safe direct-to-Home fallback.
-        }
+        StartupDiagnostics.Write(
+            $"Home prepared behind native splash; frames={frames}, " +
+            $"dwmFlushed={ReferenceEquals(completed, flush)}");
     }
 
     internal async Task RevealStartupCoverAsync()
@@ -103,7 +57,7 @@ public sealed partial class MainWindow
         try
         {
             StartupDiagnostics.Write(
-                "Home visual ready; fading in-window startup cover");
+                $"Home visual ready; fading in-window startup cover; iconReady={_startupCoverImageReady}");
 
             // Now that the top-level native splash is gone, these frames are
             // real visible MainWindow composition frames. Give LiquidGlass and

@@ -183,8 +183,7 @@
               Background="{ThemeResource AsterPageBackgroundBrush}"
               Opacity="0.999"
               IsHitTestVisible="True"
-              Canvas.ZIndex="1000"
-              Loaded="StartupCover_Loaded">
+              Canvas.ZIndex="1000">
             <Image x:Name="StartupCoverImage"
                    Source="ms-appx:///Assets/AsterPlay.AppIcon.png"
                    Width="144"

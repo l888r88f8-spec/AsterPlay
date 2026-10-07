@@ -48,6 +48,9 @@ internal sealed class NativeStartupSplash : IDisposable
 
     internal RectInt32 Bounds => _bounds;
 
+    internal bool IsAvailable =>
+        _hwnd != IntPtr.Zero;
+
     internal void Show()
     {
         if (_hwnd == IntPtr.Zero)

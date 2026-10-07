@@ -355,6 +355,12 @@ public sealed partial class MainWindow : Window
 
     internal event EventHandler? StartupVisualReady;
 
+    internal void NotifyStartupRevealCompleted()
+    {
+        if (PageHost.Content is HomeView homeView)
+            homeView.NotifyStartupRevealCompleted();
+    }
+
     private void PrepareStartupWindow(
         RectInt32 startupBounds)
     {
@@ -606,7 +612,14 @@ public sealed partial class MainWindow : Window
         };
         view.InitialVisualReady += (_, _) =>
         {
-            StartupDiagnostics.Write("ShowHome: cache decision completed; revealing app");
+            StartupDiagnostics.Write("ShowHome: live first viewport ready");
+
+            if (_startupVisualReadyRaised)
+            {
+                view.NotifyStartupRevealCompleted();
+                return;
+            }
+
             ScheduleStartupReveal();
         };
 

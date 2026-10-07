@@ -37,6 +37,12 @@ public sealed partial class HomeView : UserControl
     private readonly bool _noServerMode;
     private bool _hasCachedSnapshot;
     private bool _initialVisualReadyRaised;
+    private bool _deferredHomeRefreshStarted;
+    private IReadOnlyList<EmbyItem>? _pendingSectionViews;
+    private IReadOnlyList<EmbyItem>? _pendingLatest;
+    private IReadOnlyList<EmbyItem>? _pendingResume;
+    private string _pendingServerUrl = "";
+    private string _pendingUserId = "";
     private Task _heroPreloadTask = Task.CompletedTask;
 
     public event EventHandler? LibraryRequested;
@@ -245,9 +251,6 @@ public sealed partial class HomeView : UserControl
             return;
 
         _initialVisualReadyRaised = true;
-
-        if (_heroImagesReady && _heroCandidates.Count > 1)
-            _heroTimer.Start();
 
         InitialVisualReady?.Invoke(this, EventArgs.Empty);
         StartupDiagnostics.Write(
@@ -498,17 +501,14 @@ public sealed partial class HomeView : UserControl
             _hasCachedSnapshot = true;
             ShowContentState();
 
-            var serverUrl = _client.ServerUrl;
-            var userId = _client.UserId;
-            _ = RefreshLibrarySectionsAndPersistSnapshotAsync(
-                views,
-                latest,
-                resume,
-                serverUrl,
-                userId);
+            _pendingSectionViews = views;
+            _pendingLatest = latest;
+            _pendingResume = resume;
+            _pendingServerUrl = _client.ServerUrl;
+            _pendingUserId = _client.UserId;
 
             StartupDiagnostics.Write(
-                "HomeView.LoadAsync: live first viewport populated");
+                "HomeView.LoadAsync: live first viewport populated; lower sections deferred until startup reveal");
             return true;
         }
         catch (Exception ex)
@@ -541,6 +541,49 @@ public sealed partial class HomeView : UserControl
                 $"workingSet={Environment.WorkingSet / 1024d / 1024d:0.0} MB, " +
                 $"managed={GC.GetTotalMemory(false) / 1024d / 1024d:0.0} MB");
         }
+    }
+
+    internal void NotifyStartupRevealCompleted()
+    {
+        if (_deferredHomeRefreshStarted)
+            return;
+
+        _deferredHomeRefreshStarted = true;
+
+        if (_heroImagesReady && _heroCandidates.Count > 1)
+            _heroTimer.Start();
+
+        var views = _pendingSectionViews;
+        var latest = _pendingLatest;
+        var resume = _pendingResume;
+        var serverUrl = _pendingServerUrl;
+        var userId = _pendingUserId;
+
+        _pendingSectionViews = null;
+        _pendingLatest = null;
+        _pendingResume = null;
+        _pendingServerUrl = "";
+        _pendingUserId = "";
+
+        if (views is null ||
+            latest is null ||
+            resume is null ||
+            string.IsNullOrWhiteSpace(serverUrl) ||
+            string.IsNullOrWhiteSpace(userId))
+        {
+            StartupDiagnostics.Write(
+                "HomeView: startup reveal completed with no deferred section refresh");
+            return;
+        }
+
+        StartupDiagnostics.Write(
+            "HomeView: startup reveal completed; starting lower sections");
+        _ = RefreshLibrarySectionsAndPersistSnapshotAsync(
+            views,
+            latest,
+            resume,
+            serverUrl,
+            userId);
     }
 
     private async Task RefreshLibrarySectionsAndPersistSnapshotAsync(
