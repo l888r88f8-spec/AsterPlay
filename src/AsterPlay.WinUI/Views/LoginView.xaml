@@ -77,10 +77,8 @@
 
                 <Button Content="管理服务器"
                         HorizontalAlignment="Left"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Foreground="#7CC0FF"
-                        Padding="0,4"
+                        Foreground="{ThemeResource AsterAccentHoverBrush}"
+                        Padding="16,7"
                         Click="ManageServers_Click"/>
 
                 <TextBlock Text="用户名"
