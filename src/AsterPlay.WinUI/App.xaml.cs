@@ -144,22 +144,31 @@ public partial class App : Application
             if (splash is not null &&
                 splash.IsAvailable)
             {
-                // Keep the native surface visible while the in-window cover is
-                // removed and the already-ready Home tree is committed to DWM.
-                // Only then fade the one visible splash directly into Home.
+                // A layered native HWND cannot reliably alpha-blend into the
+                // WinUI compositor surface on every Windows 10/11 DWM path.
+                // Prepare the visually identical in-window cover first, then
+                // swap surfaces atomically and run the actual transition inside
+                // the MainWindow composition tree.
                 StartupDiagnostics.Write(
-                    "App: preparing Home behind native splash");
-                await _window.PrepareHomeBehindNativeSplashAsync();
+                    "App: preparing in-window cover for native splash handoff");
+                await _window.PrepareStartupCoverForNativeHandoffAsync();
                 _window.WriteStartupVisualState(
-                    "App.beforeNativeFade");
+                    "App.beforeNativeSplashDispose");
+
+                splash.Dispose();
+                _window.Activate();
+
                 StartupDiagnostics.Write(
-                    "App: starting native splash fade");
-                await splash.FadeOutAsync(
-                    durationMilliseconds: 700);
+                    "App: native splash disposed; confirming in-window cover presentation");
+                await _window.ConfirmStartupCoverPresentedAsync();
                 _window.WriteStartupVisualState(
-                    "App.afterNativeFade");
+                    "App.beforeInWindowCoverFade");
+
+                await _window.RevealStartupCoverAsync();
+                _window.WriteStartupVisualState(
+                    "App.afterInWindowCoverFade");
                 StartupDiagnostics.Write(
-                    "Native splash faded directly into presented Home");
+                    "In-window startup cover faded into presented Home");
             }
             else
             {

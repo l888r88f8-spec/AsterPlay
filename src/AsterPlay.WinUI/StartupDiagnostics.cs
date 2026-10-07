@@ -69,14 +69,20 @@ internal static class StartupDiagnostics
         var formatted =
             $"+{elapsedMilliseconds:0.0} ms [T{threadId}] {message}";
 
+        // Startup state can contain image URLs with Emby access tokens.
+        // Apply the same redaction to the dedicated startup log as the main
+        // application log before anything is persisted.
+        var safeFormatted =
+            PlaybackLog.Redact(formatted);
+
         PlaybackLog.Write(
             "Startup",
-            formatted);
+            safeFormatted);
 
         try
         {
             var line =
-                $"{DateTime.Now:HH:mm:ss.fff} {formatted}" +
+                $"{DateTime.Now:HH:mm:ss.fff} {safeFormatted}" +
                 Environment.NewLine;
 
             lock (Sync)

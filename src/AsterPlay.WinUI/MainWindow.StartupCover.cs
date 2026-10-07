@@ -6,12 +6,15 @@ public sealed partial class MainWindow
 {
     private bool _startupCoverRevealStarted;
     private bool _startupCoverImageReady;
+    private readonly TaskCompletionSource<bool> _startupCoverImageCompletion =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private void StartupCoverImage_ImageOpened(
         object sender,
         RoutedEventArgs e)
     {
         _startupCoverImageReady = true;
+        _startupCoverImageCompletion.TrySetResult(true);
         StartupDiagnostics.Write(
             "In-window startup cover icon decoded");
     }
@@ -20,32 +23,60 @@ public sealed partial class MainWindow
         object sender,
         ExceptionRoutedEventArgs e)
     {
+        _startupCoverImageCompletion.TrySetResult(false);
         StartupDiagnostics.Write(
             $"In-window startup cover icon failed: {e.ErrorMessage}");
     }
 
-    internal async Task PrepareHomeBehindNativeSplashAsync()
+    internal async Task PrepareStartupCoverForNativeHandoffAsync()
     {
+        // Keep an opaque WinUI-owned surface directly below the native splash.
+        // It is intentionally the same artwork, so destroying the native HWND
+        // is visually lossless and does not expose an unpresented owner window.
+        StartupCover.Visibility = Visibility.Visible;
+        StartupCover.IsHitTestVisible = true;
+        StartupCover.Opacity = 0.999;
+
         WriteStartupVisualState(
-            "PrepareHomeBehindNativeSplash.beforeCollapse");
-        // The native splash remains the only visible startup surface. Remove
-        // the XAML cover behind it, then require fresh composition frames and a
-        // DWM fence before the native surface begins fading.
-        StartupCover.IsHitTestVisible = false;
-        StartupCover.Opacity = 0;
-        StartupCover.Visibility = Visibility.Collapsed;
+            "PrepareStartupCoverForNativeHandoff.beforeFence");
+
+        var imageTask = _startupCoverImageCompletion.Task;
+        var imageWait = await Task.WhenAny(
+            imageTask,
+            Task.Delay(1000));
+        var imageReady =
+            ReferenceEquals(imageWait, imageTask) &&
+            await imageTask;
 
         var frames = await WaitForStartupCoverFramesAsync(3, 1000);
         var flush = Task.Run(DwmFlush);
         var completed = await Task.WhenAny(
             flush,
             Task.Delay(1000));
+        var dwmFlushed = ReferenceEquals(completed, flush);
 
         StartupDiagnostics.Write(
-            $"Home prepared behind native splash; frames={frames}, " +
+            $"In-window cover prepared behind native splash; " +
+            $"iconReady={imageReady}, frames={frames}, dwmFlushed={dwmFlushed}");
+        WriteStartupVisualState(
+            "PrepareStartupCoverForNativeHandoff.afterFence");
+    }
+
+    internal async Task ConfirmStartupCoverPresentedAsync()
+    {
+        // These are the first composition frames after the layered native HWND
+        // has gone away. Fence them before starting the visible WinUI fade.
+        var frames = await WaitForStartupCoverFramesAsync(2, 1000);
+        var flush = Task.Run(DwmFlush);
+        var completed = await Task.WhenAny(
+            flush,
+            Task.Delay(1000));
+
+        StartupDiagnostics.Write(
+            $"In-window cover confirmed after native handoff; frames={frames}, " +
             $"dwmFlushed={ReferenceEquals(completed, flush)}");
         WriteStartupVisualState(
-            "PrepareHomeBehindNativeSplash.afterFence");
+            "ConfirmStartupCoverPresented.afterFence");
     }
 
     internal async Task RevealStartupCoverAsync()
@@ -65,15 +96,9 @@ public sealed partial class MainWindow
             StartupDiagnostics.Write(
                 $"Home visual ready; fading in-window startup cover; iconReady={_startupCoverImageReady}");
 
-            // Now that the top-level native splash is gone, these frames are
-            // real visible MainWindow composition frames. Give LiquidGlass and
-            // decoded Home textures a final chance to settle before revealing.
-            await WaitForStartupCoverFramesAsync(3, 700);
-
-            var flush = Task.Run(DwmFlush);
-            await Task.WhenAny(
-                flush,
-                Task.Delay(700));
+            // This animation now runs entirely inside MainWindow's compositor,
+            // so every opacity step blends against the already-presented Home.
+            await WaitForStartupCoverFramesAsync(2, 700);
 
             const int durationMilliseconds = 560;
             var start = DateTime.UtcNow;
