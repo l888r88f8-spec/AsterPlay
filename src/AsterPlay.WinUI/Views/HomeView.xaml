@@ -448,6 +448,7 @@
                       HorizontalScrollMode="Disabled"
                       HorizontalScrollBarVisibility="Disabled"
                       ZoomMode="Disabled"
+                      ViewChanged="HomeScrollViewer_ViewChanged"
                       SizeChanged="HomeScrollViewer_SizeChanged">
             <Grid Width="{Binding ElementName=HomeScrollViewer, Path=ViewportWidth}"
                   HorizontalAlignment="Stretch">
