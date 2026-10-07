@@ -137,6 +137,21 @@
             <Setter Property="FontSize" Value="20"/>
         </Style>
 
+        <Style x:Key="RailEdgeButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource AsterGlassButtonStyle}">
+            <Setter Property="Width" Value="42"/>
+            <Setter Property="Height" Value="58"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="CornerRadius" Value="21"/>
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{ThemeResource AsterDockForegroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource AsterDockBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Opacity" Value="0.88"/>
+        </Style>
+
         <Style x:Key="SectionMoreButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource AsterGlassButtonStyle}">
@@ -512,130 +527,159 @@
                                    FontWeight="Bold"
                                    VerticalAlignment="Center"/>
 
-                        <StackPanel HorizontalAlignment="Right"
-                                    Orientation="Horizontal"
-                                    Spacing="7">
-                            <Button x:Name="ResumePreviousButton"
-                                    Style="{StaticResource RoundActionButtonStyle}"
-                                    Content="‹"
-                                    Tag="-1"
-                                    Click="ResumeArrow_Click"/>
-                            <Button x:Name="ResumeNextButton"
-                                    Style="{StaticResource RoundActionButtonStyle}"
-                                    Content="›"
-                                    Tag="1"
-                                    Click="ResumeArrow_Click"/>
-                            <Button Content="更多  ›"
-                                    Style="{StaticResource SectionMoreButtonStyle}"
-                                    Click="OpenLibrary_Click"/>
-                        </StackPanel>
+                        <Button Content="更多  ›"
+                                Style="{StaticResource SectionMoreButtonStyle}"
+                                HorizontalAlignment="Right"
+                                Click="OpenLibrary_Click"/>
                     </Grid>
 
-                    <ScrollViewer x:Name="ResumeScroller"
-                                  HorizontalScrollMode="Disabled"
-                                  HorizontalScrollBarVisibility="Hidden"
-                                  VerticalScrollMode="Disabled"
-                                  VerticalScrollBarVisibility="Disabled"
-                                  ZoomMode="Disabled"
-                                  ViewChanged="ResumeScroller_ViewChanged"
-                                  SizeChanged="ResumeScroller_SizeChanged">
-                        <ItemsControl x:Name="ResumeGrid">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Button Width="320"
-                                            Margin="0,0,18,0"
-                                            Padding="0"
-                                            Background="Transparent"
-                                            BorderThickness="0"
-                                            Tag="{Binding}"
-                                            Click="ResumeTile_Click"
-                                            RightTapped="ResumeTile_RightTapped"
-                                            Template="{StaticResource FlatButtonTemplate}">
-                                        <StackPanel Width="320"
-                                                    Spacing="9">
-                                            <Border Width="320"
-                                                    Height="180"
-                                                    CornerRadius="18"
-                                                    Background="{ThemeResource AsterCardBackgroundBrush}"
-                                                    BorderBrush="{ThemeResource AsterCardBorderBrush}"
-                                                    BorderThickness="1">
-                                                <Grid>
-                                                    <controls:CachedImage SourceUrl="{Binding BackdropUrl}"
-                                                                          Stretch="UniformToFill"
-                                                                          CornerRadius="18"/>
-                                                    <Border CornerRadius="18"
-                                                            IsHitTestVisible="False">
-                                                        <Border.Background>
-                                                            <LinearGradientBrush StartPoint="0,0"
-                                                                                 EndPoint="0,1">
-                                                                <GradientStop Color="#00000000" Offset="0.42"/>
-                                                                <GradientStop Color="#B0000000" Offset="1"/>
-                                                            </LinearGradientBrush>
-                                                        </Border.Background>
-                                                    </Border>
-                                                    <Border HorizontalAlignment="Right"
-                                                            VerticalAlignment="Top"
-                                                            Margin="0,12,12,0"
-                                                            Padding="8,4"
-                                                            CornerRadius="10"
-                                                            Background="#66000000">
-                                                        <TextBlock Text="{Binding LastPlayedText}"
-                                                                   Foreground="White"
-                                                                   FontSize="11"/>
-                                                    </Border>
-
-                                                    <Grid VerticalAlignment="Bottom"
-                                                          Margin="16,0,16,13">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                            <ColumnDefinition Width="10"/>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <TextBlock Text="▶"
-                                                                   Foreground="White"
-                                                                   FontSize="13"
-                                                                   VerticalAlignment="Center"/>
-                                                        <ProgressBar Grid.Column="2"
-                                                                     Minimum="0"
-                                                                     Maximum="100"
-                                                                     Value="{Binding PlayedPercentage}"
-                                                                     Height="4"
-                                                                     VerticalAlignment="Center"/>
-                                                        <TextBlock Grid.Column="3"
-                                                                   Text="{Binding ShortProgressText}"
-                                                                   Foreground="White"
-                                                                   FontSize="12"
-                                                                   Margin="11,0,0,0"/>
+                    <Grid>
+                        <ScrollViewer x:Name="ResumeScroller"
+                                      HorizontalScrollMode="Disabled"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollMode="Disabled"
+                                      VerticalScrollBarVisibility="Disabled"
+                                      ZoomMode="Disabled"
+                                      ViewChanged="ResumeScroller_ViewChanged"
+                                      SizeChanged="ResumeScroller_SizeChanged">
+                            <ItemsControl x:Name="ResumeGrid">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Width="320"
+                                                Margin="0,0,18,0"
+                                                Padding="0"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Tag="{Binding}"
+                                                Click="ResumeTile_Click"
+                                                RightTapped="ResumeTile_RightTapped"
+                                                Template="{StaticResource FlatButtonTemplate}">
+                                            <StackPanel Width="320"
+                                                        Spacing="9">
+                                                <Border Width="320"
+                                                        Height="180"
+                                                        CornerRadius="18"
+                                                        Background="{ThemeResource AsterCardBackgroundBrush}"
+                                                        BorderBrush="{ThemeResource AsterCardBorderBrush}"
+                                                        BorderThickness="1">
+                                                    <Grid>
+                                                        <controls:CachedImage SourceUrl="{Binding BackdropUrl}"
+                                                                              Stretch="UniformToFill"
+                                                                              CornerRadius="18"/>
+                                                        <Border CornerRadius="18"
+                                                                IsHitTestVisible="False">
+                                                            <Border.Background>
+                                                                <LinearGradientBrush StartPoint="0,0"
+                                                                                     EndPoint="0,1">
+                                                                    <GradientStop Color="#00000000" Offset="0.42"/>
+                                                                    <GradientStop Color="#B0000000" Offset="1"/>
+                                                                </LinearGradientBrush>
+                                                            </Border.Background>
+                                                        </Border>
+                                                        <Border HorizontalAlignment="Right"
+                                                                VerticalAlignment="Top"
+                                                                Margin="0,12,12,0"
+                                                                Padding="8,4"
+                                                                CornerRadius="10"
+                                                                Background="#66000000">
+                                                            <TextBlock Text="{Binding LastPlayedText}"
+                                                                       Foreground="White"
+                                                                       FontSize="11"/>
+                                                        </Border>
+    
+                                                        <Grid VerticalAlignment="Bottom"
+                                                              Margin="16,0,16,13">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="10"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Text="▶"
+                                                                       Foreground="White"
+                                                                       FontSize="13"
+                                                                       VerticalAlignment="Center"/>
+                                                            <ProgressBar Grid.Column="2"
+                                                                         Minimum="0"
+                                                                         Maximum="100"
+                                                                         Value="{Binding PlayedPercentage}"
+                                                                         Height="4"
+                                                                         VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="3"
+                                                                       Text="{Binding ShortProgressText}"
+                                                                       Foreground="White"
+                                                                       FontSize="12"
+                                                                       Margin="11,0,0,0"/>
+                                                        </Grid>
                                                     </Grid>
-                                                </Grid>
-                                            </Border>
+                                                </Border>
+    
+                                                <TextBlock Text="{Binding ResumeTitle}"
+                                                           Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                                                           FontSize="16"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"/>
+    
+                                                <TextBlock Text="{Binding EpisodeText}"
+                                                           Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                                                           FontSize="12"
+                                                           LineHeight="17"
+                                                           TextWrapping="Wrap"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           MaxLines="2"
+                                                           MinHeight="34"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
 
-                                            <TextBlock Text="{Binding ResumeTitle}"
-                                                       Foreground="{ThemeResource AsterPrimaryTextBrush}"
-                                                       FontSize="16"
-                                                       FontWeight="SemiBold"
-                                                       TextTrimming="CharacterEllipsis"/>
+                        <Border Width="74"
+                                HorizontalAlignment="Left"
+                                IsHitTestVisible="False">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0"
+                                                     EndPoint="1,0">
+                                    <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="0"/>
+                                    <GradientStop Color="#00000000" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Border Width="74"
+                                HorizontalAlignment="Right"
+                                IsHitTestVisible="False">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="1,0"
+                                                     EndPoint="0,0">
+                                    <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="0"/>
+                                    <GradientStop Color="#00000000" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
 
-                                            <TextBlock Text="{Binding EpisodeText}"
-                                                       Foreground="{ThemeResource AsterSecondaryTextBrush}"
-                                                       FontSize="12"
-                                                       LineHeight="17"
-                                                       TextWrapping="Wrap"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       MaxLines="2"
-                                                       MinHeight="34"/>
-                                        </StackPanel>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
+                        <Button x:Name="ResumePreviousButton"
+                                Style="{StaticResource RailEdgeButtonStyle}"
+                                Content="‹"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center"
+                                Margin="-10,0,0,44"
+                                Tag="-1"
+                                Click="ResumeArrow_Click"/>
+                        <Button x:Name="ResumeNextButton"
+                                Style="{StaticResource RailEdgeButtonStyle}"
+                                Content="›"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Margin="0,0,-10,44"
+                                Tag="1"
+                                Click="ResumeArrow_Click"/>
+                    </Grid>
                 </StackPanel>
 
                 <!-- My media -->
@@ -655,65 +699,93 @@
                                       VerticalAlignment="Center"/>
                         </StackPanel>
 
-                        <StackPanel HorizontalAlignment="Right"
-                                    Orientation="Horizontal"
-                                    Spacing="7">
-                            <Button x:Name="LibrariesPreviousButton"
-                                    Style="{StaticResource RoundActionButtonStyle}"
-                                    Content="‹"
-                                    Tag="-1"
-                                    Click="LibrariesArrow_Click"/>
-                            <Button x:Name="LibrariesNextButton"
-                                    Style="{StaticResource RoundActionButtonStyle}"
-                                    Content="›"
-                                    Tag="1"
-                                    Click="LibrariesArrow_Click"/>
-                        </StackPanel>
                     </Grid>
 
-                    <ScrollViewer x:Name="LibrariesScroller"
-                                  HorizontalScrollMode="Enabled"
-                                  HorizontalScrollBarVisibility="Hidden"
-                                  VerticalScrollMode="Disabled"
-                                  VerticalScrollBarVisibility="Disabled"
-                                  ZoomMode="Disabled"
-                                  ViewChanged="LibrariesScroller_ViewChanged"
-                                  SizeChanged="LibrariesScroller_SizeChanged">
-                        <ItemsRepeater x:Name="LibrariesGrid">
-                            <ItemsRepeater.Layout>
-                                <StackLayout Orientation="Horizontal"
-                                             Spacing="16"/>
-                            </ItemsRepeater.Layout>
-                            <ItemsRepeater.ItemTemplate>
-                                <DataTemplate>
-                                    <Button Width="286"
-                                            Height="154"
-                                            Padding="0"
-                                            Background="Transparent"
-                                            BorderThickness="0"
-                                            HorizontalAlignment="Stretch"
-                                            Tag="{Binding}"
-                                            Click="LibraryTile_Click"
-                                            Template="{StaticResource FlatButtonTemplate}">
-                                        <Border CornerRadius="20"
-                                                Background="{ThemeResource AsterCardBackgroundBrush}"
-                                                BorderBrush="{ThemeResource AsterCardBorderBrush}"
-                                                BorderThickness="1">
-                                            <Grid>
-                                                <controls:CachedImage SourceUrl="{Binding BackdropUrl}"
-                                                                      Stretch="UniformToFill"
-                                                                      CornerRadius="20"
-                                                                      Opacity="0.88"/>
-                                                <Border BorderBrush="#24FFFFFF"
-                                                        BorderThickness="1"
-                                                        CornerRadius="20"/>
-                                            </Grid>
-                                        </Border>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsRepeater.ItemTemplate>
-                        </ItemsRepeater>
-                    </ScrollViewer>
+                    <Grid>
+                        <ScrollViewer x:Name="LibrariesScroller"
+                                      HorizontalScrollMode="Enabled"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollMode="Disabled"
+                                      VerticalScrollBarVisibility="Disabled"
+                                      ZoomMode="Disabled"
+                                      ViewChanged="LibrariesScroller_ViewChanged"
+                                      SizeChanged="LibrariesScroller_SizeChanged">
+                            <ItemsRepeater x:Name="LibrariesGrid">
+                                <ItemsRepeater.Layout>
+                                    <StackLayout Orientation="Horizontal"
+                                                 Spacing="16"/>
+                                </ItemsRepeater.Layout>
+                                <ItemsRepeater.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Width="286"
+                                                Height="154"
+                                                Padding="0"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                HorizontalAlignment="Stretch"
+                                                Tag="{Binding}"
+                                                Click="LibraryTile_Click"
+                                                Template="{StaticResource FlatButtonTemplate}">
+                                            <Border CornerRadius="20"
+                                                    Background="{ThemeResource AsterCardBackgroundBrush}"
+                                                    BorderBrush="{ThemeResource AsterCardBorderBrush}"
+                                                    BorderThickness="1">
+                                                <Grid>
+                                                    <controls:CachedImage SourceUrl="{Binding BackdropUrl}"
+                                                                          Stretch="UniformToFill"
+                                                                          CornerRadius="20"
+                                                                          Opacity="0.88"/>
+                                                    <Border BorderBrush="#24FFFFFF"
+                                                            BorderThickness="1"
+                                                            CornerRadius="20"/>
+                                                </Grid>
+                                            </Border>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsRepeater.ItemTemplate>
+                            </ItemsRepeater>
+                        </ScrollViewer>
+
+                        <Border Width="72"
+                                HorizontalAlignment="Left"
+                                IsHitTestVisible="False">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0"
+                                                     EndPoint="1,0">
+                                    <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="0"/>
+                                    <GradientStop Color="#00000000" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Border Width="72"
+                                HorizontalAlignment="Right"
+                                IsHitTestVisible="False">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="1,0"
+                                                     EndPoint="0,0">
+                                    <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="0"/>
+                                    <GradientStop Color="#00000000" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+
+                        <Button x:Name="LibrariesPreviousButton"
+                                Style="{StaticResource RailEdgeButtonStyle}"
+                                Content="‹"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center"
+                                Margin="-10,0,0,0"
+                                Tag="-1"
+                                Click="LibrariesArrow_Click"/>
+                        <Button x:Name="LibrariesNextButton"
+                                Style="{StaticResource RailEdgeButtonStyle}"
+                                Content="›"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Margin="0,0,-10,0"
+                                Tag="1"
+                                Click="LibrariesArrow_Click"/>
+                    </Grid>
                 </StackPanel>
 
                 <!-- Library sections -->
