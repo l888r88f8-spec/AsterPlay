@@ -369,14 +369,13 @@
                       HorizontalAlignment="Stretch"
                       Visibility="Collapsed"
                       IsHitTestVisible="False">
-                    <controls:CachedImage x:Name="HeroImage"
+                    <!-- A low-intensity continuation of the same artwork. This layer is
+                         allowed to crop because it is only atmospheric background; it never
+                         changes the framing of the actual Hero carousel image. -->
+                    <controls:CachedImage x:Name="HeroExtensionImage"
                                           LazyLoadingEnabled="False"
                                           Stretch="UniformToFill"
-                                          Opacity="1"/>
-                    <controls:CachedImage x:Name="HeroImageAlt"
-                                          LazyLoadingEnabled="False"
-                                          Stretch="UniformToFill"
-                                          Opacity="0"/>
+                                          Opacity="0.18"/>
 
                     <!-- Light top shading only for caption/control readability. -->
                     <Rectangle VerticalAlignment="Top"
@@ -418,6 +417,31 @@
                 <Grid x:Name="HeroContainer"
                       Height="690"
                       Margin="-28,0,-28,-112">
+                    <!-- The actual carousel keeps its original Hero geometry. The
+                         extension layer behind it does not participate in sizing, so
+                         extending the page cannot crop or zoom the carousel artwork. -->
+                    <controls:CachedImage x:Name="HeroImage"
+                                          LazyLoadingEnabled="False"
+                                          Stretch="UniformToFill"
+                                          Opacity="1"/>
+                    <controls:CachedImage x:Name="HeroImageAlt"
+                                          LazyLoadingEnabled="False"
+                                          Stretch="UniformToFill"
+                                          Opacity="0"/>
+
+                    <!-- Feather the Hero into the continuation layer underneath. -->
+                    <Rectangle VerticalAlignment="Bottom"
+                               Height="260">
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0,0"
+                                                 EndPoint="0,1">
+                                <GradientStop Color="#00000000" Offset="0"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.60"/>
+                                <GradientStop Color="{ThemeResource AsterHeroFadeMidColor}" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
+
                     <StackPanel VerticalAlignment="Bottom"
                                 HorizontalAlignment="Center"
                                 Margin="56,0,56,132"
