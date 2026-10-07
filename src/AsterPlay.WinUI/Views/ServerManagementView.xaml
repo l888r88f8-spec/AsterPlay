@@ -320,7 +320,7 @@
                     </Button>
 
                     <TextBlock x:Name="FooterText"
-                               Text="已到列表底部"
+                               Text=""
                                Foreground="{ThemeResource AsterSecondaryTextBrush}"
                                FontSize="13"
                                Opacity="0.68"
