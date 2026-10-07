@@ -260,13 +260,18 @@
 
             <ControlTemplate x:Key="AsterGlassButtonTemplate"
                              TargetType="Button">
-                <Grid x:Name="ButtonVisualRoot"
-                      RenderTransformOrigin="0.5,0.5">
-                    <Grid.RenderTransform>
+                <Border x:Name="ButtonVisualRoot"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        Padding="{TemplateBinding Padding}"
+                        RenderTransformOrigin="0.5,0.5">
+                    <Border.RenderTransform>
                         <ScaleTransform x:Name="ButtonScaleTransform"
                                         ScaleX="1"
                                         ScaleY="1"/>
-                    </Grid.RenderTransform>
+                    </Border.RenderTransform>
 
                     <VisualStateManager.VisualStateGroups>
                         <VisualStateGroup x:Name="CommonStates">
@@ -336,32 +341,15 @@
                         </VisualStateGroup>
                     </VisualStateManager.VisualStateGroups>
 
-                    <!-- Visual material never owns input. -->
-                    <Border Background="{TemplateBinding Background}"
-                            CornerRadius="{TemplateBinding CornerRadius}"
-                            IsHitTestVisible="False"/>
-                    <Border Background="{ThemeResource AsterDockOverlayBrush}"
-                            CornerRadius="{TemplateBinding CornerRadius}"
-                            IsHitTestVisible="False"/>
-
-                    <!-- 1/255 alpha is visually imperceptible but makes the complete
-                         button rectangle a real hit-test surface. This prevents
-                         pointer-over from falling through to controls underneath. -->
-                    <Border Background="#01000000"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{TemplateBinding CornerRadius}"
-                            Padding="{TemplateBinding Padding}">
-                        <ContentPresenter Content="{TemplateBinding Content}"
-                                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          Foreground="{TemplateBinding Foreground}"
-                                          FontFamily="{TemplateBinding FontFamily}"
-                                          FontSize="{TemplateBinding FontSize}"
-                                          FontWeight="{TemplateBinding FontWeight}"
-                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                    </Border>
-                </Grid>
+                    <ContentPresenter Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Foreground="{TemplateBinding Foreground}"
+                                      FontFamily="{TemplateBinding FontFamily}"
+                                      FontSize="{TemplateBinding FontSize}"
+                                      FontWeight="{TemplateBinding FontWeight}"
+                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                </Border>
             </ControlTemplate>
 
             <Style x:Key="AsterGlassButtonStyle"
