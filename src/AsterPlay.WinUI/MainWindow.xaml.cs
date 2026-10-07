@@ -243,6 +243,10 @@ public sealed partial class MainWindow : Window
         WriteStartupVisualState(
             "RootGrid.Loaded");
 
+        // Connect and warm the real navigation glass while the opaque native
+        // splash is still covering MainWindow.
+        _ = EnsureLiquidGlassWarmupAsync();
+
         if (_startupResolutionScheduled)
             return;
 
@@ -263,11 +267,8 @@ public sealed partial class MainWindow : Window
         WriteStartupVisualState(
             "FirstFrame.Rendering");
 
-        // LiquidGlass is intentionally not created during cold startup.
-        // Its backdrop-flattening custom effect is attached only after the
-        // native splash has finished revealing a stable Home frame.
         StartupDiagnostics.Write(
-            "LiquidGlass: deferred until startup reveal completes");
+            "LiquidGlass: startup warmup is running behind native splash");
 
         DispatcherQueue.TryEnqueue(
             Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
@@ -359,10 +360,6 @@ public sealed partial class MainWindow : Window
 
         if (PageHost.Content is HomeView homeView)
             homeView.NotifyStartupRevealCompleted();
-
-        // Do not let the custom backdrop effect participate in the first
-        // MainWindow frame or the native-splash handoff.
-        _ = EnableLiquidGlassAfterStartupAsync();
 
         StopStartupHeartbeat(
             "StartupReveal.completed");
@@ -525,6 +522,11 @@ public sealed partial class MainWindow : Window
                 $"Startup page arranged; page={page.GetType().Name}, " +
                 $"size={page.ActualWidth:0}x{page.ActualHeight:0}, " +
                 $"host={PageHost.ActualWidth:0}x{PageHost.ActualHeight:0}");
+
+            var liquidGlassReady =
+                await EnsureLiquidGlassWarmupAsync();
+            StartupDiagnostics.Write(
+                $"Startup reveal glass prerequisite completed; ready={liquidGlassReady}");
 
             // First allow new layout, decoded images, and custom Composition
             // brushes to be submitted on subsequent XAML rendering passes.

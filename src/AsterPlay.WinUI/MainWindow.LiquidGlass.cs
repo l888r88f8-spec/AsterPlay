@@ -2,29 +2,18 @@ namespace AsterPlay.WinUI;
 
 public sealed partial class MainWindow
 {
-    private bool _liquidGlassActivationScheduled;
+    private Task<bool>? _liquidGlassWarmupTask;
 
-    private async Task EnableLiquidGlassAfterStartupAsync()
+    private Task<bool> EnsureLiquidGlassWarmupAsync() =>
+        _liquidGlassWarmupTask ??=
+            WarmLiquidGlassBehindNativeSplashAsync();
+
+    private async Task<bool> WarmLiquidGlassBehindNativeSplashAsync()
     {
-        if (_liquidGlassActivationScheduled)
-            return;
-
-        _liquidGlassActivationScheduled = true;
+        var fallbackBrush = NavigationDock.Background;
 
         try
         {
-            // Home is already visible at this point. Let its post-reveal work
-            // settle before connecting the backdrop-flattening custom effect.
-            await Task.Delay(500);
-
-            if (RootGrid.XamlRoot is null)
-            {
-                StartupDiagnostics.Write(
-                    "LiquidGlass: activation skipped because MainWindow is no longer connected");
-                return;
-            }
-
-            var fallbackBrush = NavigationDock.Background;
             var liquidGlassBrush =
                 new LiquidGlassWinUI.LiquidGlassBrush
                 {
@@ -44,29 +33,50 @@ public sealed partial class MainWindow
                     ShapeRoundness = 4.0
                 };
 
+            // Remove the solid fallback before connecting the backdrop brush;
+            // otherwise the glass would sample the fallback instead of the
+            // Home content underneath it. The native splash still hides this.
+            NavigationDock.Background = null;
+            NavigationDockGlassLayer.Background = liquidGlassBrush;
             StartupDiagnostics.Write(
-                "LiquidGlass: attaching navigation dock effect after startup reveal");
-            NavigationDock.Background = liquidGlassBrush;
+                "LiquidGlass: real navigation brush attached behind native splash");
 
-            var frames = await WaitForCompositionFramesAsync(3, 1000);
+            // The package exposes LastError but no ready event. Require both a
+            // minimum warmup interval and multiple real composition passes, then
+            // fence the submitted frames through DWM.
+            var minimumWarmup = Task.Delay(500);
+            var frames = await WaitForCompositionFramesAsync(8, 1500);
+            await minimumWarmup;
+
+            var flush = Task.Run(DwmFlush);
+            var completed = await Task.WhenAny(
+                flush,
+                Task.Delay(1500));
+            var dwmFlushed = ReferenceEquals(completed, flush);
             var error = LiquidGlassWinUI.LiquidGlassBrush.LastError;
 
             if (!string.IsNullOrWhiteSpace(error))
             {
+                NavigationDockGlassLayer.Background = null;
                 NavigationDock.Background = fallbackBrush;
                 StartupDiagnostics.Write(
-                    $"LiquidGlass: activation failed; fallback restored; error={error}");
-                return;
+                    $"LiquidGlass: startup warmup failed; fallback restored; error={error}");
+                return false;
             }
 
             StartupDiagnostics.Write(
-                $"LiquidGlass: post-startup activation completed; frames={frames}");
+                $"LiquidGlass: startup warmup completed; frames={frames}, " +
+                $"dwmFlushed={dwmFlushed}");
+            return true;
         }
         catch (Exception ex)
         {
+            NavigationDockGlassLayer.Background = null;
+            NavigationDock.Background = fallbackBrush;
             StartupDiagnostics.WriteException(
-                "EnableLiquidGlassAfterStartup",
+                "WarmLiquidGlassBehindNativeSplash",
                 ex);
+            return false;
         }
     }
 }
