@@ -365,14 +365,14 @@
                             Padding="28,0,28,130"
                             Spacing="30">
 
-                <!-- Full-bleed Hero. Its own lower edge progressively blurs and
-                     fades into the theme background; no image is extended below it. -->
+                <!-- Full-bleed Hero. The image stays completely sharp; only one
+                     continuous theme-aware fade blends its lower edge into the page. -->
                 <Grid x:Name="HeroContainer"
                       Height="690"
                       Margin="-28,0,-28,-112">
-                    <!-- The carousel keeps its original Hero geometry. Blur and
-                         theme fade are composited over this same image, so the
-                         transition never changes the artwork framing. -->
+                    <!-- The carousel keeps its original Hero geometry and remains
+                         completely unblurred. The fade overlay below does not change
+                         artwork framing or image sharpness. -->
                     <controls:CachedImage x:Name="HeroImage"
                                           LazyLoadingEnabled="False"
                                           Stretch="UniformToFill"
@@ -382,91 +382,18 @@
                                           Stretch="UniformToFill"
                                           Opacity="0"/>
 
-                    <!-- Progressive Gaussian-blur fade. There is no duplicated
-                         artwork below the Hero: these compositor brushes blur only the
-                         actual Hero image beneath them, then the theme-aware gradient
-                         resolves directly into the real page background. -->
+                    <!-- One uninterrupted fade: transparent over the Hero, then
+                         smoothly into the real light/dark page background. No blur,
+                         duplicated image, stacked bands or hard transition boundary. -->
                     <Rectangle VerticalAlignment="Bottom"
-                               Height="340"
-                               Opacity="0.42"
-                               IsHitTestVisible="False">
-                        <Rectangle.Fill>
-                            <lg:LiquidGlassBrush BlurAmount="2.2"
-                                                 BloomAmount="0"
-                                                 RefThickness="0"
-                                                 RefFactor="1"
-                                                 RefDispersion="0"
-                                                 DispersionRange="0"
-                                                 RefFresnelFactor="0"
-                                                 GlareFactor="0"
-                                                 GlareOppositeFactor="0"
-                                                 TintA="0"
-                                                 Contrast="0.96"
-                                                 Saturation="1"
-                                                 Exposure="1"
-                                                 ShapeRadius="0"
-                                                 ShapeRoundness="4"/>
-                        </Rectangle.Fill>
-                    </Rectangle>
-
-                    <Rectangle VerticalAlignment="Bottom"
-                               Height="245"
-                               Opacity="0.68"
-                               IsHitTestVisible="False">
-                        <Rectangle.Fill>
-                            <lg:LiquidGlassBrush BlurAmount="4.2"
-                                                 BloomAmount="0"
-                                                 RefThickness="0"
-                                                 RefFactor="1"
-                                                 RefDispersion="0"
-                                                 DispersionRange="0"
-                                                 RefFresnelFactor="0"
-                                                 GlareFactor="0"
-                                                 GlareOppositeFactor="0"
-                                                 TintA="0"
-                                                 Contrast="0.90"
-                                                 Saturation="0.98"
-                                                 Exposure="1"
-                                                 ShapeRadius="0"
-                                                 ShapeRoundness="4"/>
-                        </Rectangle.Fill>
-                    </Rectangle>
-
-                    <Rectangle VerticalAlignment="Bottom"
-                               Height="155"
-                               Opacity="0.92"
-                               IsHitTestVisible="False">
-                        <Rectangle.Fill>
-                            <lg:LiquidGlassBrush BlurAmount="6.8"
-                                                 BloomAmount="0"
-                                                 RefThickness="0"
-                                                 RefFactor="1"
-                                                 RefDispersion="0"
-                                                 DispersionRange="0"
-                                                 RefFresnelFactor="0"
-                                                 GlareFactor="0"
-                                                 GlareOppositeFactor="0"
-                                                 TintA="0"
-                                                 Contrast="0.82"
-                                                 Saturation="0.94"
-                                                 Exposure="1"
-                                                 ShapeRadius="0"
-                                                 ShapeRoundness="4"/>
-                        </Rectangle.Fill>
-                    </Rectangle>
-
-                    <!-- Light and dark themes supply different fade colours through
-                         AsterHeroFadeMidColor/AsterHeroFadeEndColor. At the bottom
-                         the Hero has fully become the actual page background colour. -->
-                    <Rectangle VerticalAlignment="Bottom"
-                               Height="360"
+                               Height="430"
                                IsHitTestVisible="False">
                         <Rectangle.Fill>
                             <LinearGradientBrush StartPoint="0,0"
                                                  EndPoint="0,1">
                                 <GradientStop Color="#00000000" Offset="0"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.34"/>
-                                <GradientStop Color="{ThemeResource AsterHeroFadeMidColor}" Offset="0.68"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.38"/>
+                                <GradientStop Color="{ThemeResource AsterHeroFadeMidColor}" Offset="0.72"/>
                                 <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="1"/>
                             </LinearGradientBrush>
                         </Rectangle.Fill>
