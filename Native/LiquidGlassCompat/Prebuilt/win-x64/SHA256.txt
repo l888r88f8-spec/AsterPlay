@@ -1,5 +1,5 @@
 CustomEffectRuntimeNative.dll
 Target: Windows App SDK 2.5.1
 Architecture: x64
-SHA256: ad5b2a033a91a21b24bfca5cbebbe239d4642ead905522f1bc5340e239bea651
+SHA256: 10562ac2650adbfb8777fd4a1dbfc82b9847db058fb69c0a96fada7ad486146c
 Verified by Windows release build + startup smoke test.
