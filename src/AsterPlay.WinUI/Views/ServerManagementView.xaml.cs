@@ -556,6 +556,12 @@ public sealed partial class ServerManagementView : UserControl
             AvatarUrl = avatarUrl;
             _serverName = profile.ServerName;
             IsCurrent = isCurrent;
+            CardBorderBrush = new SolidColorBrush(
+                isCurrent
+                    ? Color.FromArgb(255, 22, 135, 233)
+                    : Color.FromArgb(54, 128, 136, 148));
+            CardBorderThickness = new Thickness(
+                isCurrent ? 2 : 1);
 
             _statusText = isCurrent
                 ? "当前服务器"
@@ -579,8 +585,9 @@ public sealed partial class ServerManagementView : UserControl
 
         public bool IsCurrent { get; }
 
-        public double CurrentOutlineOpacity =>
-            IsCurrent ? 1 : 0;
+        public Brush CardBorderBrush { get; }
+
+        public Thickness CardBorderThickness { get; }
 
         public string DisplayName =>
             !string.IsNullOrWhiteSpace(CustomName)
