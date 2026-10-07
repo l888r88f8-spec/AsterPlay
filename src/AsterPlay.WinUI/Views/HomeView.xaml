@@ -130,14 +130,14 @@
              this layer replaces the previous dual-image + full-screen Acrylic
              stack to reduce GPU work and decoded texture memory. -->
         <Grid x:Name="PageBackdropLayer"
-              Height="1080"
+              Height="1240"
               VerticalAlignment="Top"
               Visibility="Collapsed"
               IsHitTestVisible="False">
             <controls:CachedImage x:Name="PageBackdropImage"
                                   LazyLoadingEnabled="False"
                                   Stretch="UniformToFill"
-                                  Opacity="0.22"
+                                  Opacity="0.14"
                                   RenderTransformOrigin="0.5,0.5">
                 <controls:CachedImage.RenderTransform>
                     <ScaleTransform ScaleX="1.05"
@@ -403,7 +403,7 @@
                 <!-- Full-bleed poster Hero with a long mist fade into the page. -->
                 <Grid x:Name="HeroContainer"
                       Height="690"
-                      Margin="-28,0,-28,-86">
+                      Margin="-28,0,-28,-112">
                     <controls:CachedImage x:Name="HeroImage"
                                           LazyLoadingEnabled="False"
                                           Stretch="UniformToFill"
@@ -428,15 +428,15 @@
                     <!-- The important reference detail: the artwork dissolves into a
                          bright, milky page instead of ending at a visible boundary. -->
                     <Rectangle VerticalAlignment="Bottom"
-                               Height="390">
+                               Height="500">
                         <Rectangle.Fill>
                             <LinearGradientBrush StartPoint="0,0"
                                                  EndPoint="0,1">
                                 <GradientStop Color="#00000000" Offset="0"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.26"/>
-                                <GradientStop Color="{ThemeResource AsterHeroFadeMidColor}" Offset="0.58"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}" Offset="0.82"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}" Offset="1"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.24"/>
+                                <GradientStop Color="{ThemeResource AsterHeroFadeMidColor}" Offset="0.54"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}" Offset="0.78"/>
+                                <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="1"/>
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
@@ -530,7 +530,7 @@
                                 Orientation="Horizontal"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Bottom"
-                                Margin="0,0,0,96"
+                                Margin="0,0,0,112"
                                 Spacing="7"
                                 IsHitTestVisible="False"/>
                 </Grid>
