@@ -720,7 +720,9 @@ public sealed partial class MainWindow : Window
                     StringComparison.Ordinal) &&
                 ReferenceEquals(PageHost.Content, view))
             {
-                ConfigureNativeTitleBar(useDarkGlyphs);
+                ConfigureNativeTitleBar(
+                    useDarkGlyphs ??
+                    (RootGrid.ActualTheme == ElementTheme.Light));
             }
         };
         view.LibraryRequested += (_, _) => ShowLibrary();
