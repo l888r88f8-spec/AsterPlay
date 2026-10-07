@@ -14,7 +14,7 @@ public sealed partial class MainWindow
         var liquidGlassBrush =
             new LiquidGlassWinUI.LiquidGlassBrush
             {
-                BlurAmount = 2.2,
+                BlurAmount = 1.9,
                 BloomAmount = 0.08,
                 RefThickness = 38,
                 RefFactor = 2.24,
@@ -22,7 +22,7 @@ public sealed partial class MainWindow
                 DispersionRange = 0.30,
                 RefFresnelFactor = 22,
                 GlareFactor = 60,
-                TintA = 0.24,
+                TintA = 0.16,
                 TintR = 239,
                 TintG = 239,
                 TintB = 244,
