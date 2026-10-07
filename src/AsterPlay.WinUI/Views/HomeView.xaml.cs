@@ -177,6 +177,10 @@ public sealed partial class HomeView : UserControl
         HeroContainer.Margin =
             new Thickness(-horizontalPadding, 0, -horizontalPadding, -112);
 
+        // Keep the atmospheric continuation below the Hero without ever using
+        // its height to size/crop the foreground carousel image.
+        PageBackdropLayer.Height = HeroContainer.Height + 550;
+
     }
 
     private void HomeView_Loaded(object sender, RoutedEventArgs e)
@@ -1160,6 +1164,7 @@ public sealed partial class HomeView : UserControl
             HeroFavoriteButton.Content = "♡  收藏";
             HeroImage.SourceUrl = "";
             HeroImageAlt.SourceUrl = "";
+            HeroExtensionImage.SourceUrl = "";
             PageBackdropLayer.Visibility = Visibility.Collapsed;
             _heroVisualInitialized = false;
             _currentHeroBackdropUrl = "";
@@ -1228,6 +1233,8 @@ public sealed partial class HomeView : UserControl
             HeroImage.Opacity = 1;
             HeroImageAlt.SourceUrl = "";
             HeroImageAlt.Opacity = 0;
+            HeroExtensionImage.SourceUrl = backdropUrl;
+            HeroExtensionImage.Opacity = 0.18;
 
             _heroShowingPrimary = true;
             _currentHeroBackdropUrl = backdropUrl;
@@ -1239,6 +1246,8 @@ public sealed partial class HomeView : UserControl
             HeroImage.SourceUrl = backdropUrl;
             HeroImage.Opacity = 1;
             HeroImageAlt.Opacity = 0;
+            HeroExtensionImage.SourceUrl = backdropUrl;
+            HeroExtensionImage.Opacity = 0.18;
 
             _heroShowingPrimary = true;
             _heroVisualInitialized = true;
@@ -1290,6 +1299,11 @@ public sealed partial class HomeView : UserControl
         _heroTransitionStoryboard = storyboard;
         storyboard.Completed += (_, _) =>
         {
+            // The continuation is deliberately a separate, low-intensity copy.
+            // Update it only after the foreground carousel has completed its
+            // crossfade so it never changes the Hero's framing or crop.
+            HeroExtensionImage.SourceUrl = backdropUrl;
+            HeroExtensionImage.Opacity = 0.18;
             _heroTransitionStoryboard = null;
         };
         storyboard.Begin();
