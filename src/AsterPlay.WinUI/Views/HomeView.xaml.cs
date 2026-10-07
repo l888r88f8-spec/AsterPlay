@@ -438,18 +438,21 @@ public sealed partial class HomeView : UserControl
         return completion.Task;
     }
 
-    private Task LoadCachedSnapshotAsync()
+    private async Task LoadCachedSnapshotAsync()
     {
         StartupDiagnostics.Write("HomeView: deferred snapshot load begin");
 
-        var snapshot = HomeSnapshotStore.Load(
-            _client.ServerUrl,
-            _client.UserId);
+        var serverUrl = _client.ServerUrl;
+        var userId = _client.UserId;
+        var snapshot = await Task.Run(
+            () => HomeSnapshotStore.Load(
+                serverUrl,
+                userId));
 
         StartupDiagnostics.Write(
             $"HomeView: deferred snapshot={(snapshot is null ? "miss" : "hit")}");
 
-        if (snapshot is not null)
+        if (snapshot is not null && IsLoaded)
         {
             ApplySnapshot(snapshot);
             _hasCachedSnapshot = true;
@@ -460,8 +463,6 @@ public sealed partial class HomeView : UserControl
                 $"Loaded cached home snapshot; age={(DateTimeOffset.UtcNow - snapshot.SavedAtUtc).TotalMinutes:0.0} min, " +
                 $"libraries={snapshot.Views.Count}, resume={snapshot.Resume.Count}, sections={snapshot.Sections.Count}");
         }
-
-        return Task.CompletedTask;
     }
 
     private async Task<bool> LoadAsync()
@@ -485,47 +486,29 @@ public sealed partial class HomeView : UserControl
                 .Where(IsVisibleLibrary)
                 .Take(MaxLibrarySections)
                 .ToArray();
+            var resume = resumeTask.Result.ToArray();
+            var latest = latestTask.Result.ToArray();
 
-            PopulateHero(latestTask.Result);
-            PopulateResume(resumeTask.Result);
+            // These three live responses are enough to build the complete first
+            // viewport. Reveal only after their visible images decode, while
+            // lower library rows and snapshot persistence continue in background.
+            PopulateHero(latest);
+            PopulateResume(resume);
             PopulateLibraries(views);
-
-            // Load each real Emby library section concurrently. Only six items
-            // are requested for the home page, while TotalRecordCount is kept
-            // for the section header count.
-            var sectionTasks = views.Select(LoadLibrarySectionAsync).ToArray();
-            var sectionResults = await Task.WhenAll(sectionTasks);
-
-            _sections.Clear();
-            foreach (var section in sectionResults.Where(section => section is not null))
-                _sections.Add(section!);
-
-            var snapshot = new HomeSnapshot
-            {
-                Latest = latestTask.Result.ToList(),
-                Resume = resumeTask.Result.ToList(),
-                Views = views.ToList(),
-                Sections = sectionResults
-                    .Where(section => section is not null)
-                    .Select(section => new HomeSectionSnapshot
-                    {
-                        Library = section!.Library,
-                        TotalCount = section.TotalCount,
-                        Items = section.Items
-                            .Select(item => item.Item)
-                            .ToList()
-                    })
-                    .ToList()
-            };
-
-            HomeSnapshotStore.Save(
-                _client.ServerUrl,
-                _client.UserId,
-                snapshot);
-
             _hasCachedSnapshot = true;
             ShowContentState();
-            StartupDiagnostics.Write("HomeView.LoadAsync: refreshed snapshot saved");
+
+            var serverUrl = _client.ServerUrl;
+            var userId = _client.UserId;
+            _ = RefreshLibrarySectionsAndPersistSnapshotAsync(
+                views,
+                latest,
+                resume,
+                serverUrl,
+                userId);
+
+            StartupDiagnostics.Write(
+                "HomeView.LoadAsync: live first viewport populated");
             return true;
         }
         catch (Exception ex)
@@ -549,14 +532,73 @@ public sealed partial class HomeView : UserControl
         {
             DispatcherQueue.TryEnqueue(UpdateResumeButtons);
 
-            StartupDiagnostics.Write("HomeView.LoadAsync: refresh completed");
+            StartupDiagnostics.Write("HomeView.LoadAsync: first viewport refresh completed");
             loadTimer.Stop();
             PlaybackLog.Write(
                 "Performance",
-                $"WinUI home load: {loadTimer.Elapsed.TotalMilliseconds:0} ms, " +
+                $"WinUI home first viewport load: {loadTimer.Elapsed.TotalMilliseconds:0} ms, " +
                 $"libraries={_libraries.Count}, resume={_resume.Count}, sections={_sections.Count}, " +
                 $"workingSet={Environment.WorkingSet / 1024d / 1024d:0.0} MB, " +
                 $"managed={GC.GetTotalMemory(false) / 1024d / 1024d:0.0} MB");
+        }
+    }
+
+    private async Task RefreshLibrarySectionsAndPersistSnapshotAsync(
+        IReadOnlyList<EmbyItem> views,
+        IReadOnlyList<EmbyItem> latest,
+        IReadOnlyList<EmbyItem> resume,
+        string serverUrl,
+        string userId)
+    {
+        try
+        {
+            var sectionTasks = views
+                .Select(LoadLibrarySectionAsync)
+                .ToArray();
+            var sectionResults = await Task.WhenAll(sectionTasks);
+            var sections = sectionResults
+                .Where(section => section is not null)
+                .Select(section => section!)
+                .ToArray();
+
+            if (IsLoaded)
+            {
+                _sections.Clear();
+                foreach (var section in sections)
+                    _sections.Add(section);
+            }
+
+            var snapshot = new HomeSnapshot
+            {
+                Latest = latest.ToList(),
+                Resume = resume.ToList(),
+                Views = views.ToList(),
+                Sections = sections
+                    .Select(section => new HomeSectionSnapshot
+                    {
+                        Library = section.Library,
+                        TotalCount = section.TotalCount,
+                        Items = section.Items
+                            .Select(item => item.Item)
+                            .ToList()
+                    })
+                    .ToList()
+            };
+
+            await Task.Run(
+                () => HomeSnapshotStore.Save(
+                    serverUrl,
+                    userId,
+                    snapshot));
+
+            StartupDiagnostics.Write(
+                $"HomeView: background sections and snapshot ready; sections={sections.Length}");
+        }
+        catch (Exception ex)
+        {
+            PlaybackLog.Error(
+                "WinUIHomeBackgroundSections",
+                ex);
         }
     }
 

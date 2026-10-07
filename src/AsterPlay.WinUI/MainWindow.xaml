@@ -185,12 +185,15 @@
               IsHitTestVisible="True"
               Canvas.ZIndex="1000"
               Loaded="StartupCover_Loaded">
-            <Image Source="ms-appx:///Assets/AsterPlay.AppIcon.png"
+            <Image x:Name="StartupCoverImage"
+                   Source="ms-appx:///Assets/AsterPlay.AppIcon.png"
                    Width="144"
                    Height="144"
                    Stretch="Uniform"
                    HorizontalAlignment="Center"
-                   VerticalAlignment="Center"/>
+                   VerticalAlignment="Center"
+                   ImageOpened="StartupCoverImage_ImageOpened"
+                   ImageFailed="StartupCoverImage_ImageFailed"/>
         </Grid>
 
     </Grid>

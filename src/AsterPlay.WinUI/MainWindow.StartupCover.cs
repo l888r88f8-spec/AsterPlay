@@ -6,29 +6,67 @@ public sealed partial class MainWindow
 {
     private bool _startupCoverPresentedRaised;
     private bool _startupCoverRevealStarted;
+    private bool _startupCoverLoaded;
+    private bool _startupCoverImageReady;
+    private bool _startupCoverPresentationStarted;
 
     internal event EventHandler? StartupCoverPresented;
 
-    private async void StartupCover_Loaded(
+    private void StartupCover_Loaded(
         object sender,
         RoutedEventArgs e)
     {
-        if (_startupCoverPresentedRaised)
-            return;
+        _startupCoverLoaded = true;
+        TryPresentStartupCover();
+    }
 
+    private void StartupCoverImage_ImageOpened(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _startupCoverImageReady = true;
+        StartupDiagnostics.Write(
+            "In-window startup cover icon decoded");
+        TryPresentStartupCover();
+    }
+
+    private void StartupCoverImage_ImageFailed(
+        object sender,
+        ExceptionRoutedEventArgs e)
+    {
+        StartupDiagnostics.Write(
+            $"In-window startup cover icon failed: {e.ErrorMessage}");
+        // Keep the native splash visible. The final startup-ready fallback will
+        // fade it directly into Home instead of exposing an iconless cover.
+    }
+
+    private void TryPresentStartupCover()
+    {
+        if (!_startupCoverLoaded ||
+            !_startupCoverImageReady ||
+            _startupCoverPresentationStarted ||
+            _startupCoverPresentedRaised)
+        {
+            return;
+        }
+
+        _startupCoverPresentationStarted = true;
+        _ = PresentStartupCoverAsync();
+    }
+
+    private async Task PresentStartupCoverAsync()
+    {
         try
         {
-            // The native splash only needs to survive until this lightweight
-            // in-window cover has entered MainWindow's own composition tree.
-            // Unlike a second top-level HWND, this cover does not occlude the
-            // owner window from DWM, so Home/LiquidGlass can genuinely render
-            // underneath it during the rest of startup.
-            var frames = await WaitForStartupCoverFramesAsync(2, 500);
+            // ImageOpened guarantees the large source PNG has decoded. Wait for
+            // subsequent composition frames as well, so the native splash is
+            // never removed over a background-only in-window cover.
+            var frames = await WaitForStartupCoverFramesAsync(2, 700);
 
             var flush = Task.Run(DwmFlush);
             await Task.WhenAny(
                 flush,
-                Task.Delay(500));
+                Task.Delay(700));
 
             if (_startupCoverPresentedRaised ||
                 StartupCover.Visibility != Visibility.Visible)
@@ -38,23 +76,17 @@ public sealed partial class MainWindow
 
             _startupCoverPresentedRaised = true;
             StartupDiagnostics.Write(
-                $"In-window startup cover presented; frames={frames}, " +
+                $"In-window startup cover presented with decoded icon; frames={frames}, " +
                 $"size={StartupCover.ActualWidth:0}x{StartupCover.ActualHeight:0}");
             StartupCoverPresented?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {
             StartupDiagnostics.WriteException(
-                "StartupCover_Loaded",
+                "PresentStartupCoverAsync",
                 ex);
-
-            // Do not strand the native splash if the diagnostic barrier itself
-            // fails. The in-window cover is already part of the XAML tree.
-            if (!_startupCoverPresentedRaised)
-            {
-                _startupCoverPresentedRaised = true;
-                StartupCoverPresented?.Invoke(this, EventArgs.Empty);
-            }
+            // Leave the native splash in place. MainWindow_StartupVisualReady
+            // owns the safe direct-to-Home fallback.
         }
     }
 
@@ -83,7 +115,7 @@ public sealed partial class MainWindow
                 flush,
                 Task.Delay(700));
 
-            const int durationMilliseconds = 420;
+            const int durationMilliseconds = 560;
             var start = DateTime.UtcNow;
 
             while (true)
