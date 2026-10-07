@@ -26,6 +26,8 @@ public sealed partial class MainWindow
 
     internal async Task PrepareHomeBehindNativeSplashAsync()
     {
+        WriteStartupVisualState(
+            "PrepareHomeBehindNativeSplash.beforeCollapse");
         // The native splash remains the only visible startup surface. Remove
         // the XAML cover behind it, then require fresh composition frames and a
         // DWM fence before the native surface begins fading.
@@ -42,6 +44,8 @@ public sealed partial class MainWindow
         StartupDiagnostics.Write(
             $"Home prepared behind native splash; frames={frames}, " +
             $"dwmFlushed={ReferenceEquals(completed, flush)}");
+        WriteStartupVisualState(
+            "PrepareHomeBehindNativeSplash.afterFence");
     }
 
     internal async Task RevealStartupCoverAsync()
@@ -56,6 +60,8 @@ public sealed partial class MainWindow
 
         try
         {
+            WriteStartupVisualState(
+                "RevealStartupCover.beforeFade");
             StartupDiagnostics.Write(
                 $"Home visual ready; fading in-window startup cover; iconReady={_startupCoverImageReady}");
 
@@ -95,6 +101,8 @@ public sealed partial class MainWindow
 
             StartupDiagnostics.Write(
                 "In-window startup cover removed; Home is now directly visible");
+            WriteStartupVisualState(
+                "RevealStartupCover.afterCollapse");
         }
         finally
         {

@@ -11,7 +11,10 @@ public partial class App : Application
 
     public App()
     {
-        StartupDiagnostics.Write("App constructor: entered");
+        StartupDiagnostics.StartSession();
+        StartupDiagnostics.Write(
+            $"App constructor: entered; startupLog={StartupDiagnostics.LogPath}");
+
         UnhandledException += App_UnhandledException;
         StartupDiagnostics.Write("App constructor: before InitializeComponent");
         RequestedTheme = ResolveStartupTheme();
@@ -64,6 +67,8 @@ public partial class App : Application
                     RequestedTheme);
 
             _splash.Show();
+            StartupDiagnostics.Write(
+                $"OnLaunched: native splash shown; available={_splash.IsAvailable}");
 
             using (StartupDiagnostics.Measure("MainWindow constructor"))
                 _window = new MainWindow(
@@ -128,6 +133,12 @@ public partial class App : Application
         var splash = _splash;
         _splash = null;
 
+        StartupDiagnostics.Write(
+            $"StartupVisualReady event received; nativeSplashExists={splash is not null}, " +
+            $"nativeSplashAvailable={splash?.IsAvailable == true}");
+        _window.WriteStartupVisualState(
+            "App.StartupVisualReady.received");
+
         try
         {
             if (splash is not null &&
@@ -136,9 +147,17 @@ public partial class App : Application
                 // Keep the native surface visible while the in-window cover is
                 // removed and the already-ready Home tree is committed to DWM.
                 // Only then fade the one visible splash directly into Home.
+                StartupDiagnostics.Write(
+                    "App: preparing Home behind native splash");
                 await _window.PrepareHomeBehindNativeSplashAsync();
+                _window.WriteStartupVisualState(
+                    "App.beforeNativeFade");
+                StartupDiagnostics.Write(
+                    "App: starting native splash fade");
                 await splash.FadeOutAsync(
                     durationMilliseconds: 700);
+                _window.WriteStartupVisualState(
+                    "App.afterNativeFade");
                 StartupDiagnostics.Write(
                     "Native splash faded directly into presented Home");
             }

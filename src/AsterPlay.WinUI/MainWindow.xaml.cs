@@ -28,6 +28,9 @@ public sealed partial class MainWindow : Window
     private readonly IntPtr _hwnd;
     private readonly HookProc _lowLevelMouseHookProc;
     private IntPtr _lowLevelMouseHook;
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _startupHeartbeatTimer;
+    private long _startupHeartbeatLastTimestamp;
+    private int _startupHeartbeatTick;
 
     private const uint WmMouseWheel = 0x020A;
     private const int WhMouseLl = 14;
@@ -224,6 +227,8 @@ public sealed partial class MainWindow : Window
 
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= FirstFrame_Rendering;
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= StartupReveal_Rendering;
+        StopStartupHeartbeat(
+            "MainWindow.Closed");
 
         if (_uiSettings is not null)
             _uiSettings.ColorValuesChanged -= SystemColorValuesChanged;
@@ -234,6 +239,9 @@ public sealed partial class MainWindow : Window
     {
         StartupDiagnostics.Write(
             $"RootGrid.Loaded; startupScheduled={_startupResolutionScheduled}, section={_currentSection}");
+        StartStartupHeartbeat();
+        WriteStartupVisualState(
+            "RootGrid.Loaded");
 
         if (_startupResolutionScheduled)
             return;
@@ -252,6 +260,8 @@ public sealed partial class MainWindow : Window
 
         StartupDiagnostics.Write(
             "First MainWindow XAML frame composed behind native splash");
+        WriteStartupVisualState(
+            "FirstFrame.Rendering");
 
         var liquidGlassError = LiquidGlassWinUI.LiquidGlassBrush.LastError;
         StartupDiagnostics.Write(
@@ -357,8 +367,99 @@ public sealed partial class MainWindow : Window
 
     internal void NotifyStartupRevealCompleted()
     {
+        WriteStartupVisualState(
+            "StartupReveal.completed");
+
         if (PageHost.Content is HomeView homeView)
             homeView.NotifyStartupRevealCompleted();
+
+        StopStartupHeartbeat(
+            "StartupReveal.completed");
+    }
+
+    internal void WriteStartupVisualState(
+        string stage)
+    {
+        try
+        {
+            var page = PageHost.Content as FrameworkElement;
+            var homeState = PageHost.Content is HomeView homeView
+                ? homeView.GetStartupDiagnosticState()
+                : "n/a";
+
+            StartupDiagnostics.WriteState(
+                stage,
+                $"section={_currentSection}; resolutionCompleted={_startupResolutionCompleted}; " +
+                $"revealScheduled={_startupRevealScheduled}; presentationInProgress={_startupPresentationInProgress}; " +
+                $"visualReadyRaised={_startupVisualReadyRaised}; rootLoaded={RootGrid.IsLoaded}; " +
+                $"root={RootGrid.ActualWidth:0}x{RootGrid.ActualHeight:0}; " +
+                $"coverVisibility={StartupCover.Visibility}; coverOpacity={StartupCover.Opacity:0.000}; " +
+                $"coverHitTest={StartupCover.IsHitTestVisible}; cover={StartupCover.ActualWidth:0}x{StartupCover.ActualHeight:0}; " +
+                $"coverImageSource={StartupCoverImage.Source is not null}; " +
+                $"coverImage={StartupCoverImage.ActualWidth:0}x{StartupCoverImage.ActualHeight:0}; " +
+                $"host={PageHost.ActualWidth:0}x{PageHost.ActualHeight:0}; " +
+                $"page={PageHost.Content?.GetType().Name ?? "null"}; pageLoaded={page?.IsLoaded}; " +
+                $"page={page?.ActualWidth:0}x{page?.ActualHeight:0}; home=[{homeState}]");
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.WriteException(
+                $"WriteStartupVisualState({stage})",
+                ex);
+        }
+    }
+
+    private void StartStartupHeartbeat()
+    {
+        if (_startupHeartbeatTimer is not null)
+            return;
+
+        _startupHeartbeatLastTimestamp =
+            System.Diagnostics.Stopwatch.GetTimestamp();
+        _startupHeartbeatTick = 0;
+
+        var timer = DispatcherQueue.CreateTimer();
+        timer.Interval = TimeSpan.FromMilliseconds(250);
+        timer.IsRepeating = true;
+        timer.Tick += StartupHeartbeat_Tick;
+        _startupHeartbeatTimer = timer;
+        timer.Start();
+
+        StartupDiagnostics.Write(
+            "UI startup heartbeat started; interval=250 ms");
+    }
+
+    private void StartupHeartbeat_Tick(
+        Microsoft.UI.Dispatching.DispatcherQueueTimer sender,
+        object args)
+    {
+        var now = System.Diagnostics.Stopwatch.GetTimestamp();
+        var gap = System.Diagnostics.Stopwatch.GetElapsedTime(
+            _startupHeartbeatLastTimestamp,
+            now);
+        _startupHeartbeatLastTimestamp = now;
+        _startupHeartbeatTick++;
+
+        if (gap >= TimeSpan.FromMilliseconds(600) ||
+            _startupHeartbeatTick % 4 == 0)
+        {
+            WriteStartupVisualState(
+                $"Heartbeat#{_startupHeartbeatTick}; uiGapMs={gap.TotalMilliseconds:0.0}");
+        }
+    }
+
+    private void StopStartupHeartbeat(
+        string reason)
+    {
+        var timer = _startupHeartbeatTimer;
+        if (timer is null)
+            return;
+
+        timer.Stop();
+        timer.Tick -= StartupHeartbeat_Tick;
+        _startupHeartbeatTimer = null;
+        StartupDiagnostics.Write(
+            $"UI startup heartbeat stopped; reason={reason}; ticks={_startupHeartbeatTick}");
     }
 
     private void PrepareStartupWindow(
@@ -395,6 +496,8 @@ public sealed partial class MainWindow : Window
         _startupRevealScheduled = true;
         StartupDiagnostics.Write(
             "Startup reveal scheduled; waiting for laid-out page and DWM presentation");
+        WriteStartupVisualState(
+            "ScheduleStartupReveal");
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering +=
             StartupReveal_Rendering;
     }
@@ -474,9 +577,13 @@ public sealed partial class MainWindow : Window
             }
 
             _startupVisualReadyRaised = true;
+            WriteStartupVisualState(
+                "StartupReveal.beforeEvent");
             StartupDiagnostics.Write(
-                "Startup page DWM presentation settled; handing off native splash");
+                "Startup page DWM presentation settled; raising StartupVisualReady");
             StartupVisualReady?.Invoke(this, EventArgs.Empty);
+            WriteStartupVisualState(
+                "StartupReveal.afterEvent");
         }
         catch (Exception ex)
         {

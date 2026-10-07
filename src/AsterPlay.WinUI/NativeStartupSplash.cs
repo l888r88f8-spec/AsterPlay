@@ -111,9 +111,10 @@ internal sealed class NativeStartupSplash : IDisposable
             durationMilliseconds);
         var stopwatch =
             Stopwatch.StartNew();
+        var lastMilestone = -1;
 
         StartupDiagnostics.Write(
-            $"NativeStartupSplash fade started; duration={duration} ms");
+            $"NativeStartupSplash fade started; duration={duration} ms; hwnd=0x{_hwnd.ToInt64():X}");
 
         while (true)
         {
@@ -137,6 +138,16 @@ internal sealed class NativeStartupSplash : IDisposable
                 254);
 
             Present(alpha);
+
+            var milestone = Math.Min(
+                4,
+                (int)Math.Floor(progress * 4.0));
+            if (milestone != lastMilestone)
+            {
+                lastMilestone = milestone;
+                StartupDiagnostics.Write(
+                    $"NativeStartupSplash fade progress={progress:P0}; alpha={alpha}; elapsed={stopwatch.Elapsed.TotalMilliseconds:0.0} ms");
+            }
 
             if (progress >= 1.0)
                 break;

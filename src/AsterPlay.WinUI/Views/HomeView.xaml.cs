@@ -245,6 +245,17 @@ public sealed partial class HomeView : UserControl
             });
     }
 
+    internal string GetStartupDiagnosticState() =>
+        $"loaded={IsLoaded}; noServer={_noServerMode}; cache={_hasCachedSnapshot}; " +
+        $"initialReady={_initialVisualReadyRaised}; deferredStarted={_deferredHomeRefreshStarted}; " +
+        $"loadingVisibility={LoadingState.Visibility}; loadingActive={LoadingRing.IsActive}; " +
+        $"scrollVisibility={HomeScrollViewer.Visibility}; scrollOpacity={HomeScrollViewer.Opacity:0.000}; " +
+        $"scroll={HomeScrollViewer.ActualWidth:0}x{HomeScrollViewer.ActualHeight:0}; " +
+        $"hero={HeroContainer.ActualWidth:0}x{HeroContainer.ActualHeight:0}; " +
+        $"heroCandidates={_heroCandidates.Count}; heroImagesReady={_heroImagesReady}; " +
+        $"libraries={_libraries.Count}; resume={_resume.Count}; sections={_sections.Count}; " +
+        $"pendingSections={_pendingSectionViews?.Count ?? 0}";
+
     private void RaiseInitialVisualReady()
     {
         if (_initialVisualReadyRaised)
@@ -252,7 +263,13 @@ public sealed partial class HomeView : UserControl
 
         _initialVisualReadyRaised = true;
 
+        StartupDiagnostics.WriteState(
+            "Home.InitialVisualReady.beforeEvent",
+            GetStartupDiagnosticState());
         InitialVisualReady?.Invoke(this, EventArgs.Empty);
+        StartupDiagnostics.WriteState(
+            "Home.InitialVisualReady.afterEvent",
+            GetStartupDiagnosticState());
         StartupDiagnostics.Write(
             $"HomeView: initial visual ready; cachedSnapshot={_hasCachedSnapshot}");
     }
@@ -509,6 +526,9 @@ public sealed partial class HomeView : UserControl
 
             StartupDiagnostics.Write(
                 "HomeView.LoadAsync: live first viewport populated; lower sections deferred until startup reveal");
+            StartupDiagnostics.WriteState(
+                "Home.LiveViewportPopulated",
+                GetStartupDiagnosticState());
             return true;
         }
         catch (Exception ex)
@@ -576,6 +596,9 @@ public sealed partial class HomeView : UserControl
             return;
         }
 
+        StartupDiagnostics.WriteState(
+            "Home.StartupRevealCompleted",
+            GetStartupDiagnosticState());
         StartupDiagnostics.Write(
             "HomeView: startup reveal completed; starting lower sections");
         _ = RefreshLibrarySectionsAndPersistSnapshotAsync(
@@ -666,6 +689,9 @@ public sealed partial class HomeView : UserControl
         LoadingRing.IsActive = true;
         LoadingState.Visibility = Visibility.Visible;
         StartupDiagnostics.Write("HomeView state: Loading");
+        StartupDiagnostics.WriteState(
+            "Home.ShowLoadingState",
+            GetStartupDiagnosticState());
     }
 
     private void ShowContentState()
@@ -690,6 +716,9 @@ public sealed partial class HomeView : UserControl
 
         StartupDiagnostics.Write(
             $"HomeView state: Content; verticalOffset={HomeScrollViewer.VerticalOffset:0.0}");
+        StartupDiagnostics.WriteState(
+            "Home.ShowContentState",
+            GetStartupDiagnosticState());
 
     }
 
