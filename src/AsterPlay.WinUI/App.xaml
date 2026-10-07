@@ -22,7 +22,7 @@
                     <SolidColorBrush x:Key="AsterAmbientBottomBrush" Color="#182F79A8"/>
                     <SolidColorBrush x:Key="AsterRailArrowForegroundBrush" Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="AsterRailArrowBorderBrush" Color="#38FFFFFF"/>
-                    <SolidColorBrush x:Key="AsterDockOverlayBrush" Color="#26070B12"/>
+                    <SolidColorBrush x:Key="AsterDockOverlayBrush" Color="#14070B12"/>
                     <SolidColorBrush x:Key="AsterDockBorderBrush" Color="#68FFFFFF"/>
                     <SolidColorBrush x:Key="AsterDockForegroundBrush" Color="#F2F5F8"/>
                     <SolidColorBrush x:Key="AsterDockSelectedForegroundBrush" Color="#6EA8FF"/>
@@ -118,7 +118,7 @@
                     <SolidColorBrush x:Key="AsterAmbientBottomBrush" Color="#1458A9D6"/>
                     <SolidColorBrush x:Key="AsterRailArrowForegroundBrush" Color="#20242C"/>
                     <SolidColorBrush x:Key="AsterRailArrowBorderBrush" Color="#26000000"/>
-                    <SolidColorBrush x:Key="AsterDockOverlayBrush" Color="#B8F7F9FC"/>
+                    <SolidColorBrush x:Key="AsterDockOverlayBrush" Color="#5CF7F9FC"/>
                     <SolidColorBrush x:Key="AsterDockBorderBrush" Color="#42000000"/>
                     <SolidColorBrush x:Key="AsterDockForegroundBrush" Color="#20242C"/>
                     <SolidColorBrush x:Key="AsterDockSelectedForegroundBrush" Color="#176CE8"/>
