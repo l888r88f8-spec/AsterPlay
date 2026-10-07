@@ -125,42 +125,6 @@
     </UserControl.Resources>
 
     <Grid Background="{ThemeResource AsterPageBackgroundBrush}">
-        <!-- One low-opacity ambient copy is enough to carry the Hero's
-             colour into the first content rows. The Hero itself stays sharp;
-             this layer replaces the previous dual-image + full-screen Acrylic
-             stack to reduce GPU work and decoded texture memory. -->
-        <Grid x:Name="PageBackdropLayer"
-              Height="1240"
-              VerticalAlignment="Top"
-              Visibility="Collapsed"
-              IsHitTestVisible="False">
-            <controls:CachedImage x:Name="PageBackdropImage"
-                                  LazyLoadingEnabled="False"
-                                  Stretch="UniformToFill"
-                                  Opacity="0.14"
-                                  RenderTransformOrigin="0.5,0.5">
-                <controls:CachedImage.RenderTransform>
-                    <ScaleTransform ScaleX="1.05"
-                                    ScaleY="1.05"/>
-                </controls:CachedImage.RenderTransform>
-            </controls:CachedImage>
-
-            <!-- Fade the ambient artwork itself into the real page background.
-                 This extends well below the Hero so there is no visible seam. -->
-            <Rectangle>
-                <Rectangle.Fill>
-                    <LinearGradientBrush StartPoint="0,0"
-                                         EndPoint="0,1">
-                        <GradientStop Color="#00000000" Offset="0"/>
-                        <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.34"/>
-                        <GradientStop Color="{ThemeResource AsterAmbientOverlayMidColor}" Offset="0.58"/>
-                        <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}" Offset="0.78"/>
-                        <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="1"/>
-                    </LinearGradientBrush>
-                </Rectangle.Fill>
-            </Rectangle>
-        </Grid>
-
         <!-- Reference-style fixed controls: a compact frosted server capsule
              on the left and a circular search control on the right. -->
         <Grid x:Name="FloatingTopControls"
@@ -395,15 +359,16 @@
                       SizeChanged="HomeScrollViewer_SizeChanged">
             <Grid Width="{Binding ElementName=HomeScrollViewer, Path=ViewportWidth}"
                   HorizontalAlignment="Stretch">
-                <StackPanel x:Name="HomeContentStack"
-                            HorizontalAlignment="Stretch"
-                            Padding="28,0,28,130"
-                            Spacing="30">
 
-                <!-- Full-bleed poster Hero with a long mist fade into the page. -->
-                <Grid x:Name="HeroContainer"
-                      Height="690"
-                      Margin="-28,0,-28,-112">
+                <!-- The Hero artwork is the page background itself. It deliberately
+                     continues behind the first content rows, so there is no physical
+                     Hero/content boundary to reveal as a horizontal seam. -->
+                <Grid x:Name="PageBackdropLayer"
+                      Height="1240"
+                      VerticalAlignment="Top"
+                      HorizontalAlignment="Stretch"
+                      Visibility="Collapsed"
+                      IsHitTestVisible="False">
                     <controls:CachedImage x:Name="HeroImage"
                                           LazyLoadingEnabled="False"
                                           Stretch="UniformToFill"
@@ -413,34 +378,46 @@
                                           Stretch="UniformToFill"
                                           Opacity="0"/>
 
-                    <!-- Keep the top readable without making the artwork look shaded. -->
-                    <Rectangle>
+                    <!-- Light top shading only for caption/control readability. -->
+                    <Rectangle VerticalAlignment="Top"
+                               Height="360">
                         <Rectangle.Fill>
                             <LinearGradientBrush StartPoint="0,0"
                                                  EndPoint="0,1">
                                 <GradientStop Color="#26000000" Offset="0"/>
-                                <GradientStop Color="#08000000" Offset="0.27"/>
-                                <GradientStop Color="#00000000" Offset="0.48"/>
+                                <GradientStop Color="#08000000" Offset="0.56"/>
+                                <GradientStop Color="#00000000" Offset="1"/>
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
 
-                    <!-- The important reference detail: the artwork dissolves into a
-                         bright, milky page instead of ending at a visible boundary. -->
+                    <!-- One continuous fade over the same image. The image remains
+                         visible behind Continue Watching and My Media before it
+                         finally dissolves into the real page background. -->
                     <Rectangle VerticalAlignment="Bottom"
-                               Height="500">
+                               Height="820">
                         <Rectangle.Fill>
                             <LinearGradientBrush StartPoint="0,0"
                                                  EndPoint="0,1">
                                 <GradientStop Color="#00000000" Offset="0"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.24"/>
-                                <GradientStop Color="{ThemeResource AsterHeroFadeMidColor}" Offset="0.54"/>
-                                <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}" Offset="0.78"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayTopColor}" Offset="0.34"/>
+                                <GradientStop Color="{ThemeResource AsterHeroFadeMidColor}" Offset="0.64"/>
+                                <GradientStop Color="{ThemeResource AsterAmbientOverlayBottomColor}" Offset="0.84"/>
                                 <GradientStop Color="{ThemeResource AsterHeroFadeEndColor}" Offset="1"/>
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
+                </Grid>
 
+                <StackPanel x:Name="HomeContentStack"
+                            HorizontalAlignment="Stretch"
+                            Padding="28,0,28,130"
+                            Spacing="30">
+
+                <!-- Full-bleed poster Hero with a long mist fade into the page. -->
+                <Grid x:Name="HeroContainer"
+                      Height="690"
+                      Margin="-28,0,-28,-112">
                     <StackPanel VerticalAlignment="Bottom"
                                 HorizontalAlignment="Center"
                                 Margin="56,0,56,132"
