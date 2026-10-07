@@ -1041,6 +1041,7 @@ public sealed partial class HomeView : UserControl
         _sections.Clear();
         foreach (var section in snapshot.Sections)
         {
+            var isSeriesLibrary = IsSeriesLibrary(section.Library);
             var items = section.Items
                 .Where(item => !string.IsNullOrWhiteSpace(item.Id))
                 .Take(SectionItemLimit)
@@ -1048,7 +1049,8 @@ public sealed partial class HomeView : UserControl
                     item,
                     item.Name,
                     BuildSectionMeta(item),
-                    _client.BuildPrimaryUrl(item, 420)))
+                    _client.BuildPrimaryUrl(item, 420),
+                    _client.BuildBackdropUrl(item, 900)))
                 .ToArray();
 
             if (items.Length == 0)
@@ -1059,6 +1061,8 @@ public sealed partial class HomeView : UserControl
                 section.Library.Name,
                 section.TotalCount,
                 section.TotalCount > 0 ? $"{section.TotalCount} 项" : "",
+                isSeriesLibrary ? Visibility.Collapsed : Visibility.Visible,
+                isSeriesLibrary ? Visibility.Visible : Visibility.Collapsed,
                 items));
         }
 
@@ -1417,10 +1421,17 @@ public sealed partial class HomeView : UserControl
     {
         try
         {
+            var isSeriesLibrary = IsSeriesLibrary(library);
+            var includeItemTypes = isSeriesLibrary
+                ? "Series"
+                : string.Equals(library.CollectionType, "movies", StringComparison.OrdinalIgnoreCase)
+                    ? "Movie"
+                    : "Movie,Series";
+
             var result = await _client.GetLibraryItemsAsync(
                 parentId: library.Id,
                 searchTerm: null,
-                includeItemTypes: "Movie,Series",
+                includeItemTypes: includeItemTypes,
                 year: null,
                 sortBy: "DateCreated",
                 sortOrder: "Descending",
@@ -1435,7 +1446,8 @@ public sealed partial class HomeView : UserControl
                     item,
                     item.Name,
                     BuildSectionMeta(item),
-                    _client.BuildPrimaryUrl(item, 420)))
+                    _client.BuildPrimaryUrl(item, 420),
+                    _client.BuildBackdropUrl(item, 900)))
                 .ToArray();
 
             if (items.Length == 0)
@@ -1446,6 +1458,8 @@ public sealed partial class HomeView : UserControl
                 library.Name,
                 result.TotalRecordCount,
                 result.TotalRecordCount > 0 ? $"{result.TotalRecordCount} 项" : "",
+                isSeriesLibrary ? Visibility.Collapsed : Visibility.Visible,
+                isSeriesLibrary ? Visibility.Visible : Visibility.Collapsed,
                 items);
         }
         catch (Exception ex)
@@ -1730,11 +1744,30 @@ public sealed partial class HomeView : UserControl
         if (item.ProductionYear is > 0)
             values.Add(item.ProductionYear.Value.ToString());
 
+        if (string.Equals(item.Type, "Series", StringComparison.OrdinalIgnoreCase))
+        {
+            if (item.SeasonCount is > 0)
+                values.Add($"{item.SeasonCount} 季");
+            else if (item.ChildCount is > 0)
+                values.Add($"{item.ChildCount} 季");
+
+            var genre = item.Genres
+                .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+            if (!string.IsNullOrWhiteSpace(genre))
+                values.Add(genre);
+        }
+
         if (item.CommunityRating is > 0)
             values.Add($"★ {item.CommunityRating:0.0}");
 
         return string.Join(" · ", values);
     }
+
+    private static bool IsSeriesLibrary(EmbyItem library) =>
+        string.Equals(
+            library.CollectionType,
+            "tvshows",
+            StringComparison.OrdinalIgnoreCase);
 
     private static bool IsVisibleLibrary(EmbyItem view) =>
         !new[] { "boxsets", "playlists", "folders", "livetv", "homevideos" }
@@ -1764,12 +1797,15 @@ public sealed partial class HomeView : UserControl
         EmbyItem Item,
         string Title,
         string Meta,
-        string PosterUrl);
+        string PosterUrl,
+        string BackdropUrl);
 
     private sealed record HomeLibrarySection(
         EmbyItem Library,
         string Name,
         int TotalCount,
         string CountLabel,
+        Visibility PosterVisibility,
+        Visibility SeriesVisibility,
         IReadOnlyList<SectionMediaTile> Items);
 }
