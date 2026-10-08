@@ -35,15 +35,15 @@ jobs:
         run: |
           $publish = Join-Path $PWD "dist\AsterPlay"
           $required = @(
-            "AsterPlay.cmd",
-            "App/AsterPlay.exe",
-            "App/AsterPlay.Core.dll",
-            "App/LiquidGlassWinUI.dll",
-            "App/CustomEffectRuntimeNative.dll",
-            "App/libmpv-2.dll",
-            "App/Assets/AsterPlay.AppIcon.png",
-            "Info/RUNTIME-SOURCE.txt",
-            "Info/BUILD-INFO.txt"
+            "AsterPlay.exe",
+            "resources/AsterPlay.exe",
+            "resources/AsterPlay.Core.dll",
+            "resources/LiquidGlassWinUI.dll",
+            "resources/CustomEffectRuntimeNative.dll",
+            "resources/libmpv-2.dll",
+            "resources/Assets/AsterPlay.AppIcon.png",
+            "resources/Info/RUNTIME-SOURCE.txt",
+            "resources/Info/BUILD-INFO.txt"
           )
 
           foreach ($name in $required) {
@@ -57,9 +57,17 @@ jobs:
       - name: Smoke start WinUI app
         shell: pwsh
         run: |
-          $exe = Join-Path $PWD "dist\AsterPlay\App\AsterPlay.exe"
-          $process = Start-Process -FilePath $exe -PassThru
+          $launcher = Join-Path $PWD "dist\AsterPlay\AsterPlay.exe"
+          $exe = Join-Path $PWD "dist\AsterPlay\resources\AsterPlay.exe"
+          $launcherProcess = Start-Process -FilePath $launcher -PassThru
           Start-Sleep -Seconds 5
+          $launcherProcess.Refresh()
+          if (-not $launcherProcess.HasExited -or $launcherProcess.ExitCode -ne 0) {
+            throw "Portable GUI launcher did not exit successfully."
+          }
+          $process = Get-Process -Name "AsterPlay" -ErrorAction SilentlyContinue |
+            Where-Object { $_.Path -eq $exe } | Select-Object -First 1
+          if (-not $process) { throw "Portable launcher did not start resources/AsterPlay.exe." }
 
           if ($process.HasExited) {
             $asterPlayLog = Join-Path $env:LOCALAPPDATA "AsterPlay\AsterPlay.log"
