@@ -150,7 +150,7 @@ public partial class App : Application
                 // startup cover, arranging the target page and confirming its
                 // presentation. Only then fade the native HWND out.
                 StartupDiagnostics.Write(
-                    $"App: verifying real startup page behind native splash; noServer={_window.IsNoServerStartup}");
+                    "App: verifying real startup page behind native splash");
 
                 if (!await _window.PrepareHomeBehindNativeSplashAsync())
                     return;
