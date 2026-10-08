@@ -90,19 +90,12 @@ public sealed partial class MainWindow
                 return true;
             }
 
-            // Connected means the native factories and the complete effect graph
-            // exist. Now wait for that graph to participate in real frames and
-            // fence those frames through DWM before allowing splash dismissal.
-            var frames = await WaitForCompositionFramesAsync(3, 1000);
-            var flush = Task.Run(DwmFlush);
-            var completed = await Task.WhenAny(
-                flush,
-                Task.Delay(1500));
-            var dwmFlushed = ReferenceEquals(completed, flush);
-
+            // Connected means the effect graph is usable, not that its first
+            // pixels were displayed. The shared startup presentation fence
+            // now verifies XAML frames and DWM after the target page is ready.
+            // Avoid a second untracked DwmFlush thread competing with it.
             StartupDiagnostics.Write(
-                $"LiquidGlass: pipeline connected; frames={frames}, " +
-                $"dwmFlushed={dwmFlushed}; final presentation is verified by MainWindow");
+                "LiquidGlass: pipeline connected; awaiting shared startup presentation fence");
             return true;
         }
         catch (Exception ex)
