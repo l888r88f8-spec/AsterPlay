@@ -767,13 +767,13 @@ public sealed partial class HomeView : UserControl
                 .Select(CreateSectionSnapshot)
                 .ToArray();
 
-            if (IsLoaded)
-            {
-                MergeLibrarySections(
-                    sections,
-                    sectionSnapshots,
-                    _cachedSnapshot?.Sections);
-            }
+            // HomeView is retained across navigation. Keep its detached
+            // collections current as well, so returning to the page never
+            // exposes an older section tree.
+            MergeLibrarySections(
+                sections,
+                sectionSnapshots,
+                _cachedSnapshot?.Sections);
 
             var snapshot = new HomeSnapshot
             {
