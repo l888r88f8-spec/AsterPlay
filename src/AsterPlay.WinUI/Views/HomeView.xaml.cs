@@ -1026,7 +1026,11 @@ public sealed partial class HomeView : UserControl
         LoadingState.Visibility = Visibility.Collapsed;
         LoadingRing.IsActive = false;
         NoServerState.Visibility = Visibility.Visible;
-        FloatingTopControls.Visibility = Visibility.Visible;
+
+        // First-run empty state has one central add-server action. The
+        // server pill would perform the same navigation, so keep the entire
+        // floating header hidden until a server actually exists.
+        FloatingTopControls.Visibility = Visibility.Collapsed;
         SearchButton.Visibility = Visibility.Collapsed;
         StartupDiagnostics.Write("HomeView state: NoServer");
     }
