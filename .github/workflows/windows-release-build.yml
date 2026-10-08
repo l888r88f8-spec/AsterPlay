@@ -92,16 +92,17 @@ jobs:
           if (-not (Test-Path $languagesRoot -PathType Container)) {
             throw "Missing managed language resources directory."
           }
-          $localizedAssemblies = @(Get-ChildItem -LiteralPath $languagesRoot -Filter '*.resources.dll' -Recurse -File)
-          if ($localizedAssemblies.Count -eq 0) {
-            throw "No localized satellite assemblies were grouped in resources."
+          $localizedFiles = @(Get-ChildItem -LiteralPath $languagesRoot -Recurse -File -Force)
+          if ($localizedFiles.Count -eq 0) {
+            throw "No language resource files were collected in resources."
           }
-          $unrelatedResources = @(Get-ChildItem -LiteralPath $languagesRoot -Recurse -File |
-            Where-Object { $_.Name -notlike '*.resources.dll' })
-          if ($unrelatedResources.Count -gt 0) {
-            throw "Language resources folder contains unrelated application DLLs."
+          $unrelatedBinaries = @($localizedFiles | Where-Object {
+            $_.Name -in @('AsterPlay.exe','AsterPlay.Core.dll','LiquidGlassWinUI.dll','libmpv-2.dll','coreclr.dll')
+          })
+          if ($unrelatedBinaries.Count -gt 0) {
+            throw "Language resources folder contains application or runtime binaries."
           }
-          Write-Host "Grouped $($localizedAssemblies.Count) managed satellite DLLs under resources."
+          Write-Host "Grouped $($localizedFiles.Count) native and managed language files under resources."
 
           $nativeCultureDirs = 0
           foreach ($folder in @(Get-ChildItem -LiteralPath $publish -Directory -Force)) {
