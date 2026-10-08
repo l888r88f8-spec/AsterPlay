@@ -236,18 +236,6 @@
                         </ItemsRepeater.ItemTemplate>
                     </ItemsRepeater>
 
-                    <Grid x:Name="EmptyState"
-                          Visibility="Collapsed"
-                          MinHeight="270">
-                        <TextBlock Text="请先添加服务器"
-                                   FontSize="22"
-                                   FontWeight="SemiBold"
-                                   Foreground="{ThemeResource AsterPrimaryTextBrush}"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   TextAlignment="Center"/>
-                    </Grid>
-
                     <Button x:Name="RefreshButton"
                             Style="{StaticResource RefreshPillButtonStyle}"
                             HorizontalAlignment="Center"
@@ -288,5 +276,20 @@
                 </StackPanel>
             </Grid>
         </ScrollViewer>
+
+        <!-- Keep the no-server prompt centered in the viewport, not in the scroll content. -->
+        <Grid x:Name="EmptyState"
+              Visibility="Collapsed"
+              IsHitTestVisible="False">
+            <TextBlock Text="请先添加服务器"
+                       FontSize="20"
+                       FontWeight="Normal"
+                       Foreground="{ThemeResource AsterTertiaryTextBrush}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       Margin="24,0"/>
+        </Grid>
     </Grid>
 </UserControl>
