@@ -77,10 +77,13 @@ public sealed partial class MainWindow : Window
 
         try
         {
+            var executableDirectory = Path.GetDirectoryName(Environment.ProcessPath);
             var iconPath = Path.Combine(
-                AppContext.BaseDirectory,
+                executableDirectory ?? AppContext.BaseDirectory,
                 "Assets",
                 "AsterPlay.ico");
+            if (!File.Exists(iconPath))
+                iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "AsterPlay.ico");
             if (File.Exists(iconPath))
                 _appWindow.SetIcon(iconPath);
         }
