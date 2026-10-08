@@ -982,33 +982,7 @@ public sealed partial class MainWindow : Window
         if (NavigationDock.Visibility == Visibility.Visible)
             SetActiveNavigation(ServersButton);
 
-        var view = new ServerManagementView();
-        view.DoneRequested += (_, _) =>
-        {
-            var serverCount = ServerProfileStore.Load().Count;
-            if (serverCount == 0)
-            {
-                AppStateStore.Clear();
-                InvalidateRetainedHome();
-                _client.Reset();
-                _authenticated = false;
-                ShowNoServerHome();
-                return;
-            }
-
-            if (returnToNoServerHome)
-            {
-                ShowLogin();
-                return;
-            }
-
-            if (returnToLogin || !_authenticated)
-                ShowLogin();
-            else
-                ShowHome();
-        };
-
-        PageHost.Content = view;
+        PageHost.Content = new ServerManagementView();
     }
 
     private void ShowSettings()
