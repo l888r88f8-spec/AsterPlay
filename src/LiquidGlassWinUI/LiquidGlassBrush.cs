@@ -280,6 +280,7 @@ namespace LiquidGlassWinUI
         // completion for every visible brush before dismissing startup.
         private static readonly object s_effectCommitSync = new();
         private static int s_pendingEffectCommitCount;
+        private static readonly HashSet<LiquidGlassBrush> s_pendingEffectBrushes = new();
         private static TaskCompletionSource<bool> s_effectCommitCompletion =
             NewEffectCompletionSource();
         private CompositionCommitBatch _firstEffectCommitBatch;
@@ -307,6 +308,42 @@ namespace LiquidGlassWinUI
             }
         }
 
+        /// <summary>
+        /// If an effect batch never completes (unsupported driver/runtime),
+        /// fail open with a transparent control background instead of leaving
+        /// the application forever behind the native startup window.
+        /// This only changes brushes whose first GPU commit is still pending.
+        /// </summary>
+        public static int FallBackPendingEffectCommits()
+        {
+            LiquidGlassBrush[] pending;
+            lock (s_effectCommitSync)
+                pending = s_pendingEffectBrushes.ToArray();
+
+            foreach (var brush in pending)
+            {
+                if (!brush._effectCommitPending)
+                    continue;
+
+                brush.CompleteFirstEffectCommit(false);
+                try
+                {
+                    brush.CompositionBrush =
+                        brush._compositor?.CreateColorBrush(Colors.Transparent);
+                }
+                catch
+                {
+                    // A pending shader should not abort the window startup.
+                }
+
+                brush.SetPipelineState(
+                    LiquidGlassPipelineState.Failed,
+                    "First GPU effect commit did not complete; using transparent fallback");
+            }
+
+            return pending.Length;
+        }
+
         private void TrackFirstEffectCommit()
         {
             // Obtain the batch BEFORE exposing the effect brush. The factory
@@ -318,6 +355,7 @@ namespace LiquidGlassWinUI
             {
                 if (s_pendingEffectCommitCount++ == 0)
                     s_effectCommitCompletion = NewEffectCompletionSource();
+                s_pendingEffectBrushes.Add(this);
             }
 
             _firstEffectCommitBatch = batch;
@@ -356,6 +394,7 @@ namespace LiquidGlassWinUI
 
             lock (s_effectCommitSync)
             {
+                s_pendingEffectBrushes.Remove(this);
                 if (--s_pendingEffectCommitCount == 0)
                     s_effectCommitCompletion.TrySetResult(true);
             }
@@ -573,8 +612,13 @@ namespace LiquidGlassWinUI
             _postProcessBrush?.Dispose();
             _backdropBrush?.Dispose();
 
-            // CompositionBrush == _glassBrush; dispose once via the base property.
-            CompositionBrush?.Dispose();
+            // Normal path: CompositionBrush == _glassBrush. The GPU-timeout
+            // fallback uses a separate transparent color brush; dispose both
+            // without double-disposing the original glass graph.
+            var activeBrush = CompositionBrush;
+            activeBrush?.Dispose();
+            if (!ReferenceEquals(activeBrush, _glassBrush))
+                _glassBrush?.Dispose();
 
             CompositionBrush = null;
             _glassBrush = null;
