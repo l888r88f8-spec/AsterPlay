@@ -1,3 +1,4 @@
+using AsterPlay.Services;
 using Microsoft.UI.Xaml;
 using Windows.Graphics;
 using Windows.UI.ViewManagement;
@@ -10,6 +11,8 @@ public partial class App : Application
     private NativeStartupSplash? _splash;
 
     internal MainWindow? HostWindow => _window;
+
+    internal string ThemeMode { get; private set; } = "system";
 
     public App()
     {
@@ -25,15 +28,21 @@ public partial class App : Application
 
         UnhandledException += App_UnhandledException;
         StartupDiagnostics.Write("App constructor: before InitializeComponent");
-        RequestedTheme = ResolveStartupTheme();
+        ThemeMode = AppSettingsStore.Load().ThemeMode;
+        RequestedTheme = ResolveStartupTheme(ThemeMode);
         StartupDiagnostics.Write($"App constructor: startup theme={RequestedTheme}");
         using (StartupDiagnostics.Measure("App.InitializeComponent"))
             InitializeComponent();
         StartupDiagnostics.Write("App constructor: after InitializeComponent");
     }
 
-    private static ApplicationTheme ResolveStartupTheme()
+    private static ApplicationTheme ResolveStartupTheme(string mode)
     {
+        if (string.Equals(mode, "light", StringComparison.OrdinalIgnoreCase))
+            return ApplicationTheme.Light;
+        if (string.Equals(mode, "dark", StringComparison.OrdinalIgnoreCase))
+            return ApplicationTheme.Dark;
+
         try
         {
             var settings = new UISettings();
