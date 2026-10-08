@@ -25,6 +25,42 @@
                                   TintLuminosityOpacity="0.30"
                                   FallbackColor="#B9F0F2F8"/>
                 </Border.Background>
+                <Grid ColumnSpacing="20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Spacing="5" VerticalAlignment="Center">
+                        <TextBlock Text="外观"
+                                   Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                                   FontSize="19"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Text="应用主题"
+                                   Foreground="{ThemeResource AsterPrimaryTextBrush}"/>
+                        <TextBlock Text="跟随 Windows 自动切换，或固定为浅色、深色模式。"
+                                   Foreground="{ThemeResource AsterSecondaryTextBrush}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <ComboBox x:Name="ThemeModeComboBox"
+                              Grid.Column="1"
+                              Width="174"
+                              VerticalAlignment="Center"
+                              AutomationProperties.Name="应用主题"
+                              SelectionChanged="ThemeMode_SelectionChanged">
+                        <ComboBoxItem Tag="system" Content="跟随系统"/>
+                        <ComboBoxItem Tag="light" Content="浅色"/>
+                        <ComboBoxItem Tag="dark" Content="深色"/>
+                    </ComboBox>
+                </Grid>
+            </Border>
+
+            <Border Padding="26" CornerRadius="28">
+                <Border.Background>
+                    <AcrylicBrush TintColor="#F0F2F8"
+                                  TintOpacity="0.050"
+                                  TintLuminosityOpacity="0.30"
+                                  FallbackColor="#B9F0F2F8"/>
+                </Border.Background>
                 <StackPanel Spacing="14">
                     <TextBlock Text="常规"
                                Foreground="{ThemeResource AsterPrimaryTextBrush}"
