@@ -10,22 +10,23 @@ Run from a clean clone:
 git clone https://github.com/l888r88f8-spec/AsterPlay.git
 cd AsterPlay
 build-windows.cmd
-dist\AsterPlay\AsterPlay.exe
+dist\AsterPlay\App\AsterPlay.exe
 ```
 
 Pass criteria:
 
-- No system-wide .NET installation is required to run `dist\AsterPlay\AsterPlay.exe`.
-- `dist\AsterPlay\AsterPlay.exe` starts and remains running.
-- `dist\AsterPlay\libmpv-2.dll` and `dist\AsterPlay\CustomEffectRuntimeNative.dll` exist.
-- `dist\AsterPlay\Assets\AsterPlay.AppIcon.png` exists and the native splash displays it.
-- `dist\AsterPlay\Info\BUILD-INFO.txt` records `PublishSingleFile: true`.
+- No system-wide .NET installation is required to run `dist\AsterPlay\App\AsterPlay.exe`.
+- `dist\AsterPlay\App\AsterPlay.exe` starts and remains running.
+- `dist\AsterPlay\App\libmpv-2.dll` and `dist\AsterPlay\App\CustomEffectRuntimeNative.dll` exist.
+- `dist\AsterPlay\App\Assets\AsterPlay.AppIcon.png` exists and the native splash displays it.
+- `dist\AsterPlay\Info\BUILD-INFO.txt` records `PublishSingleFile: false` and `PortableLayout: App subdirectory`.
 - `dist\AsterPlay\Info\RUNTIME-SOURCE.txt` contains:
   - release `2026-09-29-b4b5d69a44`
   - mpv commit `b4b5d69a44e240e4a95c230bb7f018c381f0c5ae`
   - SHA-256 `8c80c506cf95f403d8a2b9d672d5f88d965885666f25c850f711a06b9510dfc8`
-- The compact portable app starts on a clean Windows x64 desktop; first launch may take longer while .NET dependencies extract to a temporary per-user cache.
-- If the single-file build fails, compare with `build-windows.cmd -Unpacked -Full`; do not move core WinUI or native DLLs into arbitrary subfolders.
+- `dist\AsterPlay\AsterPlay.cmd` starts the app when the whole portable folder is copied to another drive.
+- All .NET and WinUI 3 assemblies remain unpacked under `App/`; no single-file extraction or installer is required.
+- Native libraries and culture-specific satellite assemblies preserve their expected relative paths within `App/`.
 
 ## 2. Login and session
 
