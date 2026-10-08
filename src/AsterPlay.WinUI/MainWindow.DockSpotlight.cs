@@ -8,6 +8,7 @@ public sealed partial class MainWindow
 {
     private bool _dockPointerInside;
     private long _lastDockSpotlightUpdate;
+    private long _dockVisibilityCallbackToken;
 
     // AddHandler(handledEventsToo) receives moves over actual Button children:
     // no transparent hit-test overlay or PointerCapture is needed.
@@ -25,6 +26,22 @@ public sealed partial class MainWindow
             UIElement.PointerExitedEvent,
             new PointerEventHandler(DockSpotlight_PointerExited),
             true);
+        NavigationDock.AddHandler(
+            UIElement.PointerReleasedEvent,
+            new PointerEventHandler(DockSpotlight_PointerReleased),
+            true);
+        NavigationDock.AddHandler(
+            UIElement.PointerCanceledEvent,
+            new PointerEventHandler(DockSpotlight_PointerCanceled),
+            true);
+
+        _dockVisibilityCallbackToken = NavigationDock.RegisterPropertyChangedCallback(
+            UIElement.VisibilityProperty,
+            (_, _) =>
+            {
+                if (NavigationDock.Visibility != Visibility.Visible)
+                    FadeDockSpotlight();
+            });
     }
 
     private void DetachDockSpotlight()
@@ -38,6 +55,15 @@ public sealed partial class MainWindow
         NavigationDock.RemoveHandler(
             UIElement.PointerExitedEvent,
             new PointerEventHandler(DockSpotlight_PointerExited));
+        NavigationDock.RemoveHandler(
+            UIElement.PointerReleasedEvent,
+            new PointerEventHandler(DockSpotlight_PointerReleased));
+        NavigationDock.RemoveHandler(
+            UIElement.PointerCanceledEvent,
+            new PointerEventHandler(DockSpotlight_PointerCanceled));
+        NavigationDock.UnregisterPropertyChangedCallback(
+            UIElement.VisibilityProperty,
+            _dockVisibilityCallbackToken);
 
         _dockPointerInside = false;
         _dockGlassBrush = null;
@@ -117,6 +143,29 @@ public sealed partial class MainWindow
         }
 
         FadeDockSpotlight();
+    }
+
+    private void DockSpotlight_PointerReleased(
+        object sender, PointerRoutedEventArgs e)
+    {
+        // Unlike mouse hover, a touch contact ends as soon as the finger lifts.
+        if (e.Pointer.PointerDeviceType == Windows.Devices.Input.PointerDeviceType.Touch)
+            FadeDockSpotlight();
+    }
+
+    private void DockSpotlight_PointerCanceled(
+        object sender, PointerRoutedEventArgs e) =>
+        FadeDockSpotlight();
+
+    private void RefreshDockSpotlightTheme()
+    {
+        if (_dockPointerInside && _dockGlassBrush is { } brush)
+        {
+            brush.AnimateScalar(
+                "SpotlightStrength",
+                RootGrid.ActualTheme == ElementTheme.Light ? 0.43f : 0.75f,
+                150);
+        }
     }
 
     private void FadeDockSpotlight()
