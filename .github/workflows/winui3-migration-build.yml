@@ -35,10 +35,13 @@ jobs:
         run: |
           $publish = Join-Path $PWD "dist\AsterPlay"
           $required = @(
-            "AsterPlay.exe",
-            "CustomEffectRuntimeNative.dll",
-            "libmpv-2.dll",
-            "Assets/AsterPlay.AppIcon.png",
+            "AsterPlay.cmd",
+            "App/AsterPlay.exe",
+            "App/AsterPlay.Core.dll",
+            "App/LiquidGlassWinUI.dll",
+            "App/CustomEffectRuntimeNative.dll",
+            "App/libmpv-2.dll",
+            "App/Assets/AsterPlay.AppIcon.png",
             "Info/RUNTIME-SOURCE.txt",
             "Info/BUILD-INFO.txt"
           )
@@ -54,7 +57,7 @@ jobs:
       - name: Smoke start WinUI app
         shell: pwsh
         run: |
-          $exe = Join-Path $PWD "dist\AsterPlay\AsterPlay.exe"
+          $exe = Join-Path $PWD "dist\AsterPlay\App\AsterPlay.exe"
           $process = Start-Process -FilePath $exe -PassThru
           Start-Sleep -Seconds 5
 
