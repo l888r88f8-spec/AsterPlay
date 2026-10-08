@@ -141,41 +141,24 @@ public partial class App : Application
         {
             if (splash is not null && splash.IsAvailable)
             {
-                if (_window.IsNoServerStartup)
-                {
-                    // The native HWND and WinUI HWND are different surfaces.
-                    // Keep the existing WinUI cover visible during the switch.
-                    // The cover is dismissed ONLY after the now-unoccluded
-                    // WinUI window has confirmed fresh frames and DWM S_OK.
-                    StartupDiagnostics.Write(
-                        "App: empty-home native -> WinUI cover presentation verification");
-                    if (!await _window.PrepareEmptyHomeCoverHandoffAsync())
-                        return;
+                // Both the first-run (no server) Home and the authenticated
+                // Home must transition directly from the native splash to the
+                // REAL page. A second in-window cover creates a separate
+                // composition handoff and can expose an unrendered white frame.
+                //
+                // Keep the native splash visible while removing the XAML
+                // startup cover, arranging the target page and confirming its
+                // presentation. Only then fade the native HWND out.
+                StartupDiagnostics.Write(
+                    $"App: verifying real startup page behind native splash; noServer={_window.IsNoServerStartup}");
 
-                    splash.Dispose();
-                    _window.WriteStartupVisualState(
-                        "App.emptyHome.afterNativeHandoff");
+                if (!await _window.PrepareHomeBehindNativeSplashAsync())
+                    return;
 
-                    if (!await _window.RevealStartupCoverAsync())
-                        return;
-
-                    StartupDiagnostics.Write(
-                        "App: empty-home WinUI cover faded after confirmed visible composition");
-                }
-                else
-                {
-                    // The authenticated home keeps its direct native fade,
-                    // but the underlying page must now pass a checked fence.
-                    StartupDiagnostics.Write(
-                        "App: verifying final content behind native splash");
-                    if (!await _window.PrepareHomeBehindNativeSplashAsync())
-                        return;
-
-                    await splash.FadeOutAsync(durationMilliseconds: 700);
-                    _window.WriteStartupVisualState("App.afterNativeFade");
-                    StartupDiagnostics.Write(
-                        "App: native splash faded into verified startup page");
-                }
+                await splash.FadeOutAsync(durationMilliseconds: 700);
+                _window.WriteStartupVisualState("App.afterNativeFade");
+                StartupDiagnostics.Write(
+                    "App: native splash faded directly into verified startup page");
             }
             else
             {
