@@ -83,9 +83,8 @@
                     BorderThickness="1"
                     Visibility="Visible">
                 <Border.Resources>
-                    <!-- Let the shader's traveling reflection show through hover. -->
-                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
-                                     Color="Transparent"/>
+                    <StaticResource x:Key="ButtonBackgroundPointerOver"
+                                    ResourceKey="AsterDockHoverBrush"/>
                     <StaticResource x:Key="ButtonBackgroundPressed"
                                     ResourceKey="AsterDockPressedBrush"/>
                     <SolidColorBrush x:Key="ButtonBorderBrushPointerOver"

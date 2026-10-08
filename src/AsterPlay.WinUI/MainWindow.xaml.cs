@@ -51,7 +51,6 @@ public sealed partial class MainWindow : Window
         StartupDiagnostics.Write("MainWindow constructor: entered");
         using (StartupDiagnostics.Measure("MainWindow.InitializeComponent"))
             InitializeComponent();
-        InitializeDockSpotlight();
         if (Application.Current is App app)
             _themeMode = app.ThemeMode;
         StartupDiagnostics.Write("MainWindow constructor: after InitializeComponent");
@@ -219,7 +218,6 @@ public sealed partial class MainWindow : Window
             SetActiveNavigation(_activeNavigationButton);
 
         RefreshStandardTitleBarBackground();
-        RefreshDockSpotlightTheme();
     }
 
     private void ApplySystemTheme()
@@ -319,8 +317,6 @@ public sealed partial class MainWindow : Window
 
     private void MainWindow_Closed(object sender, WindowEventArgs args)
     {
-        DetachDockSpotlight();
-
         if (_lowLevelMouseHook != IntPtr.Zero)
         {
             UnhookWindowsHookEx(_lowLevelMouseHook);

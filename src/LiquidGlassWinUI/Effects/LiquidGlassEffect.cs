@@ -14,9 +14,9 @@ namespace LiquidGlassWinUI.Effects
     //   - NO in-shader shadow (a control's shadow is drawn outside the brush by the
     //     platform) -> the four Shadow* params are gone
     //   - ShapeRadius is a 0..1 corner-radius fraction of the shorter half-side
-    // Four legacy-unused slots (88, 92, 104, 108) now carry the optional
-    // pointer spotlight; the 128-byte constant buffer layout stays unchanged.
-    // Other unused slots remain at their original offsets.
+    // The unused cbuffer slots (BlurEdge, Shadow*, MergeRate, ShowShape1,
+    // SpringSizeFactor, Step, _Pad) stay 0; the 128-byte layout is unchanged,
+    // so only the params below are exposed as animatable properties.
     // Custom-sampler route: UV arg 0x0100 + samplerDataExt 0x0400
     // + samplerData 0x0300, LinkingArgCustomSamplerResult, FlattenSource on.
     internal sealed class LiquidGlassEffect : CustomEffectBase
@@ -66,12 +66,6 @@ namespace LiquidGlassWinUI.Effects
             // Shape (Width/Height dropped — the glass fills the brush rect = the control)
             new() { Key = "ShapeRadius",         Offset = 96,  Default = 0.4f, Min = 0,    Max = 1,    Step = 0.01f, Group = "Shape", Label = "Corner Radius (0..1)" },
             new() { Key = "ShapeRoundness",      Offset = 100, Default = 5,    Min = 2,    Max = 7,    Step = 0.01f, Group = "Shape", Label = "Roundness (n)" },
-            // Optional pointer-following spotlight (off by default).
-            // Reuse spare offsets without growing the shader constant buffer.
-            new() { Key = "SpotlightX",          Offset = 88,  Default = 0.5f, Min = 0,    Max = 1,    Step = 0.001f, Group = "Glare", Label = "Spotlight X" },
-            new() { Key = "SpotlightY",          Offset = 92,  Default = 0.5f, Min = 0,    Max = 1,    Step = 0.001f, Group = "Glare", Label = "Spotlight Y" },
-            new() { Key = "SpotlightStrength",   Offset = 104, Default = 0,    Min = 0,    Max = 1,    Step = 0.01f,  Group = "Glare", Label = "Spotlight Strength" },
-            new() { Key = "SpotlightRadius",     Offset = 108, Default = 128,  Min = 20,   Max = 300,  Step = 1,     Group = "Glare", Label = "Spotlight Radius (DIP)" },
         };
 
         protected override Guid Id => new Guid("a2b8c4d6-7e9f-4a1b-8c3d-2e5f6a7b8c9d");

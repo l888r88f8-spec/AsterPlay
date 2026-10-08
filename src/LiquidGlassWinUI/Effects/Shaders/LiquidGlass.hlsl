@@ -28,9 +28,8 @@
 // effect registration/layout is unchanged and this file is a drop-in preview for the
 // Studio harness. Semantics that differ: ShapeRadius is a 0..1 corner-radius
 // fraction of the shorter half-side; ShapeWidth/Height are UNUSED (the glass fills
-// the brush rect = the control, sized by res at any DPI). Reserved cbuffer slots
-// are reused for an optional pointer-following spotlight (disabled by default).
-// Remaining legacy fields are unused (BlurAmount drives the upstream
+// the brush rect = the control, sized by res at any DPI). ShowShape1/MergeRate/
+// BlurEdge/SpringSizeFactor/BgType/Step are unused (BlurAmount drives the upstream
 // GaussianBlur). dpr is read from cbuffer slot 124 (the brush sets it from the
 // window DPI) and scales the band widths (RefThickness / fresnel / glare) so slider
 // values read as logical px; the refraction magnitude is DPI-neutral on its own.
@@ -65,12 +64,12 @@ cbuffer LiquidGlassParams : register(b0)
     float ShadowFactor;        // offset 76  (unused)
     float ShadowPosX;          // offset 80  (unused)
     float ShadowPosY;          // offset 84  (unused)
-    float SpotlightX;          // offset 88  (normalized control-local x, 0..1)
-    float SpotlightY;          // offset 92  (normalized control-local y, 0..1)
+    float ShapeWidth;          // offset 88  (unused; glass fills the brush rect via res*0.5)
+    float ShapeHeight;         // offset 92  (unused)
     float ShapeRadius;         // offset 96  (repurposed: 0..1 corner-radius fraction of the shorter half-side)
     float ShapeRoundness;      // offset 100 (superellipse exponent n; ~5 = Apple squircle)
-    float SpotlightStrength;   // offset 104 (0 disables the extra glare)
-    float SpotlightRadius;     // offset 108 (logical px)
+    float MergeRate;           // offset 104 (unused; no merge)
+    float ShowShape1;          // offset 108 (unused; no circle)
     float SpringSizeFactor;    // offset 112 (unused)
     float DispersionRange;     // offset 116 (0=no dispersion, 1=full; default 1)
     float Step;                // offset 120 (unused)
@@ -416,38 +415,6 @@ float4 LiquidGlassBody(float2 uv, float4 samplerDataExt, float4 samplerData)
             float3 glareColor = lerp(glareBase, float3(1.0, 1.0, 1.0), clamp(g, 0.0, 1.0));
             float glareCoverage = smoothstep(0.0, 2.0, GlareRange * dpr);
             outColor = lerp(outColor, float4(glareColor, 1.0), saturate(g * gnLen) * glareCoverage);
-        }
-
-        // The Dock reflection is a moving area light, not a small opaque
-        // circular overlay. A concentrated white core is surrounded by a
-        // wider, feathered bloom and an extra specular boost at the glass rim.
-        // This branch is disabled for every other glass brush by default.
-        if (SpotlightStrength > 0.001)
-        {
-            float2 deltaDp = (localUv - float2(SpotlightX, SpotlightY)) * res / dpr;
-            float radius = max(SpotlightRadius, 1.0);
-            float2 ellipse = deltaDp / float2(radius, radius * 0.82);
-            float distance = length(ellipse);
-
-            // A gentle wide-area reflection with no hard circular edge.
-            float halo = 1.0 - smoothstep(0.18, 1.30, distance);
-            // A near-white center, as in the reference Dock animation.
-            float core = 1.0 - smoothstep(0.0, 0.52, distance);
-            core *= core;
-            // A horizontal glancing-light streak makes motion apparent.
-            float2 streakUv = deltaDp / float2(radius * 1.20, radius * 0.30);
-            float streak = 1.0 - smoothstep(0.0, 1.0, length(streakUv));
-
-            float edgeDepthDp = max(-merged * res.y / dpr, 0.0);
-            float rim = 1.0 - smoothstep(0.0, 18.0, edgeDepthDp);
-
-            float reflection = SpotlightStrength *
-                (0.50 * halo + 0.78 * core + 0.18 * streak +
-                 0.32 * rim * halo);
-            // Preserve the shape AA and refraction, but allow the high-gloss
-            // center to become genuinely bright instead of capped at ~34%.
-            outColor.rgb = lerp(outColor.rgb, float3(1.0, 1.0, 1.0),
-                                saturate(reflection));
         }
     }
     else
