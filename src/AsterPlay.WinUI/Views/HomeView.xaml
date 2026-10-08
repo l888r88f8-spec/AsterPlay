@@ -400,8 +400,11 @@
                       ZoomMode="Disabled"
                       ViewChanged="HomeScrollViewer_ViewChanged"
                       SizeChanged="HomeScrollViewer_SizeChanged">
-            <Grid Width="{Binding ElementName=HomeScrollViewer, Path=ViewportWidth}"
-                  HorizontalAlignment="Stretch">
+            <!-- The ScrollViewer already constrains horizontal content.
+                 Binding Width back to ViewportWidth adds a delayed second
+                 layout pass during maximize/restore and can expose a frame
+                 with the old content width. Stretch directly in the viewport. -->
+            <Grid HorizontalAlignment="Stretch">
 
                 <StackPanel x:Name="HomeContentStack"
                             HorizontalAlignment="Stretch"
