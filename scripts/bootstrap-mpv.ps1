@@ -1,7 +1,7 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$Root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $Target = Join-Path $Root "third_party\mpv"
 $Dll = Join-Path $Target "libmpv-2.dll"
 $SourceInfo = Join-Path $Target "RUNTIME-SOURCE.txt"

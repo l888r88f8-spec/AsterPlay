@@ -3,7 +3,7 @@ param([switch]$Full)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$Root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $Project = Join-Path $Root "src\AsterPlay.WinUI\AsterPlay.WinUI.csproj"
 $Dist = Join-Path $Root "dist"
 $Publish = Join-Path $Dist "AsterPlay"
@@ -32,7 +32,7 @@ foreach ($exe in ($candidates | Select-Object -Unique)) {
 }
 if (-not $Dotnet) {
     Write-Host "[SETUP] Installing missing .NET 8 SDK (8.0.425)..."
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root "bootstrap-dotnet.ps1") | Out-Host
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root "scripts\bootstrap-dotnet.ps1") | Out-Host
     if ($LASTEXITCODE -ne 0 -or -not (Has-Dotnet8 $PortableDotnet)) {
         throw "Unable to install .NET 8 SDK. Verify network access to Microsoft download servers."
     }
@@ -84,7 +84,7 @@ if ($rebuildNative) {
 if (-not (Test-Path $prebuiltNative) -and -not (Test-Path $sourceNative)) { throw "Native LiquidGlass runtime missing." }
 if (-not $env:ASTERPLAY_MPV_DIR) {
     Write-Host "[SETUP] Checking pinned libmpv; download only if needed..."
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root "bootstrap-mpv.ps1") | Out-Host
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root "scripts\bootstrap-mpv.ps1") | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "Automatic libmpv setup failed." }
 }
 $mpvDll = Join-Path $MpvDir "libmpv-2.dll"
@@ -150,9 +150,9 @@ $src = @(Get-ChildItem (Join-Path $Root "src") -Recurse -File |
         ".jpg",".jpeg",".svg",".hlsl",".ttf",".otf",".txt",".config") } |
     Select-Object -ExpandProperty FullName)
 $settings = @(
-    (Join-Path $Root "AsterPlay.sln"),(Join-Path $Root "build-windows.ps1"),
-    (Join-Path $Root "build-windows.cmd"),(Join-Path $Root "bootstrap-dotnet.ps1"),
-    (Join-Path $Root "bootstrap-mpv.ps1"),(Join-Path $Root "NuGet.Config"),
+    (Join-Path $Root "AsterPlay.sln"),(Join-Path $Root "scripts\build-windows.ps1"),
+    (Join-Path $Root "build-windows.cmd"),(Join-Path $Root "scripts\bootstrap-dotnet.ps1"),
+    (Join-Path $Root "scripts\bootstrap-mpv.ps1"),(Join-Path $Root "NuGet.Config"),
     (Join-Path $Root "global.json"),(Join-Path $Root "Directory.Build.props"),
     (Join-Path $Root "Directory.Build.targets"),(Join-Path $Root "Directory.Packages.props")
 ) + @($src | Where-Object { $_ -match '\.(csproj|props|targets)$' })

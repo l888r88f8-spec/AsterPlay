@@ -9,3 +9,5 @@ tools/dotnet/dotnet.exe
 ```
 
 The published `dist/AsterPlay/` folder is self-contained, so PCs that only run AsterPlay do not need .NET installed.
+
+The root `build-windows.cmd` detects available .NET 8 SDKs and invokes `scripts/bootstrap-dotnet.ps1` only when no compatible SDK is available.

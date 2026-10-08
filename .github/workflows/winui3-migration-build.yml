@@ -9,9 +9,7 @@ on:
       - "src/AsterPlay.Core/**"
       - "src/AsterPlay.WinUI/**"
       - "build-windows.cmd"
-      - "build-windows.ps1"
-      - "bootstrap-dotnet.ps1"
-      - "bootstrap-mpv.ps1"
+      - "scripts/**"
       - ".github/workflows/winui3-migration-build.yml"
   workflow_dispatch:
 

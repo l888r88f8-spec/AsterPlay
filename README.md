@@ -36,6 +36,26 @@ AsterPlay is a native Windows desktop client for Emby built with **C# / .NET 8 /
 - Build: local Windows build, no Qt/CMake/MSYS2 required
 
 
+## Repository structure
+
+```text
+AsterPlay/
+├── build-windows.cmd          # The only build command
+├── AsterPlay.sln              # Visual Studio solution
+├── src/                       # WinUI app, core logic, LiquidGlass library
+├── Native/LiquidGlassCompat/  # LiquidGlass C++ source and pinned runtime
+├── scripts/                   # Internal build and dependency bootstrap scripts
+├── docs/                      # Implementation and release documentation
+├── third_party/mpv/           # Downloaded libmpv runtime
+├── tools/dotnet/              # Optional local .NET SDK installation
+└── .github/workflows/        # CI pipelines
+```
+
+Additional documents: [architecture and implementation](docs/IMPLEMENTATION.md),
+[release checklist](docs/RELEASE-CHECKLIST.md).
+
+Run `build-windows.cmd` from the repository root; the scripts in `scripts/` are internal helpers.
+
 ## Build on Windows x64
 
 AsterPlay has **one build entry point**. On Windows, run:

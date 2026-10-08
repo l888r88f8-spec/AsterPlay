@@ -1,7 +1,7 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$Root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $InstallDir = Join-Path $Root "tools\dotnet"
 $Installer = Join-Path $env:TEMP "asterplay-dotnet-install.ps1"
 $SdkVersion = "8.0.425"
