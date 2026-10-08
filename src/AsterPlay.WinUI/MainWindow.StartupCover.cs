@@ -24,6 +24,29 @@ public sealed partial class MainWindow
             $"In-window startup cover icon failed: {e.ErrorMessage}");
     }
 
+    // Keep the in-window cover visible during the native -> WinUI handoff for
+    // first-run/empty Home. It is painted by WinUI and shields any delayed
+    // first visible compositor frame after the native HWND is withdrawn.
+    internal async Task PrepareEmptyHomeCoverHandoffAsync()
+    {
+        WriteStartupVisualState("PrepareEmptyHomeCoverHandoff.before");
+
+        StartupCover.Visibility = Visibility.Visible;
+        StartupCover.IsHitTestVisible = true;
+        StartupCover.Opacity = 0.999;
+        StartupCover.UpdateLayout();
+
+        var frames = await WaitForStartupCoverFramesAsync(3, 1000);
+        var flush = Task.Run(DwmFlush);
+        var completed = await Task.WhenAny(flush, Task.Delay(1000));
+
+        StartupDiagnostics.Write(
+            $"Empty-home native-to-XAML cover handoff ready; " +
+            $"coverImageReady={_startupCoverImageReady}; frames={frames}; " +
+            $"dwmFlushed={ReferenceEquals(completed, flush)}");
+        WriteStartupVisualState("PrepareEmptyHomeCoverHandoff.after");
+    }
+
     internal async Task PrepareHomeBehindNativeSplashAsync()
     {
         WriteStartupVisualState(
