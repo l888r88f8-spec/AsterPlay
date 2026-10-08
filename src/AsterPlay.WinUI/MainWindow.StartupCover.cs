@@ -170,6 +170,7 @@ public sealed partial class MainWindow
     {
         var targetPage = PageHost.Content;
         var attempt = 0;
+        var rasterProbeFailures = 0;
 
         while (!_startupWindowClosed &&
                ReferenceEquals(PageHost.Content, targetPage))
@@ -183,6 +184,32 @@ public sealed partial class MainWindow
             }
             else
             {
+                // An arranged empty Home can still rasterize as an empty
+                // surface during the first native/WinUI compositor handoff.
+                // Read back the real XAML text/glyph before trusting frame
+                // counts and the DWM fence.
+                if (IsNoServerStartup &&
+                    PageHost.Content is Views.HomeView emptyHome &&
+                    !await emptyHome.VerifyNoServerRasterAsync())
+                {
+                    rasterProbeFailures++;
+                    if (rasterProbeFailures < 4)
+                    {
+                        StartupDiagnostics.Write(
+                            $"No-server raster not ready; phase={phase}; " +
+                            $"attempt={rasterProbeFailures}/4; retrying");
+                        await Task.Delay(200);
+                        continue;
+                    }
+
+                    // On a driver/environment where RenderTargetBitmap
+                    // readback is unsupported, retain the existing verified
+                    // frame/DWM path instead of trapping the user on splash.
+                    StartupDiagnostics.Write(
+                        $"No-server raster could not be verified after " +
+                        $"{rasterProbeFailures} attempts; using DWM fallback");
+                }
+
                 var frames = await WaitForStartupCoverFramesAsync(
                     targetFrames, 1200);
 
