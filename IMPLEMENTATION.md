@@ -27,7 +27,7 @@ src/
 - `AsterPlay.Core`：Emby API、会话、设置、播放协商、libmpv 客户端、弹幕数据与服务、详情/媒体库 ViewModel。
 - `AsterPlay.WinUI`：WinUI 3 应用壳、页面、播放器 UI、D3D11 SwapChainPanel 合成、液态玻璃、图片缓存与懒加载。
 - 默认发布入口：`src/AsterPlay.WinUI/AsterPlay.WinUI.csproj`。
-- 默认构建入口：`build-windows.cmd` / `build-windows.ps1`。
+- 默认构建入口：`build-windows.cmd`（自动检测依赖，增量或全量编译）。
 
 ## 已实现功能
 
@@ -112,7 +112,6 @@ src/
 运行：
 
 ```bat
-bootstrap-dotnet.cmd
 build-windows.cmd
 ```
 
@@ -133,9 +132,9 @@ dist/AsterPlay/
 
 CI 会验证：
 
-1. .NET 8 bootstrap
-2. Windows x64 release publish
-3. 必需运行时文件
+1. 构建环境自动检测和缺失依赖安装
+2. 自动选择增量或完整 Windows x64 Release 发布
+3. 必需运行时文件校验
 4. 固定 libmpv 版本与校验信息
 5. 应用启动 smoke test
 6. Release artifact 上传
