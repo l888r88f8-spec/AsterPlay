@@ -121,16 +121,22 @@ build-windows.cmd
 dist/AsterPlay/
 ```
 
-发布包为 Windows x64 self-contained **非单文件**便携版，`PublishSingleFile=false`，不使用打包压缩或首次解包机制。构建完成后把应用与依赖整体放到 `App/`，其相对目录结构保持不变：
+Windows x64 发布采用与常见 Windows 桌面程序一致的 **根目录 EXE + resources/** 结构，便携版与未来安装版共用同一目录约定：
 
-- `dist/AsterPlay/AsterPlay.cmd`：根目录便携启动脚本，使用相对路径。
-- `dist/AsterPlay/App/AsterPlay.exe`：真正的可执行文件。
-- `dist/AsterPlay/App/`：.NET 8、WinUI 3、Liquid Glass、libmpv 的 DLL，以及原有语言资源目录和 Assets。
-- `dist/AsterPlay/Info/`：BUILD-INFO、LIQUIDGLASS-COMPAT 和 RUNTIME-SOURCE 构建信息。
+```text
+AsterPlay/
+├── AsterPlay.exe                 # 无控制台、带应用图标的启动入口
+└── resources/
+    ├── AsterPlay.exe             # 实际 WinUI 3 主程序
+    ├── *.dll                      # .NET 8、Windows App SDK、mpv、LiquidGlass
+    ├── Assets/
+    ├── <语言资源目录>/
+    └── Info/
+```
 
-可以直接运行 `App/AsterPlay.exe`，或双击根目录的 `AsterPlay.cmd`。移动整个便携目录后，启动脚本仍然有效。不会额外安装运行时，也不会在首次运行时解压自包含包。
+`PublishSingleFile=false`，不进行 EXE 压缩，也不解包运行时。内部实际程序和运行库保持原始相对位置，只把整套 .NET/WinUI 运行目录放进 `resources`。根目录的启动器使用 Windows PowerShell 5.1 / .NET Framework 编译成小型 Windows GUI EXE，按相对路径启动 `resources/AsterPlay.exe` 后退出，避免出现命令行窗口。当前未创建安装程序；未来安装版安装同样的目录结构，并额外提供卸载程序和快捷方式。
 
-`build-windows.cmd -Full` 强制完全构建。旧参数 `-Unpacked` 保留兼容，但不再改变构建模式，因为普通 DLL 目录已经是默认输出方式。
+`build-windows.cmd -Full` 强制清理并重新构建。旧参数 `-Unpacked` 保留向后兼容，但目录式 DLL 已经是默认方式。
 
 CI 会验证：
 
