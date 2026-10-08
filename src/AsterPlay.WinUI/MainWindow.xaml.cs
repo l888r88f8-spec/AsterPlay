@@ -16,6 +16,7 @@ public sealed partial class MainWindow : Window
 {
     private EmbyClient _client = null!;
     private UISettings? _uiSettings;
+    private string _themeMode = "system";
     private readonly AppWindow _appWindow;
     private bool _startupResolutionScheduled;
     private bool _startupResolutionCompleted;
@@ -51,6 +52,8 @@ public sealed partial class MainWindow : Window
         using (StartupDiagnostics.Measure("MainWindow.InitializeComponent"))
             InitializeComponent();
         InitializeDockSpotlight();
+        if (Application.Current is App app)
+            _themeMode = app.ThemeMode;
         StartupDiagnostics.Write("MainWindow constructor: after InitializeComponent");
 
         // With a native splash present, avoid constructing the first
@@ -220,16 +223,29 @@ public sealed partial class MainWindow : Window
 
     private void ApplySystemTheme()
     {
-        if (_uiSettings is null)
-            return;
+        // A manual selection must not be overwritten by Windows theme events.
+        bool isLight;
+        if (string.Equals(_themeMode, "light", StringComparison.OrdinalIgnoreCase))
+        {
+            isLight = true;
+        }
+        else if (string.Equals(_themeMode, "dark", StringComparison.OrdinalIgnoreCase))
+        {
+            isLight = false;
+        }
+        else
+        {
+            if (_uiSettings is null)
+                return;
 
-        var background = _uiSettings.GetColorValue(UIColorType.Background);
-        var luminance =
-            (0.2126 * background.R) +
-            (0.7152 * background.G) +
-            (0.0722 * background.B);
+            var background = _uiSettings.GetColorValue(UIColorType.Background);
+            var luminance =
+                (0.2126 * background.R) +
+                (0.7152 * background.G) +
+                (0.0722 * background.B);
+            isLight = luminance >= 128;
+        }
 
-        var isLight = luminance >= 128;
         RootGrid.RequestedTheme = isLight
             ? ElementTheme.Light
             : ElementTheme.Dark;
@@ -237,7 +253,14 @@ public sealed partial class MainWindow : Window
         ConfigureNativeTitleBar(
             _homeCaptionUseDarkGlyphs ?? isLight);
 
-        StartupDiagnostics.Write($"System theme applied: {RootGrid.RequestedTheme}");
+        StartupDiagnostics.Write(
+            $"Appearance applied: mode={_themeMode}; theme={RootGrid.RequestedTheme}");
+    }
+
+    private void ApplyThemePreference(string mode)
+    {
+        _themeMode = mode;
+        ApplySystemTheme();
     }
 
     private void ConfigureNativeTitleBar(bool isLight)
@@ -1005,6 +1028,7 @@ public sealed partial class MainWindow : Window
         SetActiveNavigation(SettingsButton);
 
         var view = new SettingsView();
+        view.ThemeModeChanged += (_, mode) => ApplyThemePreference(mode);
         view.LogoutRequested += (_, _) =>
         {
             AppStateStore.Clear();
