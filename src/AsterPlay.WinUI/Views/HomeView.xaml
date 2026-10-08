@@ -1002,11 +1002,11 @@
                            FontWeight="SemiBold"
                            Foreground="{ThemeResource AsterPrimaryTextBrush}"
                            HorizontalAlignment="Center"/>
-                <TextBlock Text="请先添加服务器"
+                <TextBlock Text="连接服务器，开始浏览媒体库"
                            FontSize="15"
                            Foreground="{ThemeResource AsterSecondaryTextBrush}"
                            HorizontalAlignment="Center"/>
-                <Button Content="前往服务器页面"
+                <Button Content="添加服务器"
                         Margin="0,10,0,0"
                         Padding="24,11"
                         CornerRadius="18"
