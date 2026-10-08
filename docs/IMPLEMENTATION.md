@@ -121,14 +121,15 @@ build-windows.cmd
 dist/AsterPlay/
 ```
 
-发布包为 Windows x64 self-contained，包含：
+发布包为 Windows x64 self-contained 便携版，默认使用 `PublishSingleFile=true` 和 `IncludeAllContentForSelfExtract=true` 整合 .NET / WinUI 运行依赖。实际输出包含：
 
-- `AsterPlay.exe`
-- `AsterPlay.Core.dll`
-- Windows App SDK self-contained runtime
-- `libmpv-2.dll`
-- `BUILD-INFO.txt`
-- `RUNTIME-SOURCE.txt`
+- `AsterPlay.exe`（应用和可合并的运行依赖）
+- `CustomEffectRuntimeNative.dll`（Liquid Glass 原生桥接）
+- `libmpv-2.dll`（以及 mpv 需要的同目录依赖）
+- `Assets/AsterPlay.AppIcon.png`、`Assets/AsterPlay.ico`（原生开屏资源）
+- `Info/BUILD-INFO.txt`、`Info/LIQUIDGLASS-COMPAT.txt`、`Info/RUNTIME-SOURCE.txt`（构建与授权来源信息）
+
+单文件便携版首次运行时会解包部分依赖到用户临时目录，不需要安装 .NET / Windows App SDK。可用 `build-windows.cmd -Unpacked` 恢复完整目录结构进行故障排查，`-Full` 强制全量构建。
 
 CI 会验证：
 
