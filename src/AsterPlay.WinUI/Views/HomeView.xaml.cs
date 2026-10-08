@@ -41,6 +41,7 @@ public sealed partial class HomeView : UserControl
     private HomeSnapshot? _cachedSnapshot;
     private bool _initialVisualReadyRaised;
     private bool _deferredHomeRefreshStarted;
+    private bool _navigationRefreshInProgress;
     private IReadOnlyList<EmbyItem>? _pendingSectionViews;
     private IReadOnlyList<EmbyItem>? _pendingLatest;
     private IReadOnlyList<EmbyItem>? _pendingResume;
@@ -602,6 +603,99 @@ public sealed partial class HomeView : UserControl
                 $"libraries={_libraries.Count}, resume={_resume.Count}, sections={_sections.Count}, " +
                 $"workingSet={Environment.WorkingSet / 1024d / 1024d:0.0} MB, " +
                 $"managed={GC.GetTotalMemory(false) / 1024d / 1024d:0.0} MB");
+        }
+    }
+
+    internal void RefreshAfterNavigation()
+    {
+        if (_noServerMode ||
+            !_client.IsAuthenticated ||
+            !_hasCachedSnapshot ||
+            _navigationRefreshInProgress)
+        {
+            return;
+        }
+
+        DispatcherQueue.TryEnqueue(
+            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+            async () => await RefreshRetainedHomeAsync());
+    }
+
+    private async Task RefreshRetainedHomeAsync()
+    {
+        if (_navigationRefreshInProgress ||
+            !_client.IsAuthenticated)
+        {
+            return;
+        }
+
+        _navigationRefreshInProgress = true;
+
+        try
+        {
+            var viewsTask = _client.GetViewsAsync();
+            var resumeTask = _client.GetResumeAsync(24);
+            var latestTask = _client.GetLatestAsync(12);
+
+            await Task.WhenAll(
+                viewsTask,
+                resumeTask,
+                latestTask);
+
+            var views = viewsTask.Result
+                .Where(IsVisibleLibrary)
+                .Take(MaxLibrarySections)
+                .ToArray();
+            var resume = resumeTask.Result.ToArray();
+            var latest = latestTask.Result.ToArray();
+
+            var cached = _cachedSnapshot;
+            var latestChanged =
+                cached is null ||
+                !HomeSnapshotComparer.ItemsEqual(
+                    cached.Latest,
+                    latest);
+            var resumeChanged =
+                cached is null ||
+                !HomeSnapshotComparer.ItemsEqual(
+                    cached.Resume,
+                    resume);
+            var viewsChanged =
+                cached is null ||
+                !HomeSnapshotComparer.ItemsEqual(
+                    cached.Views,
+                    views);
+
+            if (latestChanged)
+                PopulateHero(latest);
+            if (resumeChanged)
+                PopulateResume(resume);
+            if (viewsChanged)
+                PopulateLibraries(views);
+
+            PlaybackLog.Write(
+                "WinUIHomeDiff",
+                $"Navigation refresh: hero={latestChanged}, resume={resumeChanged}, libraries={viewsChanged}");
+
+            await RefreshLibrarySectionsAndPersistSnapshotAsync(
+                views,
+                latest,
+                resume,
+                _client.ServerUrl,
+                _client.UserId);
+        }
+        catch (Exception ex)
+        {
+            PlaybackLog.Error(
+                "WinUIHomeNavigationRefresh",
+                ex);
+
+            if (UserError.IsAuthenticationFailure(ex))
+                AuthenticationFailed?.Invoke(this, EventArgs.Empty);
+        }
+        finally
+        {
+            _navigationRefreshInProgress = false;
         }
     }
 
