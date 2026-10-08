@@ -139,13 +139,12 @@ function Test-Output {
         "Assets\AsterPlay.ico",
         "Info\BUILD-INFO.txt",
         "Info\LIQUIDGLASS-COMPAT.txt",
-        "Info\RUNTIME-SOURCE.txt",
-        "resources"
+        "Info\RUNTIME-SOURCE.txt"
     )
     foreach ($n in $required) {
         if (-not (Test-Path (Join-Path $Publish $n) -PathType Leaf)) { return $false }
     }
-    return $true
+    return (Test-Path $LocalesDir -PathType Container)
 }
 function Publish-App([bool]$Clean,[bool]$NoRestore) {
     if ($Clean) {
