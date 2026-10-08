@@ -3,6 +3,7 @@ namespace AsterPlay.WinUI;
 public sealed partial class MainWindow
 {
     private Task<bool>? _liquidGlassWarmupTask;
+    private LiquidGlassWinUI.LiquidGlassBrush? _dockGlassBrush;
 
     private Task<bool> EnsureLiquidGlassWarmupAsync() =>
         _liquidGlassWarmupTask ??=
@@ -27,7 +28,9 @@ public sealed partial class MainWindow
                 TintG = 239,
                 TintB = 244,
                 ShapeRadius = 0.99,
-                ShapeRoundness = 4.0
+                ShapeRoundness = 4.0,
+                SpotlightRadius = 128,
+                SpotlightStrength = 0
             };
 
         var connection =
@@ -55,6 +58,7 @@ public sealed partial class MainWindow
             // The opaque native splash still covers MainWindow at this point.
             NavigationDock.Background = null;
             NavigationDockGlassLayer.Background = liquidGlassBrush;
+            _dockGlassBrush = liquidGlassBrush;
             StartupDiagnostics.Write(
                 "LiquidGlass: real navigation brush attached behind native splash");
 
@@ -79,6 +83,7 @@ public sealed partial class MainWindow
 
             if (!connected)
             {
+                _dockGlassBrush = null;
                 NavigationDockGlassLayer.Background = null;
                 NavigationDock.Background = fallbackBrush;
                 StartupDiagnostics.Write(
@@ -100,6 +105,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
+            _dockGlassBrush = null;
             NavigationDockGlassLayer.Background = null;
             NavigationDock.Background = fallbackBrush;
             StartupDiagnostics.WriteException(
