@@ -38,6 +38,7 @@ public sealed partial class HomeView : UserControl
     private bool _serverChooserClosing;
     private readonly bool _noServerMode;
     private bool _hasCachedSnapshot;
+    private HomeSnapshot? _cachedSnapshot;
     private bool _initialVisualReadyRaised;
     private bool _deferredHomeRefreshStarted;
     private IReadOnlyList<EmbyItem>? _pendingSectionViews;
@@ -495,6 +496,7 @@ public sealed partial class HomeView : UserControl
 
         if (snapshot is not null && IsLoaded)
         {
+            _cachedSnapshot = snapshot;
             ApplySnapshot(snapshot);
             _hasCachedSnapshot = true;
             ShowContentState();
@@ -530,12 +532,31 @@ public sealed partial class HomeView : UserControl
             var resume = resumeTask.Result.ToArray();
             var latest = latestTask.Result.ToArray();
 
-            // These three live responses are enough to build the complete first
-            // viewport. Reveal only after their visible images decode, while
-            // lower library rows and snapshot persistence continue in background.
-            PopulateHero(latest);
-            PopulateResume(resume);
-            PopulateLibraries(views);
+            // Compare server data with the local snapshot before touching the
+            // visual tree. Unchanged groups keep their existing item containers,
+            // image sources and scroll state instead of being rebuilt.
+            var cached = _cachedSnapshot;
+            var latestChanged =
+                cached is null ||
+                !HomeSnapshotComparer.ItemsEqual(cached.Latest, latest);
+            var resumeChanged =
+                cached is null ||
+                !HomeSnapshotComparer.ItemsEqual(cached.Resume, resume);
+            var viewsChanged =
+                cached is null ||
+                !HomeSnapshotComparer.ItemsEqual(cached.Views, views);
+
+            if (latestChanged)
+                PopulateHero(latest);
+            if (resumeChanged)
+                PopulateResume(resume);
+            if (viewsChanged)
+                PopulateLibraries(views);
+
+            PlaybackLog.Write(
+                "WinUIHomeDiff",
+                $"First viewport diff: hero={latestChanged}, resume={resumeChanged}, libraries={viewsChanged}");
+
             _hasCachedSnapshot = true;
             ShowContentState();
 
@@ -648,11 +669,16 @@ public sealed partial class HomeView : UserControl
                 .Select(section => section!)
                 .ToArray();
 
+            var sectionSnapshots = sections
+                .Select(CreateSectionSnapshot)
+                .ToArray();
+
             if (IsLoaded)
             {
-                _sections.Clear();
-                foreach (var section in sections)
-                    _sections.Add(section);
+                MergeLibrarySections(
+                    sections,
+                    sectionSnapshots,
+                    _cachedSnapshot?.Sections);
             }
 
             var snapshot = new HomeSnapshot
@@ -660,26 +686,26 @@ public sealed partial class HomeView : UserControl
                 Latest = latest.ToList(),
                 Resume = resume.ToList(),
                 Views = views.ToList(),
-                Sections = sections
-                    .Select(section => new HomeSectionSnapshot
-                    {
-                        Library = section.Library,
-                        TotalCount = section.TotalCount,
-                        Items = section.Items
-                            .Select(item => item.Item)
-                            .ToList()
-                    })
-                    .ToList()
+                Sections = sectionSnapshots.ToList()
             };
 
+            var snapshotChanged =
+                !HomeSnapshotComparer.SnapshotDataEquals(
+                    _cachedSnapshot,
+                    snapshot);
+
+            // Persist the server result even when it is identical so the cache
+            // freshness timestamp reflects successful contact with the server.
             await Task.Run(
                 () => HomeSnapshotStore.Save(
                     serverUrl,
                     userId,
                     snapshot));
 
+            _cachedSnapshot = snapshot;
+
             StartupDiagnostics.Write(
-                $"HomeView: background sections and snapshot ready; sections={sections.Length}");
+                $"HomeView: background sections compared; changed={snapshotChanged}, sections={sections.Length}");
         }
         catch (Exception ex)
         {
@@ -687,6 +713,108 @@ public sealed partial class HomeView : UserControl
                 "WinUIHomeBackgroundSections",
                 ex);
         }
+    }
+
+    private static HomeSectionSnapshot CreateSectionSnapshot(
+        HomeLibrarySection section) =>
+        new()
+        {
+            Library = section.Library,
+            TotalCount = section.TotalCount,
+            Items = section.Items
+                .Select(item => item.Item)
+                .ToList()
+        };
+
+    private void MergeLibrarySections(
+        IReadOnlyList<HomeLibrarySection> liveSections,
+        IReadOnlyList<HomeSectionSnapshot> liveSnapshots,
+        IReadOnlyList<HomeSectionSnapshot>? cachedSnapshots)
+    {
+        var cachedById = (cachedSnapshots ?? Array.Empty<HomeSectionSnapshot>())
+            .Where(section => !string.IsNullOrWhiteSpace(section.Library.Id))
+            .GroupBy(
+                section => section.Library.Id,
+                StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First(),
+                StringComparer.OrdinalIgnoreCase);
+
+        var changedCount = 0;
+
+        for (var targetIndex = 0;
+             targetIndex < liveSections.Count;
+             targetIndex++)
+        {
+            var liveSection = liveSections[targetIndex];
+            var liveSnapshot = liveSnapshots[targetIndex];
+            var id = liveSection.Library.Id;
+
+            var currentIndex = FindSectionIndex(id);
+            if (currentIndex < 0)
+            {
+                _sections.Insert(
+                    Math.Min(targetIndex, _sections.Count),
+                    liveSection);
+                changedCount++;
+                continue;
+            }
+
+            if (currentIndex != targetIndex)
+            {
+                _sections.Move(
+                    currentIndex,
+                    targetIndex);
+            }
+
+            cachedById.TryGetValue(
+                id,
+                out var cachedSection);
+
+            if (!HomeSnapshotComparer.SectionEquals(
+                    cachedSection,
+                    liveSnapshot))
+            {
+                _sections[targetIndex] = liveSection;
+                changedCount++;
+            }
+        }
+
+        var liveIds = liveSections
+            .Select(section => section.Library.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        for (var index = _sections.Count - 1;
+             index >= 0;
+             index--)
+        {
+            if (!liveIds.Contains(_sections[index].Library.Id))
+            {
+                _sections.RemoveAt(index);
+                changedCount++;
+            }
+        }
+
+        PlaybackLog.Write(
+            "WinUIHomeDiff",
+            $"Library section diff: changed={changedCount}, total={liveSections.Count}");
+    }
+
+    private int FindSectionIndex(string libraryId)
+    {
+        for (var index = 0; index < _sections.Count; index++)
+        {
+            if (string.Equals(
+                    _sections[index].Library.Id,
+                    libraryId,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return index;
+            }
+        }
+
+        return -1;
     }
 
     private void ShowNoServerState()
@@ -1441,51 +1569,130 @@ public sealed partial class HomeView : UserControl
 
     private void PopulateResume(IEnumerable<EmbyItem> source)
     {
-        _resume.Clear();
+        var desired = BuildResumeItems(source)
+            .Select(CreateResumeTile)
+            .ToArray();
 
-        foreach (var item in BuildResumeItems(source))
-        {
-            var played = Math.Clamp(item.UserData?.PlayedPercentage ?? 0, 0, 100);
-            var positionTicks = Math.Max(0, item.UserData?.PlaybackPositionTicks ?? 0);
-            var durationTicks = Math.Max(0, item.RunTimeTicks ?? 0);
-
-            _resume.Add(new ResumeMediaTile(
-                item,
-                BuildResumeTitle(item),
-                BuildEpisodeText(item),
-                _client.BuildBackdropUrl(item, 900),
-                played,
-                BuildShortProgressText(positionTicks, durationTicks, played),
-                BuildLastPlayedText(item.UserData?.LastPlayedDate)));
-        }
+        SyncCollectionByItemId(
+            _resume,
+            desired,
+            tile => tile.Item,
+            (left, right) =>
+                HomeSnapshotComparer.ItemEquals(
+                    left.Item,
+                    right.Item));
 
         ContinueSection.Visibility = _resume.Count > 0
             ? Visibility.Visible
             : Visibility.Collapsed;
     }
 
+    private ResumeMediaTile CreateResumeTile(EmbyItem item)
+    {
+        var played = Math.Clamp(
+            item.UserData?.PlayedPercentage ?? 0,
+            0,
+            100);
+        var positionTicks = Math.Max(
+            0,
+            item.UserData?.PlaybackPositionTicks ?? 0);
+        var durationTicks = Math.Max(
+            0,
+            item.RunTimeTicks ?? 0);
+
+        return new ResumeMediaTile(
+            item,
+            BuildResumeTitle(item),
+            BuildEpisodeText(item),
+            _client.BuildBackdropUrl(item, 900),
+            played,
+            BuildShortProgressText(
+                positionTicks,
+                durationTicks,
+                played),
+            BuildLastPlayedText(
+                item.UserData?.LastPlayedDate));
+    }
+
     private void PopulateLibraries(IEnumerable<EmbyItem> views)
     {
-        _libraries.Clear();
-
-        foreach (var view in views)
-        {
-            _libraries.Add(new HomeLibraryTile(
+        var desired = views
+            .Select(view => new HomeLibraryTile(
                 view,
                 view.Name,
                 BuildLibrarySubtitle(view),
-                _client.BuildBackdropUrl(view, 900)));
+                _client.BuildBackdropUrl(view, 900)))
+            .ToArray();
+
+        SyncCollectionByItemId(
+            _libraries,
+            desired,
+            tile => tile.Item,
+            (left, right) =>
+                HomeSnapshotComparer.ItemEquals(
+                    left.Item,
+                    right.Item));
+
+        DispatcherQueue.TryEnqueue(
+            UpdateLibraryButtons);
+    }
+
+    private static void SyncCollectionByItemId<T>(
+        ObservableCollection<T> target,
+        IReadOnlyList<T> desired,
+        Func<T, EmbyItem> itemSelector,
+        Func<T, T, bool> equivalent)
+    {
+        for (var targetIndex = 0;
+             targetIndex < desired.Count;
+             targetIndex++)
+        {
+            var desiredItem = desired[targetIndex];
+            var desiredId = itemSelector(desiredItem).Id;
+
+            var currentIndex = -1;
+            for (var index = targetIndex;
+                 index < target.Count;
+                 index++)
+            {
+                if (string.Equals(
+                        itemSelector(target[index]).Id,
+                        desiredId,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    currentIndex = index;
+                    break;
+                }
+            }
+
+            if (currentIndex < 0)
+            {
+                target.Insert(
+                    Math.Min(targetIndex, target.Count),
+                    desiredItem);
+                continue;
+            }
+
+            if (currentIndex != targetIndex)
+            {
+                target.Move(
+                    currentIndex,
+                    targetIndex);
+            }
+
+            if (!equivalent(
+                    target[targetIndex],
+                    desiredItem))
+            {
+                target[targetIndex] = desiredItem;
+            }
         }
 
-        DispatcherQueue.TryEnqueue(() =>
+        while (target.Count > desired.Count)
         {
-            LibrariesScroller.ChangeView(
-                horizontalOffset: 0,
-                verticalOffset: null,
-                zoomFactor: null,
-                disableAnimation: true);
-            UpdateLibraryButtons();
-        });
+            target.RemoveAt(
+                target.Count - 1);
+        }
     }
 
     private async Task<HomeLibrarySection?> LoadLibrarySectionAsync(EmbyItem library)
