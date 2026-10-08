@@ -81,7 +81,31 @@ To manually force a clean build for troubleshooting:
 build-windows.cmd -Full
 ~~~
 
-Output: dist/AsterPlay/ (self-contained Windows x64). The script checks that the release contains AsterPlay.exe, AsterPlay.Core.dll, LiquidGlassWinUI.dll, CustomEffectRuntimeNative.dll, libmpv-2.dll, coreclr.dll, hostfxr.dll and hostpolicy.dll, and writes BUILD-INFO.txt / RUNTIME-SOURCE.txt.
+Output: `dist/AsterPlay/` (compact self-contained Windows x64 portable build). The default build uses the Windows App SDK-supported single-file publishing mode to bundle the .NET/WinUI runtime and reduce the hundreds of loose language folders and DLLs. The directory retains only runtime files that must be external, native startup assets, and the `Info/` metadata folder.
+
+```text
+dist/AsterPlay/
+├── AsterPlay.exe                     # Portable launcher + bundled .NET/WinUI runtime
+├── CustomEffectRuntimeNative.dll     # Native LiquidGlass interop
+├── libmpv-2.dll                      # mpv playback runtime (plus any required sibling DLLs)
+├── Assets/
+│   ├── AsterPlay.AppIcon.png
+│   └── AsterPlay.ico
+└── Info/
+    ├── BUILD-INFO.txt
+    ├── LIQUIDGLASS-COMPAT.txt
+    └── RUNTIME-SOURCE.txt
+```
+
+Portable single-file apps extract bundled dependencies to a per-user .NET temporary cache on first launch; initial startup can take longer than subsequent launches. The release does not need a separate .NET or Windows App SDK installer.
+
+For troubleshooting compatibility or startup issues, restore the old fully expanded publish output with:
+
+~~~bat
+build-windows.cmd -Unpacked
+~~~
+
+To regenerate either layout without incremental reuse, add `-Full`. The two modes have independent build fingerprints and changing modes forces a clean publish.
 
 The .ps1 helpers for SDK and media-runtime provisioning are internal implementation details; build-windows.cmd is the only .cmd entry point for users and CI.
 
@@ -96,4 +120,4 @@ AsterPlay is distributed under the [MIT License](LICENSE).
 
 The home-screen visual direction references [Vanvy Emby Suite](https://github.com/micimo13/emby-beautify), implemented natively in WinUI 3.
 
-libmpv is provided under its applicable LGPL build license. The pinned Windows runtime is sourced from [zhongfly/mpv-winbuild](https://github.com/zhongfly/mpv-winbuild) and records the corresponding mpv commit in RUNTIME-SOURCE.txt.
+libmpv is provided under its applicable LGPL build license. The pinned Windows runtime is sourced from [zhongfly/mpv-winbuild](https://github.com/zhongfly/mpv-winbuild) and records the corresponding mpv commit in `Info/RUNTIME-SOURCE.txt`.
