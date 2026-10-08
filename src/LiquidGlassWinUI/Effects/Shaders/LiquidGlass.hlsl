@@ -418,23 +418,36 @@ float4 LiquidGlassBody(float2 uv, float4 samplerDataExt, float4 samplerData)
             outColor = lerp(outColor, float4(glareColor, 1.0), saturate(g * gnLen) * glareCoverage);
         }
 
-        // Pointer-driven reflection. Use existing cbuffer slots and keep the
-        // branch inactive for every other glass control (strength defaults to 0).
-        // Coordinates are local to this brush; radius remains DPI-independent.
+        // The Dock reflection is a moving area light, not a small opaque
+        // circular overlay. A concentrated white core is surrounded by a
+        // wider, feathered bloom and an extra specular boost at the glass rim.
+        // This branch is disabled for every other glass brush by default.
         if (SpotlightStrength > 0.001)
         {
             float2 deltaDp = (localUv - float2(SpotlightX, SpotlightY)) * res / dpr;
             float radius = max(SpotlightRadius, 1.0);
-            float2 scaled = deltaDp / float2(radius, radius * 0.68);
-            float falloff = saturate(1.0 - dot(scaled, scaled));
-            float softLight = falloff * falloff * (3.0 - 2.0 * falloff);
-            // The glass rim reflects a little more than the flat interior.
-            float edgeDistanceDp = max(-merged * res.y / dpr, 0.0);
-            float edgeLight = 1.0 - smoothstep(0.0, 14.0, edgeDistanceDp);
-            float reflectance = SpotlightStrength * softLight *
-                (0.25 + 0.20 * edgeLight);
+            float2 ellipse = deltaDp / float2(radius, radius * 0.82);
+            float distance = length(ellipse);
+
+            // A gentle wide-area reflection with no hard circular edge.
+            float halo = 1.0 - smoothstep(0.18, 1.30, distance);
+            // A near-white center, as in the reference Dock animation.
+            float core = 1.0 - smoothstep(0.0, 0.52, distance);
+            core *= core;
+            // A horizontal glancing-light streak makes motion apparent.
+            float2 streakUv = deltaDp / float2(radius * 1.20, radius * 0.30);
+            float streak = 1.0 - smoothstep(0.0, 1.0, length(streakUv));
+
+            float edgeDepthDp = max(-merged * res.y / dpr, 0.0);
+            float rim = 1.0 - smoothstep(0.0, 18.0, edgeDepthDp);
+
+            float reflection = SpotlightStrength *
+                (0.50 * halo + 0.78 * core + 0.18 * streak +
+                 0.32 * rim * halo);
+            // Preserve the shape AA and refraction, but allow the high-gloss
+            // center to become genuinely bright instead of capped at ~34%.
             outColor.rgb = lerp(outColor.rgb, float3(1.0, 1.0, 1.0),
-                                saturate(reflectance));
+                                saturate(reflection));
         }
     }
     else
