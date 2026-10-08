@@ -218,6 +218,7 @@ public sealed partial class MainWindow : Window
         if (_activeNavigationButton is not null)
             SetActiveNavigation(_activeNavigationButton);
 
+        RefreshStandardTitleBarBackground();
         RefreshDockSpotlightTheme();
     }
 
@@ -261,6 +262,23 @@ public sealed partial class MainWindow : Window
     {
         _themeMode = mode;
         ApplySystemTheme();
+    }
+
+    private void RefreshStandardTitleBarBackground()
+    {
+        // Standard pages set a concrete title-bar brush in RestoreStandardChrome.
+        // Recalculate it on appearance changes; Home handles its own backdrop.
+        if (Grid.GetRowSpan(ContentLayer) != 1 ||
+            AppTitleBar.Visibility != Visibility.Visible)
+        {
+            return;
+        }
+
+        var isLight = RootGrid.ActualTheme == ElementTheme.Light;
+        AppTitleBar.Background = new SolidColorBrush(
+            isLight
+                ? Windows.UI.Color.FromArgb(255, 244, 246, 249)
+                : Windows.UI.Color.FromArgb(255, 13, 17, 24));
     }
 
     private void ConfigureNativeTitleBar(bool isLight)
@@ -1179,12 +1197,9 @@ public sealed partial class MainWindow : Window
         TitleBrandPanel.Visibility = Visibility.Visible;
         PageTitleBlock.Visibility = Visibility.Visible;
 
-        var isLight = RootGrid.ActualTheme == ElementTheme.Light;
-        AppTitleBar.Background = new SolidColorBrush(
-            isLight
-                ? Windows.UI.Color.FromArgb(255, 244, 246, 249)
-                : Windows.UI.Color.FromArgb(255, 13, 17, 24));
-        ConfigureNativeTitleBar(isLight);
+        RefreshStandardTitleBarBackground();
+        ConfigureNativeTitleBar(
+            RootGrid.ActualTheme == ElementTheme.Light);
     }
 
     private void EnterPlayerChrome()
