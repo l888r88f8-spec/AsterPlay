@@ -30,8 +30,7 @@
     <Content Include="Assets\AsterPlay.AppIcon.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-      <!-- Keep the asset available to WinUI's single-file extraction; the
-           build script also copies it beside the EXE for the native splash. -->
+      <!-- The native splash requires a physical PNG beside AsterPlay.exe. -->
     </Content>
     <Content Include="Assets\AsterPlay.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
