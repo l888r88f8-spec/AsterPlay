@@ -1,134 +1,63 @@
 # AsterPlay
 
-AsterPlay is a native Windows desktop client for Emby built with **C# / .NET 8 / WinUI 3 / libmpv**.
+AsterPlay 是一款基于 **.NET 8 与 WinUI 3** 开发的 Windows 原生 Emby 客户端，使用 **libmpv** 进行媒体播放，支持 Liquid Glass 界面效果。
 
-## Current features
+## 特性
 
-- Native Emby login, saved servers, session restore and logout
-- DPAPI-protected Emby access token storage
-- Windows light/dark theme integration
-- Liquid-glass WinUI shell
-- Immersive home page with Hero, Continue Watching, media libraries and per-library sections
-- Library browsing with search, type/year/favorite filters, sorting and paging
-- Movie and series details, seasons, episodes, cast, tags and media-source information
-- Favorite toggle
-- Native libmpv playback through D3D11 composition and WinUI SwapChainPanel
-- DirectPlay / DirectStream / Transcode negotiation
-- Resume playback and Emby start/progress/pause/stop reporting
-- Timeline seek, server-side reopen/seek, volume, mute and playback speed
-- Explicit audio-track and subtitle selection
-- Previous/next episode and episode list
-- Fullscreen and playback diagnostics
-- LogVar danmaku with automatic/manual matching, filters, density and overlap controls
-- Persistent image cache and viewport-based lazy image loading
-- Portable self-contained Windows x64 publish
+- **Emby 连接**：添加和管理服务器、账户登录、会话恢复、退出登录，使用 Windows DPAPI 保护访问令牌。
+- **媒体浏览**：首页 Hero 展示、继续观看、最新媒体、媒体库分类、搜索、排序、筛选及分页。
+- **内容详情**：电影、剧集、季与集数信息，演职人员、媒体源及音视频轨道信息，支持收藏。
+- **视频播放**：通过 libmpv 与 D3D11 / SwapChainPanel 实现原生播放；支持 Direct Play、Direct Stream 和转码。
+- **播放控制**：断点续播、进度跳转、音量与倍速调整、音轨与字幕切换、上一集 / 下一集、全屏播放及播放状态同步。
+- **弹幕功能**：集成 LogVar 弹幕源，支持自动 / 手动匹配、时间同步、过滤、密度控制及防重叠。
+- **界面体验**：支持系统深浅色模式、Liquid Glass 视觉效果、开屏画面、媒体图片缓存与按需加载。
+- **便携运行**：提供 Windows x64 自包含版本，无须单独安装 .NET 8 或 Windows App SDK 运行时。
 
-## Architecture
+## 依赖
 
-- UI: WinUI 3 on .NET 8
-- Windows App SDK: self-contained deployment
-- Visual effects: compositor-native LiquidGlass / WinUI Composition
-- Emby API: HttpClient
-- Player: libmpv gpu-next with D3D11 composition into SwapChainPanel
-- Core: AsterPlay.Core contains the shared Emby/session/playback/details/danmaku logic
-- Session data: %LOCALAPPDATA%\AsterPlay\session.json
-- Image cache: %LOCALAPPDATA%\AsterPlay\cache\images
-- Build: local Windows build, no Qt/CMake/MSYS2 required
+| 组件 | 用途 |
+| --- | --- |
+| Windows 10（19041+）/ Windows 11，x64 | 运行平台 |
+| .NET 8 | 应用运行环境与开发 SDK |
+| WinUI 3 / Windows App SDK 2.5.1 | 原生 Windows 界面 |
+| libmpv | 视频解码与播放 |
+| LiquidGlassWinUI 与原生兼容运行库 | Liquid Glass 视觉效果 |
+| Microsoft C++ v145 Build Tools | 仅在需要重新编译 Liquid Glass 原生运行库时使用 |
 
+普通构建会自动检测并准备所需的 .NET SDK 和 libmpv 依赖。项目内已提供兼容的 Liquid Glass 原生 DLL，正常构建不要求安装完整 Visual Studio IDE。
 
-## Repository structure
+## 构建方法
 
-```text
-AsterPlay/
-├── build-windows.cmd          # The only build command
-├── AsterPlay.sln              # Visual Studio solution
-├── src/                       # WinUI app, core logic, LiquidGlass library
-├── Native/LiquidGlassCompat/  # LiquidGlass C++ source and pinned runtime
-├── scripts/                   # Internal build and dependency bootstrap scripts
-├── docs/                      # Implementation and release documentation
-├── third_party/mpv/           # Downloaded libmpv runtime
-├── tools/dotnet/              # Optional local .NET SDK installation
-└── .github/workflows/        # CI pipelines
+在 **Windows x64** 系统中克隆仓库，并在项目根目录执行：
+
+```powershell
+git clone https://github.com/l888r88f8-spec/AsterPlay.git
+cd AsterPlay
+.\build-windows.cmd
 ```
 
-Additional documents: [architecture and implementation](docs/IMPLEMENTATION.md),
-[release checklist](docs/RELEASE-CHECKLIST.md).
+需要清理缓存并完整重新构建时执行：
 
-Run `build-windows.cmd` from the repository root; the scripts in `scripts/` are internal helpers.
-
-## Build on Windows x64
-
-AsterPlay has **one build entry point**. On Windows, run:
-
-~~~bat
-build-windows.cmd
-~~~
-
-The script detects missing build dependencies and installs them only when needed:
-
-- Reuses an existing .NET 8 SDK; otherwise installs the pinned .NET 8.0.425 SDK into tools/dotnet.
-- Uses the repository's pinned LiquidGlass native runtime. If it is missing or source rebuilding is requested, uses the Visual Studio 2026 C++ v145 toolchain (installing Build Tools if necessary).
-- Reuses the pinned Windows x64 libmpv package, or downloads and verifies it (and its extractor) on first use.
-- Restores Microsoft.WindowsAppSDK, Microsoft.Windows.SDK.BuildTools, and other NuGet package dependencies as part of a full build.
-
-No Qt, CMake, MSYS2, full Visual Studio IDE, or separate Windows App SDK installation is required for a normal Release build. The first setup requires Internet access. Administrator approval may be necessary only if the C++ Build Tools installer runs.
-
-**Automatic build selection:** the script hashes source files and dependency metadata and stores the last successful build state under obj/. On the first build, missing/invalid caches, or a dependency change, it runs a clean Release publish. With unchanged dependencies and modified source files it runs an incremental Release publish while retaining bin/obj and NuGet assets. An incremental failure automatically triggers one full clean rebuild. If nothing changed and the package is complete, compilation is skipped.
-
-To manually force a clean build for troubleshooting:
-
-~~~bat
-build-windows.cmd -Full
-~~~
-
-Output: `dist/AsterPlay/`, a **normal unpacked portable Windows application**:
-
-```text
-dist/AsterPlay/
-├── AsterPlay.exe                # The real .NET 8 / WinUI 3 executable
-├── AsterPlay.Core.dll
-├── LiquidGlassWinUI.dll
-├── CustomEffectRuntimeNative.dll
-├── libmpv-2.dll
-├── coreclr.dll                  # Alongside other required .NET / WinUI DLLs
-├── Assets/                      # Native startup PNG and icon
-├── Info/                        # Build and runtime provenance files
-└── resources/                   # Managed language satellites only
-    ├── zh-Hans/
-    ├── de-DE/
-    ├── fr-FR/
-    └── ...                      # *.resources.dll in their culture folders
+```powershell
+.\build-windows.cmd -Full
 ```
 
-The root `AsterPlay.exe` is the **real WinUI executable**, not a CMD script,
-wrapper, or separately compiled launcher. There is no single-file bundling,
-runtime extraction, or installer. All native libraries and core .NET/WinUI DLLs
-remain at their original DLL load paths next to the executable.
+构建脚本会自动检查依赖、执行 Release 发布，并优先复用已有的构建缓存；首次构建需要网络连接。
 
-Pure managed culture satellite directories are moved into `resources/{culture}/`;
-AsterPlay installs an assembly resolver before WinUI XAML initialization to
-support those paths. Native WinUI language assets that cannot be safely
-relocated (such as MUI/PRI files) retain their SDK-required locations.
-Do not delete those directories solely to make the root look cleaner.
+输出目录为 `dist/AsterPlay/`，可直接运行其中的 `AsterPlay.exe`。便携版采用**非单文件、自包含**发布方式：主程序与运行 DLL 位于根目录，`resources/` 收纳可安全重定位的托管语言资源，`Assets/` 存放应用资源，`Info/` 存放构建与依赖来源信息。部分 WinUI 原生语言文件因加载要求可能保留在其原有位置。
 
-The current portable build and future installer should share the same
-internal file layout. A future installer will only add installation/uninstall
-registration and shortcuts; it will not change runtime paths.
+## 许可
 
-Use `build-windows.cmd -Full` to rebuild from a clean output directory. The
-legacy `-Unpacked` option remains accepted and does not change the layout.
+AsterPlay 采用 **MIT License** 开源，详细条款见 [LICENSE](LICENSE)。
 
-The .ps1 helpers for SDK and media-runtime provisioning are internal implementation details; build-windows.cmd is the only .cmd entry point for users and CI.
+Copyright © 2026 [l888r88f8-spec](https://github.com/l888r88f8-spec)。
 
-## License
+项目使用的第三方代码、库及二进制组件遵循各自的许可证；AsterPlay 的 MIT 许可不替代第三方组件的许可要求。
 
-AsterPlay is distributed under the [MIT License](LICENSE).
+## 引用公告
 
-- AsterPlay contributions: Copyright (c) 2026 [l888r88f8-spec](https://github.com/l888r88f8-spec).
-- Third-party components retain their own applicable licenses, including the bundled LiquidGlass code and libmpv.
+- **[LiquidGlassWinUI](https://github.com/luckyelysia/LiquidGlassWinUI)**：Liquid Glass 效果相关实现参考及适配来源；相关原始许可见 [LICENSE.upstream.txt](Native/LiquidGlassCompat/LICENSE.upstream.txt)。
+- **[mpv](https://github.com/mpv-player/mpv)**：媒体播放核心。Windows 版 libmpv 使用 [zhongfly/mpv-winbuild](https://github.com/zhongfly/mpv-winbuild) 提供的构建产物，并遵循相应 LGPL 许可要求；具体版本和来源记录于构建产物的 `Info/RUNTIME-SOURCE.txt`。
+- **[Vanvy Emby Suite](https://github.com/micimo13/emby-beautify)**：首页视觉设计参考。AsterPlay 界面使用 WinUI 3 独立实现。
 
-## Acknowledgements
-
-The home-screen visual direction references [Vanvy Emby Suite](https://github.com/micimo13/emby-beautify), implemented natively in WinUI 3.
-
-libmpv is provided under its applicable LGPL build license. The pinned Windows runtime is sourced from [zhongfly/mpv-winbuild](https://github.com/zhongfly/mpv-winbuild) and records the corresponding mpv commit in `Info/RUNTIME-SOURCE.txt`.
+以上引用用于注明第三方技术、组件及设计参考，不代表上述项目与 AsterPlay 存在官方关联或背书。
