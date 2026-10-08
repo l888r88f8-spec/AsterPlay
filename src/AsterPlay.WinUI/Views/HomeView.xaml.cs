@@ -97,6 +97,7 @@ public sealed partial class HomeView : UserControl
         if (_noServerMode)
         {
             ShowNoServerState();
+            Loaded += HomeView_NoServerLoaded;
         }
         else
         {
@@ -112,6 +113,35 @@ public sealed partial class HomeView : UserControl
         if (_heroImagesReady && _heroCandidates.Count > 1)
             _heroTimer.Start();
 
+    }
+
+    // Empty home has no network images to wait for, but it still must finish
+    // arranging its *visible* content before the native splash can be removed.
+    private void HomeView_NoServerLoaded(object sender, RoutedEventArgs e)
+    {
+        Loaded -= HomeView_NoServerLoaded;
+        NoServerContent.SizeChanged += NoServerContent_SizeChanged;
+        TryRaiseNoServerInitialVisualReady();
+    }
+
+    private void NoServerContent_SizeChanged(object sender, SizeChangedEventArgs e) =>
+        TryRaiseNoServerInitialVisualReady();
+
+    private void TryRaiseNoServerInitialVisualReady()
+    {
+        if (!IsLoaded ||
+            NoServerState.Visibility != Visibility.Visible ||
+            NoServerContent.ActualWidth < 100 ||
+            NoServerContent.ActualHeight < 100)
+        {
+            return;
+        }
+
+        NoServerContent.SizeChanged -= NoServerContent_SizeChanged;
+        StartupDiagnostics.Write(
+            $"HomeView: no-server content arranged; " +
+            $"size={NoServerContent.ActualWidth:0}x{NoServerContent.ActualHeight:0}");
+        RaiseInitialVisualReady();
     }
 
     private void HomeView_Unloaded(object sender, RoutedEventArgs e)
@@ -283,6 +313,8 @@ public sealed partial class HomeView : UserControl
         $"heroCandidates={_heroCandidates.Count}; heroImagesReady={_heroImagesReady}; " +
         $"libraries={_libraries.Count}; resume={_resume.Count}; sections={_sections.Count}; " +
         $"pendingSections={_pendingSectionViews?.Count ?? 0}";
+
+    internal bool IsInitialVisualReady => _initialVisualReadyRaised;
 
     private void RaiseInitialVisualReady()
     {
@@ -913,6 +945,8 @@ public sealed partial class HomeView : UserControl
 
     private void ShowNoServerState()
     {
+        // Do not construct/arrange the invisible media viewport on first-run.
+        HomeScrollViewer.Visibility = Visibility.Collapsed;
         HomeScrollViewer.Opacity = 0;
         HomeScrollViewer.IsHitTestVisible = false;
         LoadingState.Visibility = Visibility.Collapsed;
