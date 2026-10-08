@@ -74,7 +74,8 @@ public partial class App : Application
 
             using (StartupDiagnostics.Measure("MainWindow constructor"))
                 _window = new MainWindow(
-                    startupBounds);
+                    startupBounds,
+                    nativeSplashAvailable: _splash.IsAvailable);
 
             _splash.AttachOwner(
                 _window.NativeHandle);
