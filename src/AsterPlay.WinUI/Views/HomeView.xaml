@@ -977,7 +977,8 @@
 
         <Grid x:Name="NoServerState"
               Visibility="Collapsed">
-            <StackPanel HorizontalAlignment="Center"
+            <StackPanel x:Name="NoServerContent"
+                        HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Spacing="14"
                         Margin="24">
