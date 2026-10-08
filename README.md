@@ -85,6 +85,14 @@ Output: dist/AsterPlay/ (self-contained Windows x64). The script checks that the
 
 The .ps1 helpers for SDK and media-runtime provisioning are internal implementation details; build-windows.cmd is the only .cmd entry point for users and CI.
 
+## License
+
+AsterPlay is distributed under the [MIT License](LICENSE).
+
+- AsterPlay contributions: Copyright (c) 2026 [l888r88f8-spec](https://github.com/l888r88f8-spec).
+- Upstream qEmby copyright: Copyright (c) 2025-2026 AlanHJ, retained under the original MIT terms.
+- Third-party components retain their own applicable licenses, including the bundled LiquidGlass code and libmpv.
+
 ## Acknowledgements
 
 AsterPlay originated from a rewrite of ideas explored in [AlanHJ/qEmby](https://github.com/AlanHJ/qEmby). The original MIT copyright notice is retained in this repository.
