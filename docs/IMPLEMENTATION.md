@@ -121,15 +121,16 @@ build-windows.cmd
 dist/AsterPlay/
 ```
 
-发布包为 Windows x64 self-contained 便携版，默认使用 `PublishSingleFile=true` 和 `IncludeAllContentForSelfExtract=true` 整合 .NET / WinUI 运行依赖。实际输出包含：
+发布包为 Windows x64 self-contained **非单文件**便携版，`PublishSingleFile=false`，不使用打包压缩或首次解包机制。构建完成后把应用与依赖整体放到 `App/`，其相对目录结构保持不变：
 
-- `AsterPlay.exe`（应用和可合并的运行依赖）
-- `CustomEffectRuntimeNative.dll`（Liquid Glass 原生桥接）
-- `libmpv-2.dll`（以及 mpv 需要的同目录依赖）
-- `Assets/AsterPlay.AppIcon.png`、`Assets/AsterPlay.ico`（原生开屏资源）
-- `Info/BUILD-INFO.txt`、`Info/LIQUIDGLASS-COMPAT.txt`、`Info/RUNTIME-SOURCE.txt`（构建与授权来源信息）
+- `dist/AsterPlay/AsterPlay.cmd`：根目录便携启动脚本，使用相对路径。
+- `dist/AsterPlay/App/AsterPlay.exe`：真正的可执行文件。
+- `dist/AsterPlay/App/`：.NET 8、WinUI 3、Liquid Glass、libmpv 的 DLL，以及原有语言资源目录和 Assets。
+- `dist/AsterPlay/Info/`：BUILD-INFO、LIQUIDGLASS-COMPAT 和 RUNTIME-SOURCE 构建信息。
 
-单文件便携版首次运行时会解包部分依赖到用户临时目录，不需要安装 .NET / Windows App SDK。可用 `build-windows.cmd -Unpacked` 恢复完整目录结构进行故障排查，`-Full` 强制全量构建。
+可以直接运行 `App/AsterPlay.exe`，或双击根目录的 `AsterPlay.cmd`。移动整个便携目录后，启动脚本仍然有效。不会额外安装运行时，也不会在首次运行时解压自包含包。
+
+`build-windows.cmd -Full` 强制完全构建。旧参数 `-Unpacked` 保留兼容，但不再改变构建模式，因为普通 DLL 目录已经是默认输出方式。
 
 CI 会验证：
 
