@@ -231,6 +231,14 @@ Copy-Item (Join-Path $MpvDir "*.dll") $Publish -Force
 $runtimeSource = Join-Path $MpvDir "RUNTIME-SOURCE.txt"
 if (Test-Path $runtimeSource) {
     Copy-Item $runtimeSource (Join-Path $Publish "RUNTIME-SOURCE.txt") -Force
+} elseif ($env:ASTERPLAY_MPV_DIR) {
+    @(
+        "Source: external ASTERPLAY_MPV_DIR",
+        "DLL: $mpvDll",
+        "SHA256: $((Get-FileHash -Algorithm SHA256 $mpvDll).Hash.ToLowerInvariant())"
+    ) | Set-Content -Encoding UTF8 (Join-Path $Publish "RUNTIME-SOURCE.txt")
+} else {
+    throw "Pinned libmpv source manifest is missing."
 }
 
 $requiredFiles = @(
