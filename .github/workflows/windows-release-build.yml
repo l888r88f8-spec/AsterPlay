@@ -88,10 +88,21 @@ jobs:
           if (Test-Path (Join-Path $publish "resources\AsterPlay.exe")) {
             throw "The language resources directory must not contain a second application executable."
           }
-          if (-not (Test-Path (Join-Path $publish "resources") -PathType Container)) {
+          $languagesRoot = Join-Path $publish "resources"
+          if (-not (Test-Path $languagesRoot -PathType Container)) {
             throw "Missing managed language resources directory."
           }
-
+          $localizedAssemblies = @(Get-ChildItem -LiteralPath $languagesRoot -Filter '*.resources.dll' -Recurse -File)
+          if ($localizedAssemblies.Count -eq 0) {
+            throw "No localized satellite assemblies were grouped in resources."
+          }
+          $unrelatedResources = @(Get-ChildItem -LiteralPath $languagesRoot -Recurse -File |
+            Where-Object { $_.Name -notlike '*.resources.dll' })
+          if ($unrelatedResources.Count -gt 0) {
+            throw "Language resources folder contains unrelated application DLLs."
+          }
+          Write-Host "Grouped $($localizedAssemblies.Count) managed satellite DLLs under resources."
+          
           $pdbs = @(Get-ChildItem -Path $publish -Filter '*.pdb' -File)
           if ($pdbs.Count -gt 0) {
             throw "Debug symbols must not clutter the portable root."
