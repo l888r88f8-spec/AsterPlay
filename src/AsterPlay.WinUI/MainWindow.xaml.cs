@@ -42,12 +42,32 @@ public sealed partial class MainWindow : Window
     private const int DwmwaExtendedFrameBounds = 9;
 
 
-    public MainWindow(RectInt32 startupBounds)
+    public MainWindow(
+        RectInt32 startupBounds,
+        bool nativeSplashAvailable)
     {
         StartupDiagnostics.Write("MainWindow constructor: entered");
         using (StartupDiagnostics.Measure("MainWindow.InitializeComponent"))
             InitializeComponent();
         StartupDiagnostics.Write("MainWindow constructor: after InitializeComponent");
+
+        // With a native splash present, avoid constructing the first
+        // presented XAML surface behind a second opaque StartupCover.
+        // Removing that cover after the page loads invalidates the entire
+        // initial composition and can expose the blank HWND backing surface
+        // while the glass and Home visuals recompose.
+        //
+        // Preserve the XAML cover only if native splash creation failed.
+        if (nativeSplashAvailable)
+        {
+            StartupCover.Visibility = Visibility.Collapsed;
+            StartupCover.Opacity = 0;
+            StartupCover.IsHitTestVisible = false;
+        }
+
+        StartupDiagnostics.Write(
+            $"MainWindow startup cover configured; nativeSplash={nativeSplashAvailable}; " +
+            $"xamlCover={StartupCover.Visibility}");
 
         _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
 
