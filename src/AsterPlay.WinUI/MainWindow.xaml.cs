@@ -721,6 +721,29 @@ public sealed partial class MainWindow : Window
         ScheduleStartupReveal();
     }
 
+    // All Home variants raise the same first-viewport-ready signal.
+    // Server count determines what the view loads, never how the splash exits.
+    private void HomeInitialVisualReady(HomeView view)
+    {
+        if (!ReferenceEquals(PageHost.Content, view))
+        {
+            StartupDiagnostics.Write(
+                "Home.InitialVisualReady ignored for inactive page");
+            return;
+        }
+
+        StartupDiagnostics.Write(
+            $"Home.InitialVisualReady received; section={_currentSection}");
+
+        if (_startupVisualReadyRaised)
+        {
+            view.NotifyStartupRevealCompleted();
+            return;
+        }
+
+        ScheduleStartupReveal();
+    }
+
     private void ShowNoServerHome()
     {
         ExitPlayerChrome();
@@ -736,12 +759,7 @@ public sealed partial class MainWindow : Window
         view.ServerRequested += (_, _) =>
             ShowServers(returnToLogin: false, returnToNoServerHome: true);
 
-        view.InitialVisualReady += (_, _) =>
-        {
-            StartupDiagnostics.Write(
-                "ShowNoServerHome: empty home first visual arranged");
-            ScheduleStartupReveal();
-        };
+        view.InitialVisualReady += (_, _) => HomeInitialVisualReady(view);
 
         PageHost.Content = view;
         StartupDiagnostics.Write(
@@ -822,18 +840,7 @@ public sealed partial class MainWindow : Window
                 _authenticated = false;
                 ShowLogin("登录状态已失效，请重新登录。");
             };
-            view.InitialVisualReady += (_, _) =>
-            {
-                StartupDiagnostics.Write("ShowHome: live first viewport ready");
-
-                if (_startupVisualReadyRaised)
-                {
-                    view.NotifyStartupRevealCompleted();
-                    return;
-                }
-
-                ScheduleStartupReveal();
-            };
+            view.InitialVisualReady += (_, _) => HomeInitialVisualReady(view);
         }
 
         PageHost.Content = view;
