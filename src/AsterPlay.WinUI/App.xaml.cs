@@ -69,21 +69,23 @@ public partial class App : Application
                 $"{startupBounds.X},{startupBounds.Y}," +
                 $"{startupBounds.Width}x{startupBounds.Height}");
 
+            NativeStartupSplash splash;
             using (StartupDiagnostics.Measure("NativeStartupSplash constructor"))
-                _splash = new NativeStartupSplash(
+                splash = new NativeStartupSplash(
                     startupBounds,
                     RequestedTheme);
 
-            _splash.Show();
+            _splash = splash;
+            splash.Show();
             StartupDiagnostics.Write(
-                $"OnLaunched: native splash shown; available={_splash.IsAvailable}");
+                $"OnLaunched: native splash shown; available={splash.IsAvailable}");
 
             using (StartupDiagnostics.Measure("MainWindow constructor"))
                 _window = new MainWindow(
                     startupBounds,
-                    nativeSplashAvailable: _splash?.IsAvailable == true);
+                    nativeSplashAvailable: splash.IsAvailable);
 
-            _splash.AttachOwner(
+            splash.AttachOwner(
                 _window.NativeHandle);
 
             _window.StartupVisualReady +=
