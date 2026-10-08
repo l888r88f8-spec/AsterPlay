@@ -316,6 +316,23 @@ public sealed partial class HomeView : UserControl
 
     internal bool IsInitialVisualReady => _initialVisualReadyRaised;
 
+    // A Loaded UserControl alone is not sufficient for the splash handoff:
+    // verify that the currently selected visual state has nonzero geometry.
+    internal bool HasReadyStartupVisual =>
+        _initialVisualReadyRaised &&
+        IsLoaded &&
+        (_noServerMode
+            ? NoServerState.Visibility == Visibility.Visible &&
+              NoServerContent.ActualWidth > 100 &&
+              NoServerContent.ActualHeight > 100
+            : (HomeScrollViewer.Visibility == Visibility.Visible &&
+               HomeScrollViewer.Opacity > 0.9 &&
+               HomeScrollViewer.ActualWidth > 100 &&
+               HomeScrollViewer.ActualHeight > 100) ||
+              (LoadingState.Visibility == Visibility.Visible &&
+               LoadingState.ActualWidth > 100 &&
+               LoadingState.ActualHeight > 100));
+
     private void RaiseInitialVisualReady()
     {
         if (_initialVisualReadyRaised)
