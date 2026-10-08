@@ -289,6 +289,25 @@ public sealed partial class MainWindow : Window
     {
         StartupDiagnostics.Write(
             $"RootGrid.Loaded; startupScheduled={_startupResolutionScheduled}, section={_currentSection}");
+
+        // Record the EFFECTIVE DPI awareness after WinUI created the HWND,
+        // rather than assuming the manifest was honored. Comparing this
+        // with XamlRoot's rasterization scale distinguishes OS bitmap
+        // stretching from local font/asset quality problems.
+        var dpiContext = GetWindowDpiAwarenessContext(_hwnd);
+        var dpiMode =
+            AreDpiAwarenessContextsEqual(dpiContext, new IntPtr(-4))
+                ? "PerMonitorV2"
+                : AreDpiAwarenessContextsEqual(dpiContext, new IntPtr(-3))
+                    ? "PerMonitor"
+                    : AreDpiAwarenessContextsEqual(dpiContext, new IntPtr(-2))
+                        ? "System"
+                        : AreDpiAwarenessContextsEqual(dpiContext, new IntPtr(-1))
+                            ? "Unaware"
+                            : "Unknown";
+        StartupDiagnostics.Write(
+            $"DPI: windowMode={dpiMode}; windowDpi={GetDpiForWindow(_hwnd)}; " +
+            $"xamlRasterScale={RootGrid.XamlRoot?.RasterizationScale:0.###}");
         StartStartupHeartbeat();
         WriteStartupVisualState(
             "RootGrid.Loaded");
@@ -1303,6 +1322,18 @@ public sealed partial class MainWindow : Window
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetWindowDpiAwarenessContext(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool AreDpiAwarenessContextsEqual(
+        IntPtr dpiContextA,
+        IntPtr dpiContextB);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hwnd);
 
 
 }
