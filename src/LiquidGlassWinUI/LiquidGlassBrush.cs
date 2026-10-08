@@ -337,6 +337,29 @@ namespace LiquidGlassWinUI
             SetPipelineState(
                 LiquidGlassPipelineState.Connecting);
 
+            // Diagnostic A/B switch: bypass ALL liquid-glass shader pipelines
+            // while leaving the real WinUI visual tree, native startup splash,
+            // layout, and reveal timings unchanged. Normal launches never
+            // enter this branch. Use only to isolate the cold-start white frame.
+            if (string.Equals(
+                    Environment.GetEnvironmentVariable("ASTERPLAY_DIAG_NO_GLASS"),
+                    "1",
+                    StringComparison.Ordinal))
+            {
+                try
+                {
+                    _compositor = CompositionTarget.GetCompositorForCurrentThread();
+                    CompositionBrush = _compositor.CreateColorBrush(Colors.Transparent);
+                    SetPipelineState(LiquidGlassPipelineState.Connected);
+                }
+                catch (Exception ex)
+                {
+                    LastError = ex.ToString();
+                    SetPipelineState(LiquidGlassPipelineState.Failed, LastError);
+                }
+                return;
+            }
+
             try
             {
                 _compositor = CompositionTarget.GetCompositorForCurrentThread();
