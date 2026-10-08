@@ -165,6 +165,32 @@ public sealed partial class MainWindow
         return false;
     }
 
+    private static async Task<bool> WaitForStartupShaderCommitsAsync(
+        string phase)
+    {
+        var pending = LiquidGlassWinUI.LiquidGlassBrush.PendingEffectCommitCount;
+        if (pending == 0)
+            return true;
+
+        StartupDiagnostics.Write(
+            $"Startup shader effect commits pending; phase={phase}; count={pending}");
+
+        var task = LiquidGlassWinUI.LiquidGlassBrush.WaitForPendingEffectCommitsAsync();
+        var completed = await Task.WhenAny(task, Task.Delay(5000));
+        if (!ReferenceEquals(task, completed))
+        {
+            StartupDiagnostics.Write(
+                $"Startup shader effect commit timeout; phase={phase}; " +
+                $"remaining={LiquidGlassWinUI.LiquidGlassBrush.PendingEffectCommitCount}");
+            return false;
+        }
+
+        await task;
+        StartupDiagnostics.Write(
+            $"Startup shader effect commits complete; phase={phase}");
+        return LiquidGlassWinUI.LiquidGlassBrush.PendingEffectCommitCount == 0;
+    }
+
     private async Task<bool> WaitForVerifiedStartupPresentationAsync(
         string phase, int targetFrames)
     {
@@ -186,7 +212,16 @@ public sealed partial class MainWindow
                 var frames = await WaitForStartupCoverFramesAsync(
                     targetFrames, 1200);
 
-                if (frames >= targetFrames &&
+                // CompositionTarget.Rendering and DwmFlush do not wait for
+                // custom GPU effect processing. A brush used by ANY first-
+                // viewport button can still be compiling after the dock
+                // reports Connected. Await the effect-commit signal shared
+                // by all active LiquidGlass brushes before final DWM sync.
+                var shaderCommitsReady =
+                    frames >= targetFrames &&
+                    await WaitForStartupShaderCommitsAsync(phase);
+
+                if (shaderCommitsReady &&
                     IsStartupPageReady(targetPage) &&
                     await WaitForStartupDwmFenceAsync(phase, 1800) &&
                     IsStartupPageReady(targetPage))
