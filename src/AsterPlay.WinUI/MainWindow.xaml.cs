@@ -384,11 +384,6 @@ public sealed partial class MainWindow : Window
 
     internal event EventHandler? StartupVisualReady;
 
-    // Empty Home is a static first-run surface. DWM/XAML presentation is less
-    // predictable here than the image-backed authenticated Home startup.
-    internal bool IsNoServerStartup =>
-        string.Equals(_currentSection, "home-empty", StringComparison.Ordinal);
-
     internal void NotifyStartupRevealCompleted()
     {
         WriteStartupVisualState(
