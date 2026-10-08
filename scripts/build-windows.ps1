@@ -384,7 +384,6 @@ Write-Host "[PACK] Preserved $hiddenNativeCultureFolders native locale folders a
 
 Get-ChildItem -Path $AppDir -Filter "*.pdb" -File -ErrorAction SilentlyContinue |
     Remove-Item -Force
-Write-Host "[PACK] Grouped $relocatedLocales managed-language folders under resources."
 
 Write-Host ""
 Write-Host "Publish self-check passed:"
