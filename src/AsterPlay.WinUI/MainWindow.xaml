@@ -105,7 +105,8 @@
 
                     <StackPanel Orientation="Horizontal"
                                 Spacing="2"
-                                Margin="6">
+                                Margin="6"
+                                Background="Transparent">
                     <Button x:Name="HomeButton"
                             Style="{StaticResource DockButtonStyle}"
                             Click="Home_Click">
