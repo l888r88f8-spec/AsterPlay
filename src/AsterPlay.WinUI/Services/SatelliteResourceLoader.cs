@@ -70,10 +70,6 @@ internal static class SatelliteResourceLoader
         {
             return null;
         }
-        catch (FileLoadException)
-        {
-            return null;
-        }
         catch (CultureNotFoundException)
         {
             return null;
