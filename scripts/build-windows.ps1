@@ -1,4 +1,4 @@
-param([switch]$Full)
+param([switch]$Full, [switch]$Unpacked)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -14,6 +14,9 @@ $Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $Project = Join-Path $Root "src\AsterPlay.WinUI\AsterPlay.WinUI.csproj"
 $Dist = Join-Path $Root "dist"
 $Publish = Join-Path $Dist "AsterPlay"
+# Default to a tidy portable single-file publish. -Unpacked restores the
+# original directory-style output for troubleshooting WinUI/MPV startup.
+$SingleFile = if ($Unpacked) { "false" } else { "true" }
 $PortableDotnet = Join-Path $Root "tools\dotnet\dotnet.exe"
 $MpvDir = if ($env:ASTERPLAY_MPV_DIR) { $env:ASTERPLAY_MPV_DIR } else { Join-Path $Root "third_party\mpv" }
 
@@ -120,9 +123,21 @@ function Fingerprint([string[]]$Paths,[string]$Salt) {
     } finally { $hasher.Dispose() }
 }
 function Test-Output {
-    foreach ($n in @("AsterPlay.exe","AsterPlay.Core.dll","LiquidGlassWinUI.dll",
-        "CustomEffectRuntimeNative.dll","libmpv-2.dll","coreclr.dll","hostfxr.dll",
-        "hostpolicy.dll","BUILD-INFO.txt","LIQUIDGLASS-COMPAT.txt","RUNTIME-SOURCE.txt")) {
+    $required = @(
+        "AsterPlay.exe",
+        "CustomEffectRuntimeNative.dll",
+        "libmpv-2.dll",
+        "Assets\AsterPlay.AppIcon.png",
+        "Assets\AsterPlay.ico",
+        "Info\BUILD-INFO.txt",
+        "Info\LIQUIDGLASS-COMPAT.txt",
+        "Info\RUNTIME-SOURCE.txt"
+    )
+    if ($Unpacked) {
+        $required += @("AsterPlay.Core.dll", "LiquidGlassWinUI.dll",
+            "coreclr.dll", "hostfxr.dll", "hostpolicy.dll")
+    }
+    foreach ($n in $required) {
         if (-not (Test-Path (Join-Path $Publish $n) -PathType Leaf)) { return $false }
     }
     return $true
@@ -144,7 +159,10 @@ function Publish-App([bool]$Clean,[bool]$NoRestore) {
     }
     New-Item -ItemType Directory -Force -Path $Publish | Out-Null
     $arguments = @("publish",$Project,"-c","Release","-r","win-x64","--self-contained","true",
-        "-p:Platform=x64","-p:PublishSingleFile=false","-o",$Publish)
+        "-p:Platform=x64","-p:PublishSingleFile=$SingleFile",
+        "-p:IncludeAllContentForSelfExtract=$SingleFile",
+        "-p:PublishTrimmed=false","-p:DebugType=none","-p:DebugSymbols=false",
+        "-o",$Publish)
     if ($NoRestore) { $arguments += "--no-restore" }
     & $Dotnet @arguments | Out-Host
     return ($LASTEXITCODE -eq 0)
@@ -166,7 +184,7 @@ $settings = @(
 $glassInput = if ($env:CI -eq "true" -or $env:ASTERPLAY_USE_SOURCE_LIQUIDGLASS -eq "1") {
     $sourceNative
 } elseif (Test-Path $prebuiltNative) { $prebuiltNative } else { $sourceNative }
-$configHash = Fingerprint ($settings + @($glassInput,$mpvDll)) "release|win-x64|$selectedSdk|$MpvDir"
+$configHash = Fingerprint ($settings + @($glassInput,$mpvDll)) "release|win-x64|$selectedSdk|$MpvDir|single=$SingleFile"
 $inputHash = Fingerprint ($src + $settings + @($glassInput,$mpvDll)) $configHash
 $state = $null
 if (Test-Path $statePath) {
@@ -219,6 +237,9 @@ else {
 $liquidGlassNative = Join-Path $Publish "CustomEffectRuntimeNative.dll"
 Copy-Item $liquidGlassNativeSource $liquidGlassNative -Force
 
+$infoDirectory = Join-Path $Publish "Info"
+New-Item -ItemType Directory -Force -Path $infoDirectory | Out-Null
+
 $liquidGlassHash = (Get-FileHash -Algorithm SHA256 $liquidGlassNative).Hash.ToLowerInvariant()
 @(
     "AsterPlay LiquidGlass native compatibility runtime",
@@ -231,34 +252,35 @@ $liquidGlassHash = (Get-FileHash -Algorithm SHA256 $liquidGlassNative).Hash.ToLo
     "EffectType::GetBounds: 0x1F7D0",
     "EffectType::CalcInputBounds: 0x1EE90",
     "DirectPropertyUpdater vtable: 0x471E0"
-) | Set-Content -Encoding UTF8 (Join-Path $Publish "LIQUIDGLASS-COMPAT.txt")
+) | Set-Content -Encoding UTF8 (Join-Path $infoDirectory "LIQUIDGLASS-COMPAT.txt")
 
 Copy-Item (Join-Path $MpvDir "*.dll") $Publish -Force
 
 $runtimeSource = Join-Path $MpvDir "RUNTIME-SOURCE.txt"
 if (Test-Path $runtimeSource) {
-    Copy-Item $runtimeSource (Join-Path $Publish "RUNTIME-SOURCE.txt") -Force
+    Copy-Item $runtimeSource (Join-Path $infoDirectory "RUNTIME-SOURCE.txt") -Force
 } elseif ($env:ASTERPLAY_MPV_DIR) {
     @(
         "Source: external ASTERPLAY_MPV_DIR",
         "DLL: $mpvDll",
         "SHA256: $((Get-FileHash -Algorithm SHA256 $mpvDll).Hash.ToLowerInvariant())"
-    ) | Set-Content -Encoding UTF8 (Join-Path $Publish "RUNTIME-SOURCE.txt")
+    ) | Set-Content -Encoding UTF8 (Join-Path $infoDirectory "RUNTIME-SOURCE.txt")
 } else {
     throw "Pinned libmpv source manifest is missing."
 }
 
 $requiredFiles = @(
     "AsterPlay.exe",
-    "AsterPlay.Core.dll",
-    "LiquidGlassWinUI.dll",
     "CustomEffectRuntimeNative.dll",
-    "LIQUIDGLASS-COMPAT.txt",
     "libmpv-2.dll",
-    "coreclr.dll",
-    "hostfxr.dll",
-    "hostpolicy.dll"
+    "Assets\AsterPlay.AppIcon.png",
+    "Assets\AsterPlay.ico",
+    "Info\LIQUIDGLASS-COMPAT.txt"
 )
+if ($Unpacked) {
+    $requiredFiles += @("AsterPlay.Core.dll", "LiquidGlassWinUI.dll",
+        "coreclr.dll", "hostfxr.dll", "hostpolicy.dll")
+}
 
 $missingFiles = @(
     $requiredFiles |
@@ -275,11 +297,38 @@ if ($missingFiles.Count -gt 0) {
     "Configuration: Release",
     "RID: win-x64",
     "SelfContained: true",
-    "PublishSingleFile: false",
+    "PublishSingleFile: $SingleFile",
     "WindowsAppSDKSelfContained: true",
     "SDK: $selectedSdk",
     "Built: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-) | Set-Content -Encoding UTF8 (Join-Path $Publish "BUILD-INFO.txt")
+) | Set-Content -Encoding UTF8 (Join-Path $infoDirectory "BUILD-INFO.txt")
+
+# Non-runnable diagnostics are not needed at the portable root.
+Get-ChildItem -Path $Publish -Filter "*.pdb" -File -ErrorAction SilentlyContinue |
+    Remove-Item -Force
+
+if (-not $Unpacked) {
+    # Localization satellites are optional. Keep Chinese/English; .NET and
+    # Windows App SDK fall back to neutral resources for other UI languages.
+    # Only remove culture directories made entirely of satellite resources.
+    $preservedCultures = @("zh-Hans", "zh-Hant", "zh-CN", "zh-TW", "en", "en-US")
+    foreach ($folder in @(Get-ChildItem -Path $Publish -Directory)) {
+        if ($folder.Name -in $preservedCultures) { continue }
+        try { $null = [System.Globalization.CultureInfo]::GetCultureInfo($folder.Name) }
+        catch { continue }
+
+        $files = @(Get-ChildItem -LiteralPath $folder.FullName -File -Recurse)
+        $subfolders = @(Get-ChildItem -LiteralPath $folder.FullName -Directory -Recurse)
+        if ($subfolders.Count -ne 0 -or $files.Count -eq 0) { continue }
+        $notSatellites = @($files | Where-Object {
+            $_.Name -notlike "*.resources.dll" -and
+            $_.Extension -notin @(".pri", ".mui")
+        })
+        if ($notSatellites.Count -ne 0) { continue }
+        Remove-Item -LiteralPath $folder.FullName -Force -Recurse
+        Write-Host "[PACK] Pruned optional culture satellites: $($folder.Name)"
+    }
+}
 
 Write-Host ""
 Write-Host "Publish self-check passed:"
