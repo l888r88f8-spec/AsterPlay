@@ -159,6 +159,24 @@ namespace LiquidGlassWinUI
         /// <summary>Direction of the glare streak, in degrees (default -45).</summary>
         public double GlareAngle { get => (double)GetValue(GlareAngleProperty); set => SetValue(GlareAngleProperty, value); }
 
+        // ---- Pointer spotlight (off by default; uses existing cbuffer slots) ----
+
+        public static readonly DependencyProperty SpotlightXProperty = RegisterGlassParam("SpotlightX");
+        /// <summary>Horizontal pointer position normalized to this brush (0..1).</summary>
+        public double SpotlightX { get => (double)GetValue(SpotlightXProperty); set => SetValue(SpotlightXProperty, value); }
+
+        public static readonly DependencyProperty SpotlightYProperty = RegisterGlassParam("SpotlightY");
+        /// <summary>Vertical pointer position normalized to this brush (0..1).</summary>
+        public double SpotlightY { get => (double)GetValue(SpotlightYProperty); set => SetValue(SpotlightYProperty, value); }
+
+        public static readonly DependencyProperty SpotlightStrengthProperty = RegisterGlassParam("SpotlightStrength");
+        /// <summary>Additional local reflection strength (0 disables the effect).</summary>
+        public double SpotlightStrength { get => (double)GetValue(SpotlightStrengthProperty); set => SetValue(SpotlightStrengthProperty, value); }
+
+        public static readonly DependencyProperty SpotlightRadiusProperty = RegisterGlassParam("SpotlightRadius");
+        /// <summary>Horizontal radius of the spotlight in device-independent pixels.</summary>
+        public double SpotlightRadius { get => (double)GetValue(SpotlightRadiusProperty); set => SetValue(SpotlightRadiusProperty, value); }
+
         // ---- Blur ----
 
         /// <summary>Backing dependency property for <see cref="BlurAmount"/>.</summary>
