@@ -38,42 +38,9 @@ jobs:
           restore-keys: |
             asterplay-nuget-${{ runner.os }}-
 
-      - name: Bootstrap pinned portable .NET 8 SDK
+      - name: Automatically prepare and build Windows x64 package
         shell: cmd
-        run: bootstrap-dotnet.cmd
-
-      - name: Build LiquidGlass native compatibility runtime
-        shell: pwsh
-        run: |
-          $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
-          if (-not (Test-Path $vswhere)) {
-            throw "vswhere.exe was not found."
-          }
-
-          $msbuild = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\MSBuild.exe" |
-            Select-Object -First 1
-          if (-not $msbuild) {
-            throw "MSBuild was not found."
-          }
-
-          Write-Host "MSBuild: $msbuild"
-          & $msbuild "Native\LiquidGlassCompat\CustomEffectRuntime.Native.vcxproj" `
-            -restore `
-            -m `
-            /p:Configuration=Release `
-            /p:Platform=x64
-          if ($LASTEXITCODE -ne 0) {
-            throw "LiquidGlass native compatibility runtime build failed."
-          }
-
-          $native = "Native\LiquidGlassCompat\Output\x64\Release\CustomEffectRuntimeNative.dll"
-          if (-not (Test-Path $native)) {
-            throw "LiquidGlass native compatibility runtime output is missing."
-          }
-
-      - name: Build self-contained Windows x64 package
-        shell: pwsh
-        run: .\build-windows.ps1
+        run: build-windows.cmd
 
       - name: Verify release package
         shell: pwsh
