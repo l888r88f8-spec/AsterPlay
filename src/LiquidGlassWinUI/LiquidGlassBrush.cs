@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using LiquidGlassWinUI.Effects;
 using Microsoft.UI;
 using Microsoft.UI.Composition;
@@ -274,6 +275,99 @@ namespace LiquidGlassWinUI
         private CompositionBrush _backdropBrush;        // raw backdrop source (tracked for disposal on toggle)
         private bool _blurBypassed;                   // true when BlurAmount <= 0 (blur chain disconnected)
 
+        // Creating a CompositionEffectBrush is not equivalent to having its
+        // custom shaders processed by the compositor. Track EFFECT commit
+        // completion for every visible brush before dismissing startup.
+        private static readonly object s_effectCommitSync = new();
+        private static int s_pendingEffectCommitCount;
+        private static TaskCompletionSource<bool> s_effectCommitCompletion =
+            NewEffectCompletionSource();
+        private CompositionCommitBatch _firstEffectCommitBatch;
+        private bool _effectCommitPending;
+
+        private static TaskCompletionSource<bool> NewEffectCompletionSource() =>
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public static int PendingEffectCommitCount
+        {
+            get
+            {
+                lock (s_effectCommitSync)
+                    return s_pendingEffectCommitCount;
+            }
+        }
+
+        public static Task WaitForPendingEffectCommitsAsync()
+        {
+            lock (s_effectCommitSync)
+            {
+                return s_pendingEffectCommitCount == 0
+                    ? Task.CompletedTask
+                    : s_effectCommitCompletion.Task;
+            }
+        }
+
+        private void TrackFirstEffectCommit()
+        {
+            // Obtain the batch BEFORE exposing the effect brush. The factory
+            // can exist already, but the live effect chain must be committed
+            // before we report the pipeline as ready.
+            var batch = _compositor.GetCommitBatch(CompositionBatchTypes.Effect);
+
+            lock (s_effectCommitSync)
+            {
+                if (s_pendingEffectCommitCount++ == 0)
+                    s_effectCommitCompletion = NewEffectCompletionSource();
+            }
+
+            _firstEffectCommitBatch = batch;
+            _effectCommitPending = true;
+            batch.Completed += FirstEffectCommitCompleted;
+        }
+
+        private void FirstEffectCommitCompleted(
+            object sender,
+            CompositionBatchCompletedEventArgs args)
+        {
+            var queue = DispatcherQueue;
+            if (queue != null && !queue.HasThreadAccess)
+            {
+                // Brush and XAML dependency properties are UI-thread-owned.
+                // If the dispatcher is shutting down, OnDisconnected also
+                // cancels the outstanding registration.
+                queue.TryEnqueue(() => CompleteFirstEffectCommit(true));
+            }
+            else
+            {
+                CompleteFirstEffectCommit(true);
+            }
+        }
+
+        private void CompleteFirstEffectCommit(bool connected)
+        {
+            if (!_effectCommitPending)
+                return;
+
+            _effectCommitPending = false;
+            var batch = _firstEffectCommitBatch;
+            _firstEffectCommitBatch = null;
+            if (batch != null)
+                batch.Completed -= FirstEffectCommitCompleted;
+
+            lock (s_effectCommitSync)
+            {
+                if (--s_pendingEffectCommitCount == 0)
+                    s_effectCommitCompletion.TrySetResult(true);
+            }
+
+            if (connected &&
+                PipelineState == LiquidGlassPipelineState.Connecting &&
+                ReferenceEquals(CompositionBrush, _glassBrush))
+            {
+                SetPipelineState(LiquidGlassPipelineState.Connected);
+            }
+        }
+
         /// <summary>
         /// If the effect pipeline fails to compile or link (e.g. shader too complex for
         /// the current DWM, or the native hook cannot be installed), the exception message
@@ -328,8 +422,8 @@ namespace LiquidGlassWinUI
         {
             if (CompositionBrush != null)
             {
-                SetPipelineState(
-                    LiquidGlassPipelineState.Connected);
+                if (!_effectCommitPending)
+                    SetPipelineState(LiquidGlassPipelineState.Connected);
                 return;
             }
 
@@ -439,12 +533,15 @@ namespace LiquidGlassWinUI
                     ApplyValue(pair.Value, (float)(double)GetValue(pair.Key));
                 }
 
+                // The shader may be queued for DWM processing long after
+                // the effect graph is constructed. Do not emit Connected until
+                // its first Effect commit has completed.
+                TrackFirstEffectCommit();
                 CompositionBrush = _glassBrush;
-                SetPipelineState(
-                    LiquidGlassPipelineState.Connected);
             }
             catch (Exception e)
             {
+                CompleteFirstEffectCommit(false);
                 LastError = e.Message + "\n" + e.StackTrace;
 
                 _hBlurBrush?.Dispose();
@@ -467,6 +564,7 @@ namespace LiquidGlassWinUI
         /// </summary>
         protected override void OnDisconnected()
         {
+            CompleteFirstEffectCommit(false);
             // Dispose per-instance brushes. The factories are pooled statically
             // and shared across all brush instances — they must NOT be disposed
             // here or subsequent brush instances would fail to create brushes.
