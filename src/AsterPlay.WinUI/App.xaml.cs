@@ -16,6 +16,12 @@ public partial class App : Application
         StartupDiagnostics.StartSession();
         StartupDiagnostics.Write(
             $"App constructor: entered; startupLog={StartupDiagnostics.LogPath}");
+        StartupDiagnostics.Write(
+            "Startup diagnostic: liquidGlassShaderBypass=" +
+            (string.Equals(
+                Environment.GetEnvironmentVariable("ASTERPLAY_DIAG_NO_GLASS"),
+                "1",
+                StringComparison.Ordinal) ? "ON" : "OFF"));
 
         UnhandledException += App_UnhandledException;
         StartupDiagnostics.Write("App constructor: before InitializeComponent");
