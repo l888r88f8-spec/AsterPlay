@@ -51,7 +51,11 @@ jobs:
             }
           }
 
-          Write-Host "WinUI 3 package verification passed."
+          $satellites = @(Get-ChildItem -Path (Join-Path $publish 'resources') -Recurse -File -Filter '*.resources.dll' -Force)
+          if ($satellites.Count -eq 0) {
+            throw "Managed language satellites were not collected under resources."
+          }
+          Write-Host "WinUI 3 locale packaging verified ($($satellites.Count) satellite DLLs)."
 
       - name: Smoke start WinUI app
         shell: pwsh
@@ -92,4 +96,5 @@ jobs:
         with:
           name: AsterPlay-WinUI-validation-win-x64
           path: dist/AsterPlay
+          include-hidden-files: true
           if-no-files-found: error
