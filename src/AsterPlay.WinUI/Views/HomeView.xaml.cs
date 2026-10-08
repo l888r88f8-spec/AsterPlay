@@ -264,16 +264,34 @@ public sealed partial class HomeView : UserControl
             _ => 16d
         };
 
-        HomeContentStack.Padding =
-            new Thickness(horizontalPadding, 0, horizontalPadding, 130);
+        // Window maximize/restore can raise SizeChanged repeatedly while
+        // layout is still settling. Changing Padding and Margin on every
+        // callback dirties the whole Home visual tree (Hero + every rail),
+        // even when the adaptive padding stays in the same breakpoint.
+        // Update these only when a breakpoint is actually crossed.
+        if (Math.Abs(HomeContentStack.Padding.Left - horizontalPadding) > 0.01)
+        {
+            HomeContentStack.Padding =
+                new Thickness(horizontalPadding, 0, horizontalPadding, 130);
+            HeroContainer.Margin =
+                new Thickness(-horizontalPadding, 0, -horizontalPadding, -112);
+        }
 
-        // Keep the Hero dominant on large windows while retaining the mobile
-        // reference's proportions on shorter desktop windows.
-        HeroContainer.Height = Math.Clamp(e.NewSize.Height * 0.78, 590, 760);
-        HeroContainer.Margin =
-            new Thickness(-horizontalPadding, 0, -horizontalPadding, -112);
+        // Preserve the original responsive Hero proportions without sending
+        // subpixel-sized invalidations through the image and glass layers.
+        // One device pixel is the smallest visible size adjustment.
+        var scale = XamlRoot?.RasterizationScale ?? 1.0;
+        if (scale <= 0)
+            scale = 1.0;
 
-        UpdateCaptionContrastForScrollPosition();
+        var desiredHeight = Math.Round(
+            Math.Clamp(e.NewSize.Height * 0.78, 590, 760) * scale) / scale;
+
+        if (Math.Abs(HeroContainer.Height - desiredHeight) >= 0.5 / scale)
+        {
+            HeroContainer.Height = desiredHeight;
+            UpdateCaptionContrastForScrollPosition();
+        }
     }
 
     private void HomeView_Loaded(object sender, RoutedEventArgs e)
