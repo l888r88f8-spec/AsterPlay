@@ -7,6 +7,8 @@ namespace AsterPlay.WinUI;
 public sealed partial class MainWindow
 {
     private bool _dockPointerInside;
+    private bool _dockSpotlightActivatedLogged;
+    private bool _dockSpotlightUnavailableLogged;
     private long _lastDockSpotlightUpdate;
     private long _dockVisibilityCallbackToken;
 
@@ -79,13 +81,24 @@ public sealed partial class MainWindow
 
     private void UpdateDockSpotlight(PointerRoutedEventArgs e)
     {
-        var brush = _dockGlassBrush;
         if (NavigationDock.Visibility != Visibility.Visible ||
-            brush is null ||
-            brush.PipelineState != LiquidGlassWinUI.LiquidGlassPipelineState.Connected ||
             NavigationDock.ActualWidth <= 0 ||
             NavigationDock.ActualHeight <= 0)
         {
+            return;
+        }
+
+        var brush = _dockGlassBrush;
+        if (brush is null ||
+            brush.PipelineState != LiquidGlassWinUI.LiquidGlassPipelineState.Connected)
+        {
+            if (!_dockSpotlightUnavailableLogged)
+            {
+                _dockSpotlightUnavailableLogged = true;
+                StartupDiagnostics.Write(
+                    $"DockSpotlight: skipped; brushPresent={brush is not null}; " +
+                    $"pipeline={brush?.PipelineState.ToString() ?? "none"}");
+            }
             return;
         }
 
@@ -111,22 +124,31 @@ public sealed partial class MainWindow
             brush.SpotlightY = y;
             brush.AnimateScalar(
                 "SpotlightStrength",
-                RootGrid.ActualTheme == ElementTheme.Light ? 0.43f : 0.75f,
-                155);
+                RootGrid.ActualTheme == ElementTheme.Light ? 0.72f : 0.95f,
+                100);
+
+            if (!_dockSpotlightActivatedLogged)
+            {
+                _dockSpotlightActivatedLogged = true;
+                StartupDiagnostics.Write(
+                    $"DockSpotlight: active; size={NavigationDock.ActualWidth:0}x" +
+                    $"{NavigationDock.ActualHeight:0}; center={x:0.00},{y:0.00}; " +
+                    $"radius={brush.SpotlightRadius:0}");
+            }
             return;
         }
 
-        // Limit property animations to ~30 Hz; compositor interpolates the
-        // intervening frames without placing a timer on the UI thread.
+        // Limit property animations to ~60 Hz; the compositor interpolates
+        // intermediate frames without a UI-thread timer.
         if (Stopwatch.GetElapsedTime(_lastDockSpotlightUpdate) <
-            TimeSpan.FromMilliseconds(32))
+            TimeSpan.FromMilliseconds(16))
         {
             return;
         }
 
         _lastDockSpotlightUpdate = Stopwatch.GetTimestamp();
-        brush.AnimateScalar("SpotlightX", x, 110);
-        brush.AnimateScalar("SpotlightY", y, 110);
+        brush.AnimateScalar("SpotlightX", x, 75);
+        brush.AnimateScalar("SpotlightY", y, 75);
     }
 
     private void DockSpotlight_PointerExited(
@@ -163,8 +185,8 @@ public sealed partial class MainWindow
         {
             brush.AnimateScalar(
                 "SpotlightStrength",
-                RootGrid.ActualTheme == ElementTheme.Light ? 0.43f : 0.75f,
-                150);
+                RootGrid.ActualTheme == ElementTheme.Light ? 0.72f : 0.95f,
+                120);
         }
     }
 
@@ -175,6 +197,6 @@ public sealed partial class MainWindow
 
         _dockPointerInside = false;
         _lastDockSpotlightUpdate = 0;
-        _dockGlassBrush?.AnimateScalar("SpotlightStrength", 0, 260);
+        _dockGlassBrush?.AnimateScalar("SpotlightStrength", 0, 230);
     }
 }
