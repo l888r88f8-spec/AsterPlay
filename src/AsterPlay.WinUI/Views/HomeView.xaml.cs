@@ -40,6 +40,7 @@ public sealed partial class HomeView : UserControl
     private bool _hasCachedSnapshot;
     private HomeSnapshot? _cachedSnapshot;
     private bool _initialVisualReadyRaised;
+    private bool _noServerInitialVisualPending;
     private bool _deferredHomeRefreshStarted;
     private bool _navigationRefreshInProgress;
     private IReadOnlyList<EmbyItem>? _pendingSectionViews;
@@ -115,8 +116,9 @@ public sealed partial class HomeView : UserControl
 
     }
 
-    // Empty home has no network images to wait for, but it still must finish
-    // arranging its *visible* content before the native splash can be removed.
+    // An empty home has no network images to decode, but it must still send
+    // the SAME InitialVisualReady signal as the populated home only after its
+    // actual content has been laid out and passed into a composition frame.
     private void HomeView_NoServerLoaded(object sender, RoutedEventArgs e)
     {
         Loaded -= HomeView_NoServerLoaded;
@@ -129,19 +131,56 @@ public sealed partial class HomeView : UserControl
 
     private void TryRaiseNoServerInitialVisualReady()
     {
-        if (!IsLoaded ||
-            NoServerState.Visibility != Visibility.Visible ||
-            NoServerContent.ActualWidth < 100 ||
-            NoServerContent.ActualHeight < 100)
+        if (_initialVisualReadyRaised ||
+            _noServerInitialVisualPending ||
+            !HasNoServerStartupContent())
         {
             return;
         }
 
+        _noServerInitialVisualPending = true;
         NoServerContent.SizeChanged -= NoServerContent_SizeChanged;
-        StartupDiagnostics.Write(
-            $"HomeView: no-server content arranged; " +
-            $"size={NoServerContent.ActualWidth:0}x{NoServerContent.ActualHeight:0}");
-        RaiseInitialVisualReady();
+        _ = CompleteNoServerInitialVisualAsync();
+    }
+
+    private bool HasNoServerStartupContent() =>
+        IsLoaded &&
+        NoServerState.Visibility == Visibility.Visible &&
+        NoServerContent.ActualWidth > 100 &&
+        NoServerContent.ActualHeight > 100;
+
+    private async Task CompleteNoServerInitialVisualAsync()
+    {
+        try
+        {
+            // SizeChanged/Loaded can fire before the first frame is composed.
+            // Wait until the content participates in Rendering just as the
+            // populated home waits for its loaded/decoded first viewport.
+            await WaitForNextRenderingFrameAsync();
+            if (!HasNoServerStartupContent())
+                return;
+
+            StartupDiagnostics.Write(
+                $"HomeView: no-server first viewport composed; " +
+                $"size={NoServerContent.ActualWidth:0}x{NoServerContent.ActualHeight:0}");
+
+            RaiseInitialVisualReady();
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.WriteException(
+                "CompleteNoServerInitialVisualAsync", ex);
+        }
+        finally
+        {
+            _noServerInitialVisualPending = false;
+            if (!_initialVisualReadyRaised && IsLoaded)
+            {
+                NoServerContent.SizeChanged -= NoServerContent_SizeChanged;
+                NoServerContent.SizeChanged += NoServerContent_SizeChanged;
+                TryRaiseNoServerInitialVisualReady();
+            }
+        }
     }
 
     private void HomeView_Unloaded(object sender, RoutedEventArgs e)
@@ -332,78 +371,6 @@ public sealed partial class HomeView : UserControl
               (LoadingState.Visibility == Visibility.Visible &&
                LoadingState.ActualWidth > 100 &&
                LoadingState.ActualHeight > 100));
-
-    // Loaded/ActualWidth and DwmFlush do not establish that the first-run
-    // content has rasterized. Probe the actual nonempty no-server XAML
-    // subtree before allowing the native splash to become transparent.
-    internal async Task<bool> VerifyNoServerRasterAsync()
-    {
-        if (!_noServerMode)
-            return true;
-
-        if (!HasReadyStartupVisual)
-            return false;
-
-        try
-        {
-            var bitmap =
-                new Microsoft.UI.Xaml.Media.Imaging.RenderTargetBitmap();
-            await bitmap.RenderAsync(NoServerContent);
-            var buffer = await bitmap.GetPixelsAsync();
-
-            if (bitmap.PixelWidth <= 0 ||
-                bitmap.PixelHeight <= 0 ||
-                buffer.Length < 4)
-            {
-                StartupDiagnostics.Write(
-                    "No-server raster probe: empty bitmap");
-                return false;
-            }
-
-            // RenderTargetBitmap pixels are BGRA8. Read only in memory;
-            // never persist screenshots or application content to logs.
-            var pixels = new byte[checked((int)buffer.Length)];
-            using (var reader = Windows.Storage.Streams.DataReader.FromBuffer(buffer))
-                reader.ReadBytes(pixels);
-
-            var visibleSamples = 0;
-            var minBrightness = 255;
-            var maxBrightness = 0;
-
-            // Sample every fourth pixel: first-run artwork consists of
-            // readable text and a bordered glyph on a transparent panel.
-            for (var i = 0; i + 3 < pixels.Length; i += 16)
-            {
-                if (pixels[i + 3] < 32)
-                    continue;
-
-                visibleSamples++;
-                var brightness =
-                    (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
-                minBrightness = Math.Min(minBrightness, brightness);
-                maxBrightness = Math.Max(maxBrightness, brightness);
-            }
-
-            var hasVisibleRaster =
-                visibleSamples >= 32 &&
-                maxBrightness - minBrightness >= 18;
-
-            StartupDiagnostics.Write(
-                $"No-server raster probe: rendered={hasVisibleRaster}; " +
-                $"size={bitmap.PixelWidth}x{bitmap.PixelHeight}; " +
-                $"visibleSamples={visibleSamples}; " +
-                $"brightnessRange={maxBrightness - minBrightness}");
-            return hasVisibleRaster;
-        }
-        catch (Exception ex)
-        {
-            // A failed readback must be distinguishable from a genuinely
-            // empty render. The presentation fence owns retry/fallback.
-            StartupDiagnostics.WriteException(
-                "No-server raster probe failed", ex);
-            return false;
-        }
-    }
 
     private void RaiseInitialVisualReady()
     {
