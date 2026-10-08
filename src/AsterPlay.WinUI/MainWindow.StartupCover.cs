@@ -153,7 +153,7 @@ public sealed partial class MainWindow
             _pendingStartupDwmFlush = Task.Run(DwmFlush);
         }
 
-        var pending = _pendingStartupDwmFlush;
+        var pending = _pendingStartupDwmFlush!;
         var completed = await Task.WhenAny(
             pending, Task.Delay(timeoutMilliseconds));
 
