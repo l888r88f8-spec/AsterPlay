@@ -84,8 +84,10 @@ public sealed partial class MainWindow
                 StartupDiagnostics.Write(
                     $"LiquidGlass: pipeline did not connect; fallback restored; " +
                     $"state={liquidGlassBrush.PipelineState}; " +
-                    $"error={liquidGlassBrush.PipelineError}");
-                return false;
+                    $"error={liquidGlassBrush.PipelineError}; glassFallbackReady=true");
+                // The opaque fallback is a valid rendered state; do not block
+                // startup forever waiting for a failed optional shader.
+                return true;
             }
 
             // Connected means the native factories and the complete effect graph
@@ -99,8 +101,8 @@ public sealed partial class MainWindow
             var dwmFlushed = ReferenceEquals(completed, flush);
 
             StartupDiagnostics.Write(
-                $"LiquidGlass: startup presentation ready; frames={frames}, " +
-                $"dwmFlushed={dwmFlushed}");
+                $"LiquidGlass: pipeline connected; frames={frames}, " +
+                $"dwmFlushed={dwmFlushed}; final presentation is verified by MainWindow");
             return true;
         }
         catch (Exception ex)
