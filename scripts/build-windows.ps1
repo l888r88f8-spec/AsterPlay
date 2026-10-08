@@ -14,10 +14,12 @@ $Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $Project = Join-Path $Root "src\AsterPlay.WinUI\AsterPlay.WinUI.csproj"
 $Dist = Join-Path $Root "dist"
 $Publish = Join-Path $Dist "AsterPlay"
-$AppDir = Join-Path $Publish "App"
-$InfoDir = Join-Path $Publish "Info"
-# All application DLLs and language resources retain their original relative
-# paths beneath App. Never compress or extract runtime files at application start.
+$AppDir = Join-Path $Publish "resources"
+$InfoDir = Join-Path $AppDir "Info"
+$LauncherSource = Join-Path $Root "scripts\AsterPlay.PortableLauncher.cs"
+$LauncherExe = Join-Path $Publish "AsterPlay.exe"
+# Match conventional Windows program directories: a GUI launcher at the root
+# and an uncompressed resources directory containing the complete WinUI app.
 $PortableDotnet = Join-Path $Root "tools\dotnet\dotnet.exe"
 $MpvDir = if ($env:ASTERPLAY_MPV_DIR) { $env:ASTERPLAY_MPV_DIR } else { Join-Path $Root "third_party\mpv" }
 
@@ -125,20 +127,20 @@ function Fingerprint([string[]]$Paths,[string]$Salt) {
 }
 function Test-Output {
     $required = @(
-        "AsterPlay.cmd",
-        "App\AsterPlay.exe",
-        "App\AsterPlay.Core.dll",
-        "App\LiquidGlassWinUI.dll",
-        "App\CustomEffectRuntimeNative.dll",
-        "App\libmpv-2.dll",
-        "App\coreclr.dll",
-        "App\hostfxr.dll",
-        "App\hostpolicy.dll",
-        "App\Assets\AsterPlay.AppIcon.png",
-        "App\Assets\AsterPlay.ico",
-        "Info\BUILD-INFO.txt",
-        "Info\LIQUIDGLASS-COMPAT.txt",
-        "Info\RUNTIME-SOURCE.txt"
+        "AsterPlay.exe",
+        "resources\AsterPlay.exe",
+        "resources\AsterPlay.Core.dll",
+        "resources\LiquidGlassWinUI.dll",
+        "resources\CustomEffectRuntimeNative.dll",
+        "resources\libmpv-2.dll",
+        "resources\coreclr.dll",
+        "resources\hostfxr.dll",
+        "resources\hostpolicy.dll",
+        "resources\Assets\AsterPlay.AppIcon.png",
+        "resources\Assets\AsterPlay.ico",
+        "resources\Info\BUILD-INFO.txt",
+        "resources\Info\LIQUIDGLASS-COMPAT.txt",
+        "resources\Info\RUNTIME-SOURCE.txt"
     )
     foreach ($n in $required) {
         if (-not (Test-Path (Join-Path $Publish $n) -PathType Leaf)) { return $false }
@@ -178,6 +180,7 @@ $src = @(Get-ChildItem (Join-Path $Root "src") -Recurse -File |
     Select-Object -ExpandProperty FullName)
 $settings = @(
     (Join-Path $Root "AsterPlay.sln"),(Join-Path $Root "scripts\build-windows.ps1"),
+    $LauncherSource,
     (Join-Path $Root "build-windows.cmd"),(Join-Path $Root "scripts\bootstrap-dotnet.ps1"),
     (Join-Path $Root "scripts\bootstrap-mpv.ps1"),(Join-Path $Root "NuGet.Config"),
     (Join-Path $Root "global.json"),(Join-Path $Root "Directory.Build.props"),
@@ -186,7 +189,7 @@ $settings = @(
 $glassInput = if ($env:CI -eq "true" -or $env:ASTERPLAY_USE_SOURCE_LIQUIDGLASS -eq "1") {
     $sourceNative
 } elseif (Test-Path $prebuiltNative) { $prebuiltNative } else { $sourceNative }
-$configHash = Fingerprint ($settings + @($glassInput,$mpvDll)) "release|win-x64|$selectedSdk|$MpvDir|layout=app-subdirectory-v1"
+$configHash = Fingerprint ($settings + @($glassInput,$mpvDll)) "release|win-x64|$selectedSdk|$MpvDir|layout=root-launcher-resources-v1"
 $inputHash = Fingerprint ($src + $settings + @($glassInput,$mpvDll)) $configHash
 $state = $null
 if (Test-Path $statePath) {
@@ -215,8 +218,8 @@ if ($canIncremental) {
 }
 if (-not $ok) { throw "WinUI 3 Release build failed." }
 
-# Keep native startup assets beside the real executable. WinUI resource URI
-# resolution and GDI+ both use the executable's application directory.
+# Keep native startup assets beside the real WinUI executable in resources.
+# WinUI resource URI resolution and GDI+ both use that application directory.
 $portableAssets = Join-Path $AppDir "Assets"
 New-Item -ItemType Directory -Force -Path $portableAssets | Out-Null
 foreach ($assetName in @("AsterPlay.AppIcon.png", "AsterPlay.ico")) {
@@ -281,18 +284,18 @@ if (Test-Path $runtimeSource) {
 }
 
 $requiredFiles = @(
-    "App\AsterPlay.exe",
-    "App\AsterPlay.Core.dll",
-    "App\LiquidGlassWinUI.dll",
-    "App\CustomEffectRuntimeNative.dll",
-    "App\libmpv-2.dll",
-    "App\coreclr.dll",
-    "App\hostfxr.dll",
-    "App\hostpolicy.dll",
-    "App\Assets\AsterPlay.AppIcon.png",
-    "App\Assets\AsterPlay.ico",
-    "Info\LIQUIDGLASS-COMPAT.txt",
-    "Info\RUNTIME-SOURCE.txt"
+    "resources\AsterPlay.exe",
+    "resources\AsterPlay.Core.dll",
+    "resources\LiquidGlassWinUI.dll",
+    "resources\CustomEffectRuntimeNative.dll",
+    "resources\libmpv-2.dll",
+    "resources\coreclr.dll",
+    "resources\hostfxr.dll",
+    "resources\hostpolicy.dll",
+    "resources\Assets\AsterPlay.AppIcon.png",
+    "resources\Assets\AsterPlay.ico",
+    "resources\Info\LIQUIDGLASS-COMPAT.txt",
+    "resources\Info\RUNTIME-SOURCE.txt"
 )
 
 $missingFiles = @(
@@ -311,25 +314,28 @@ if ($missingFiles.Count -gt 0) {
     "RID: win-x64",
     "SelfContained: true",
     "PublishSingleFile: false",
-    "PortableLayout: App subdirectory; all DLLs remain unpacked",
+    "PortableLayout: root AsterPlay.exe + resources directory; all DLLs remain unpacked",
     "WindowsAppSDKSelfContained: true",
     "SDK: $selectedSdk",
     "Built: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 ) | Set-Content -Encoding UTF8 (Join-Path $infoDirectory "BUILD-INFO.txt")
 
-# Runtime files remain physically present. Only debug symbols are omitted.
-# Leave culture subfolders in place: .NET and WinUI 3 resolve their satellite
-# resources relative to the executable, not from an arbitrary Locales folder.
+# Runtime files stay unpacked under resources. A tiny compiled Windows
+# GUI launcher is the only executable at the portable root; the real WinUI
+# executable and all its DLLs keep their original relative layout.
 Get-ChildItem -Path $AppDir -Filter "*.pdb" -File -ErrorAction SilentlyContinue |
     Remove-Item -Force
 
-# A relative launcher keeps the portable package relocatable without embedding
-# an absolute CI or developer-machine path in a Windows .lnk shortcut.
-# AsterPlay.exe itself remains directly runnable from App\.
-@(
-    "@echo off",
-    'start "" /D "%~dp0App" "%~dp0App\AsterPlay.exe"'
-) | Set-Content -Encoding ASCII (Join-Path $Publish "AsterPlay.cmd")
+$icon = Join-Path $Root "src\AsterPlay.WinUI\Assets\AsterPlay.ico"
+$compiler = New-Object System.CodeDom.Compiler.CompilerParameters
+$compiler.CompilerOptions = '/platform:x64 /win32icon:"' + $icon + '"'
+$compiler.GenerateExecutable = $true
+$compiler.ReferencedAssemblies.Add("System.dll") | Out-Null
+Add-Type -Path $LauncherSource -OutputAssembly $LauncherExe -OutputType WindowsApplication -CompilerParameters $compiler
+if (-not (Test-Path -LiteralPath $LauncherExe -PathType Leaf)) {
+    throw "Portable launcher compilation failed: $LauncherExe"
+}
+Write-Host "[PACK] Compiled GUI launcher with embedded AsterPlay icon."
 
 Write-Host ""
 Write-Host "Publish self-check passed:"
@@ -337,8 +343,8 @@ $requiredFiles | ForEach-Object { Write-Host "  OK: $_" }
 Write-Host ""
 Write-Host "Build complete:"
 Write-Host "  Folder: $Publish"
-Write-Host "  Start:  $Publish\AsterPlay.cmd"
-Write-Host "  Or:     $AppDir\AsterPlay.exe"
+Write-Host "  Start:  $LauncherExe"
+Write-Host "  Runtime: $AppDir"
 
 if (-not (Test-Output)) { throw "Final release package verification failed." }
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $statePath) | Out-Null
