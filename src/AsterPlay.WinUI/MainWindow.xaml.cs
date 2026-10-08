@@ -25,6 +25,8 @@ public sealed partial class MainWindow : Window
     private object? _startupRevealPage;
     private bool _authenticated;
     private string _currentSection = "home-shell";
+    private HomeView? _retainedHomeView;
+    private string _retainedHomeSessionKey = "";
     private bool? _homeCaptionUseDarkGlyphs;
     private Button? _activeNavigationButton;
     private readonly IntPtr _hwnd;
@@ -351,6 +353,7 @@ public sealed partial class MainWindow : Window
             StartupDiagnostics.WriteException("ResolveStartupState", ex);
 
             EnsureDeferredServices();
+            InvalidateRetainedHome();
             _client.Reset();
             ShowLogin(UserError.GetMessage(ex, "恢复登录"));
         }
@@ -713,63 +716,102 @@ public sealed partial class MainWindow : Window
         PageTitleBlock.Text = "首页";
         SetActiveNavigation(HomeButton);
 
-        var view = new HomeView(_client);
-        view.HeroCaptionContrastChanged += useDarkGlyphs =>
-        {
-            _homeCaptionUseDarkGlyphs = useDarkGlyphs;
+        var sessionKey = BuildHomeSessionKey();
+        var reused =
+            _retainedHomeView is not null &&
+            string.Equals(
+                _retainedHomeSessionKey,
+                sessionKey,
+                StringComparison.Ordinal);
 
-            if (string.Equals(
-                    _currentSection,
-                    "home",
-                    StringComparison.Ordinal) &&
-                ReferenceEquals(PageHost.Content, view))
+        HomeView view;
+
+        if (reused)
+        {
+            view = _retainedHomeView!;
+        }
+        else
+        {
+            view = new HomeView(_client);
+            _retainedHomeView = view;
+            _retainedHomeSessionKey = sessionKey;
+
+            view.HeroCaptionContrastChanged += useDarkGlyphs =>
             {
-                ConfigureNativeTitleBar(
-                    useDarkGlyphs ??
-                    (RootGrid.ActualTheme == ElementTheme.Light));
-            }
-        };
-        view.LibraryRequested += (_, _) => ShowLibrary();
-        view.ServerRequested += (_, _) =>
-            ShowServers(returnToLogin: false);
-        view.ServerSwitchRequested += (_, profile) =>
-            SwitchServer(profile);
-        view.SearchRequested += (_, _) =>
-            ShowSearch();
-        view.MediaRequested += (_, item) => ShowDetails(item, "home");
-        view.PlayRequested += async (_, item) =>
-            await StartPlaybackAsync(item, "home");
-        view.RestartRequested += async (_, item) =>
-            await StartPlaybackAsync(item, "home", restart: true);
-        view.AuthenticationFailed += (_, _) =>
-        {
-            PlaybackLog.Write(
-                "WinUISessionRestoreAuth",
-                "Home refresh session was rejected by the server.");
-            AppStateStore.Clear();
-            _client.Reset();
-            _authenticated = false;
-            ShowLogin("登录状态已失效，请重新登录。");
-        };
-        view.InitialVisualReady += (_, _) =>
-        {
-            StartupDiagnostics.Write("ShowHome: live first viewport ready");
+                _homeCaptionUseDarkGlyphs = useDarkGlyphs;
 
-            if (_startupVisualReadyRaised)
+                if (string.Equals(
+                        _currentSection,
+                        "home",
+                        StringComparison.Ordinal) &&
+                    ReferenceEquals(PageHost.Content, view))
+                {
+                    ConfigureNativeTitleBar(
+                        useDarkGlyphs ??
+                        (RootGrid.ActualTheme == ElementTheme.Light));
+                }
+            };
+            view.LibraryRequested += (_, _) => ShowLibrary();
+            view.ServerRequested += (_, _) =>
+                ShowServers(returnToLogin: false);
+            view.ServerSwitchRequested += (_, profile) =>
+                SwitchServer(profile);
+            view.SearchRequested += (_, _) =>
+                ShowSearch();
+            view.MediaRequested += (_, item) => ShowDetails(item, "home");
+            view.PlayRequested += async (_, item) =>
+                await StartPlaybackAsync(item, "home");
+            view.RestartRequested += async (_, item) =>
+                await StartPlaybackAsync(item, "home", restart: true);
+            view.AuthenticationFailed += (_, _) =>
             {
-                view.NotifyStartupRevealCompleted();
-                return;
-            }
+                PlaybackLog.Write(
+                    "WinUISessionRestoreAuth",
+                    "Home refresh session was rejected by the server.");
+                AppStateStore.Clear();
+                InvalidateRetainedHome();
+                _client.Reset();
+                _authenticated = false;
+                ShowLogin("登录状态已失效，请重新登录。");
+            };
+            view.InitialVisualReady += (_, _) =>
+            {
+                StartupDiagnostics.Write("ShowHome: live first viewport ready");
 
-            ScheduleStartupReveal();
-        };
+                if (_startupVisualReadyRaised)
+                {
+                    view.NotifyStartupRevealCompleted();
+                    return;
+                }
 
-        // HomeView construction is now intentionally data-free. Once the shell
-        // is attached to PageHost there is nothing left to wait for before
-        // showing the window. Cache hydration and Emby refresh happen after the
-        // HomeView Loaded event.
+                ScheduleStartupReveal();
+            };
+        }
+
         PageHost.Content = view;
-        StartupDiagnostics.Write("ShowHome: home shell assigned to PageHost");
+
+        if (reused)
+        {
+            StartupDiagnostics.Write(
+                "ShowHome: retained HomeView restored without rebuilding the page");
+            view.RefreshAfterNavigation();
+        }
+        else
+        {
+            StartupDiagnostics.Write(
+                "ShowHome: new home shell assigned to PageHost");
+        }
+    }
+
+    private string BuildHomeSessionKey() =>
+        (_client.ServerUrl ?? "").Trim().TrimEnd('/').ToLowerInvariant() +
+        "\n" +
+        (_client.UserId ?? "").Trim().ToLowerInvariant();
+
+    private void InvalidateRetainedHome()
+    {
+        _retainedHomeView = null;
+        _retainedHomeSessionKey = "";
     }
 
     private void ShowLibrary(bool focusSearch = false)
@@ -822,6 +864,7 @@ public sealed partial class MainWindow : Window
             return;
 
         AppStateStore.Clear();
+        InvalidateRetainedHome();
         _client.Reset();
         _authenticated = false;
         ShowLogin(preferredServerUrl: profile.Url);
@@ -849,6 +892,7 @@ public sealed partial class MainWindow : Window
             if (serverCount == 0)
             {
                 AppStateStore.Clear();
+                InvalidateRetainedHome();
                 _client.Reset();
                 _authenticated = false;
                 ShowNoServerHome();
@@ -888,6 +932,7 @@ public sealed partial class MainWindow : Window
         view.LogoutRequested += (_, _) =>
         {
             AppStateStore.Clear();
+            InvalidateRetainedHome();
             _client.Reset();
             _authenticated = false;
             ShowLogin();
