@@ -102,7 +102,25 @@ jobs:
             throw "Language resources folder contains unrelated application DLLs."
           }
           Write-Host "Grouped $($localizedAssemblies.Count) managed satellite DLLs under resources."
-          
+
+          $nativeCultureDirs = 0
+          foreach ($folder in @(Get-ChildItem -LiteralPath $publish -Directory -Force)) {
+            if ($folder.Name -in @('resources','Assets','Info')) { continue }
+            try {
+              $culture = [Globalization.CultureInfo]::GetCultureInfo($folder.Name)
+              if (-not $culture.Name.Equals($folder.Name, [StringComparison]::OrdinalIgnoreCase)) { continue }
+            } catch { continue }
+            $leftoverSatellites = @(Get-ChildItem -LiteralPath $folder.FullName -Filter '*.resources.dll' -File -Recurse -Force)
+            if ($leftoverSatellites.Count -gt 0) {
+              throw "Unmoved managed satellites remain under $($folder.Name)."
+            }
+            if (-not (($folder.Attributes -band [IO.FileAttributes]::Hidden) -eq [IO.FileAttributes]::Hidden)) {
+              throw "Required native locale directory is visible at the portable root: $($folder.Name)"
+            }
+            $nativeCultureDirs++
+          }
+          Write-Host "Preserved $nativeCultureDirs SDK-native culture folders (hidden)."
+
           $pdbs = @(Get-ChildItem -Path $publish -Filter '*.pdb' -File)
           if ($pdbs.Count -gt 0) {
             throw "Debug symbols must not clutter the portable root."
@@ -192,4 +210,7 @@ jobs:
         with:
           name: AsterPlay-win-x64
           path: dist/AsterPlay
+          # Preserve hidden native MUI/PRI culture folders. They remain at
+          # their Windows SDK-required paths even though Explorer hides them.
+          include-hidden-files: true
           if-no-files-found: error
