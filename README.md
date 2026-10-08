@@ -81,31 +81,31 @@ To manually force a clean build for troubleshooting:
 build-windows.cmd -Full
 ~~~
 
-Output: `dist/AsterPlay/` (compact self-contained Windows x64 portable build). The default build uses the Windows App SDK-supported single-file publishing mode to bundle the .NET/WinUI runtime and reduce the hundreds of loose language folders and DLLs. The directory retains only runtime files that must be external, native startup assets, and the `Info/` metadata folder.
+Output: `dist/AsterPlay/` (self-contained, **fully unpacked** Windows x64 portable directory). The executable, .NET runtime, WinUI 3 dependencies, LiquidGlass native bridge, libmpv, and their language resources remain in one intact `App/` subtree. This preserves all default DLL and resource loading paths without compressing the app into a single EXE.
 
 ```text
 dist/AsterPlay/
-├── AsterPlay.exe                     # Portable launcher + bundled .NET/WinUI runtime
-├── CustomEffectRuntimeNative.dll     # Native LiquidGlass interop
-├── libmpv-2.dll                      # mpv playback runtime (plus any required sibling DLLs)
-├── Assets/
-│   ├── AsterPlay.AppIcon.png
-│   └── AsterPlay.ico
+├── AsterPlay.cmd                   # Relative-path portable launcher
+├── App/
+│   ├── AsterPlay.exe               # Real Windows executable
+│   ├── AsterPlay.Core.dll
+│   ├── LiquidGlassWinUI.dll
+│   ├── CustomEffectRuntimeNative.dll
+│   ├── libmpv-2.dll
+│   ├── coreclr.dll                 # Plus the remaining required .NET / WinUI DLLs
+│   ├── Assets/
+│   │   ├── AsterPlay.AppIcon.png
+│   │   └── AsterPlay.ico
+│   └── <culture directories>/      # Localized WinUI/.NET satellite assemblies
 └── Info/
     ├── BUILD-INFO.txt
     ├── LIQUIDGLASS-COMPAT.txt
     └── RUNTIME-SOURCE.txt
 ```
 
-Portable single-file apps extract bundled dependencies to a per-user .NET temporary cache on first launch; initial startup can take longer than subsequent launches. The release does not need a separate .NET or Windows App SDK installer.
+To start the portable build, double-click `AsterPlay.cmd` at the package root, or directly run `App/AsterPlay.exe`. The relative launcher keeps working if you move the entire folder to another drive or machine. It briefly invokes Windows command processing; the app itself remains a normal Windows GUI process.
 
-For troubleshooting compatibility or startup issues, restore the old fully expanded publish output with:
-
-~~~bat
-build-windows.cmd -Unpacked
-~~~
-
-To regenerate either layout without incremental reuse, add `-Full`. The two modes have independent build fingerprints and changing modes forces a clean publish.
+The DLLs and localized satellite folders under `App/` are **not** moved individually because .NET, WinUI 3, and native libmpv use their relative locations when loading. There is no single-file extraction cache and no installer. The former `-Unpacked` build option is accepted for compatibility but is unnecessary: unpacked is now the default. Add `-Full` for a clean rebuild.
 
 The .ps1 helpers for SDK and media-runtime provisioning are internal implementation details; build-windows.cmd is the only .cmd entry point for users and CI.
 
