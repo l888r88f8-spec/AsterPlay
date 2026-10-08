@@ -81,31 +81,31 @@ To manually force a clean build for troubleshooting:
 build-windows.cmd -Full
 ~~~
 
-Output: `dist/AsterPlay/` (self-contained, **fully unpacked** Windows x64 portable directory). The executable, .NET runtime, WinUI 3 dependencies, LiquidGlass native bridge, libmpv, and their language resources remain in one intact `App/` subtree. This preserves all default DLL and resource loading paths without compressing the app into a single EXE.
+Output: `dist/AsterPlay/` — a conventional Windows folder layout, like Clash Verge: **AsterPlay.exe in the root, and all unpacked dependencies under resources/**.
 
 ```text
 dist/AsterPlay/
-├── AsterPlay.cmd                   # Relative-path portable launcher
-├── App/
-│   ├── AsterPlay.exe               # Real Windows executable
-│   ├── AsterPlay.Core.dll
-│   ├── LiquidGlassWinUI.dll
-│   ├── CustomEffectRuntimeNative.dll
-│   ├── libmpv-2.dll
-│   ├── coreclr.dll                 # Plus the remaining required .NET / WinUI DLLs
-│   ├── Assets/
-│   │   ├── AsterPlay.AppIcon.png
-│   │   └── AsterPlay.ico
-│   └── <culture directories>/      # Localized WinUI/.NET satellite assemblies
-└── Info/
-    ├── BUILD-INFO.txt
-    ├── LIQUIDGLASS-COMPAT.txt
-    └── RUNTIME-SOURCE.txt
+├── AsterPlay.exe                 # Windows GUI launcher with AsterPlay icon
+└── resources/
+    ├── AsterPlay.exe             # Actual .NET 8 / WinUI 3 executable
+    ├── AsterPlay.Core.dll
+    ├── LiquidGlassWinUI.dll
+    ├── CustomEffectRuntimeNative.dll
+    ├── libmpv-2.dll
+    ├── coreclr.dll               # And all remaining .NET / WinUI runtime DLLs
+    ├── Assets/                   # Startup icon and other XAML assets
+    ├── zh-Hans/, en-US/, ...     # Localization satellites (unchanged paths)
+    └── Info/
+        ├── BUILD-INFO.txt
+        ├── LIQUIDGLASS-COMPAT.txt
+        └── RUNTIME-SOURCE.txt
 ```
 
-To start the portable build, double-click `AsterPlay.cmd` at the package root, or directly run `App/AsterPlay.exe`. The relative launcher keeps working if you move the entire folder to another drive or machine. It briefly invokes Windows command processing; the app itself remains a normal Windows GUI process.
+Double-click the **root** `AsterPlay.exe`. It is a small Windows GUI launcher compiled during the build. It starts the real `resources/AsterPlay.exe` with that folder as its working directory, then exits. This avoids a CMD window and maintains the unmodified .NET, WinUI 3, and native DLL search paths. The launcher uses Windows' built-in .NET Framework 4.x infrastructure; the WinUI application itself remains self-contained and requires no separate .NET 8 runtime installation.
 
-The DLLs and localized satellite folders under `App/` are **not** moved individually because .NET, WinUI 3, and native libmpv use their relative locations when loading. There is no single-file extraction cache and no installer. The former `-Unpacked` build option is accepted for compatibility but is unnecessary: unpacked is now the default. Add `-Full` for a clean rebuild.
+No EXE compression, runtime unpacking, or installer is involved. Both future installers and the current portable package should deploy **this exact directory layout**. The installer (when introduced) would only install the directory, optionally register shortcuts and an uninstaller; it must not reorganize runtime files.
+
+For a clean build use `build-windows.cmd -Full`. The old `-Unpacked` option remains accepted for compatibility but has no effect because the portable package is always unpacked.
 
 The .ps1 helpers for SDK and media-runtime provisioning are internal implementation details; build-windows.cmd is the only .cmd entry point for users and CI.
 
