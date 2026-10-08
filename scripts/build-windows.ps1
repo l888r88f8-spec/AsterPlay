@@ -5,7 +5,7 @@ $ErrorActionPreference = "Stop"
 
 # PowerShell 5.1 otherwise decodes native-tool output using the legacy code page.
 # Match dotnet/MSBuild UTF-8 output when piping to Out-Host.
-$utf8 = New-Object System.Text.UTF8Encoding($false)
+$utf8 = [System.Text.UTF8Encoding]::new($false)
 [Console]::InputEncoding = $utf8
 [Console]::OutputEncoding = $utf8
 $OutputEncoding = $utf8
