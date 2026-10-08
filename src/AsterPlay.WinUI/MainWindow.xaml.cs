@@ -50,6 +50,7 @@ public sealed partial class MainWindow : Window
         StartupDiagnostics.Write("MainWindow constructor: entered");
         using (StartupDiagnostics.Measure("MainWindow.InitializeComponent"))
             InitializeComponent();
+        InitializeDockSpotlight();
         StartupDiagnostics.Write("MainWindow constructor: after InitializeComponent");
 
         // With a native splash present, avoid constructing the first
@@ -275,6 +276,8 @@ public sealed partial class MainWindow : Window
 
     private void MainWindow_Closed(object sender, WindowEventArgs args)
     {
+        DetachDockSpotlight();
+
         if (_lowLevelMouseHook != IntPtr.Zero)
         {
             UnhookWindowsHookEx(_lowLevelMouseHook);
