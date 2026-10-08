@@ -144,7 +144,8 @@ function Test-Output {
     foreach ($n in $required) {
         if (-not (Test-Path (Join-Path $Publish $n) -PathType Leaf)) { return $false }
     }
-    return (Test-Path $LocalesDir -PathType Container)
+    if (-not (Test-Path $LocalesDir -PathType Container)) { return $false }
+    return @(Get-ChildItem -LiteralPath $LocalesDir -Filter "*.resources.dll" -File -Recurse).Count -gt 0
 }
 function Publish-App([bool]$Clean,[bool]$NoRestore) {
     if ($Clean) {
@@ -187,7 +188,7 @@ $settings = @(
 $glassInput = if ($env:CI -eq "true" -or $env:ASTERPLAY_USE_SOURCE_LIQUIDGLASS -eq "1") {
     $sourceNative
 } elseif (Test-Path $prebuiltNative) { $prebuiltNative } else { $sourceNative }
-$configHash = Fingerprint ($settings + @($glassInput,$mpvDll)) "release|win-x64|$selectedSdk|$MpvDir|layout=root-dll-resources-locales-v1"
+$configHash = Fingerprint ($settings + @($glassInput,$mpvDll)) "release|win-x64|$selectedSdk|$MpvDir|layout=root-dll-resources-locales-v2"
 $inputHash = Fingerprint ($src + $settings + @($glassInput,$mpvDll)) $configHash
 $state = $null
 if (Test-Path $statePath) {
@@ -318,19 +319,21 @@ if ($missingFiles.Count -gt 0) {
     "Built: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 ) | Set-Content -Encoding UTF8 (Join-Path $infoDirectory "BUILD-INFO.txt")
 
-# Keep all native DLLs and Windows PRI assets in their default load paths.
-# The managed satellite resolver installed in App() probes resources/{culture}
-# so relocating pure *.resources.dll locale directories is safe.
+# Do not move native MUI/PRI files away from the SDK-required paths.
+# Most WinUI culture folders mix those native files with managed satellite
+# assemblies. Inspect each file instead of rejecting the whole folder.
 New-Item -ItemType Directory -Force -Path $LocalesDir | Out-Null
-$relocatedLocales = 0
-foreach ($directory in @(Get-ChildItem -LiteralPath $Publish -Directory)) {
+$relocatedSatelliteFiles = 0
+$hiddenNativeCultureFolders = 0
+foreach ($directory in @(Get-ChildItem -LiteralPath $Publish -Directory -Force)) {
     if ($directory.Name -in @("resources", "Assets", "Info")) {
         continue
     }
 
     try {
         $culture = [System.Globalization.CultureInfo]::GetCultureInfo($directory.Name)
-        if (-not $culture.Name.Equals($directory.Name, [StringComparison]::OrdinalIgnoreCase)) {
+        if (-not $culture.Name.Equals(
+                $directory.Name, [StringComparison]::OrdinalIgnoreCase)) {
             continue
         }
     }
@@ -338,26 +341,33 @@ foreach ($directory in @(Get-ChildItem -LiteralPath $Publish -Directory)) {
         continue
     }
 
-    $contents = @(Get-ChildItem -LiteralPath $directory.FullName -Recurse -File)
-    if ($contents.Count -eq 0) {
+    $satellites = @(Get-ChildItem -LiteralPath $directory.FullName -Recurse -File -Filter "*.resources.dll" -Force)
+    foreach ($satellite in $satellites) {
+        $relative = $satellite.FullName.Substring($directory.FullName.Length).TrimStart([char[]]@('\', '/'))
+        $destination = Join-Path (Join-Path $LocalesDir $directory.Name) $relative
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destination) | Out-Null
+        Move-Item -LiteralPath $satellite.FullName -Destination $destination -Force
+        $relocatedSatelliteFiles++
+    }
+
+    $nativeFiles = @(Get-ChildItem -LiteralPath $directory.FullName -Recurse -File -Force)
+    if ($nativeFiles.Count -eq 0) {
+        Remove-Item -LiteralPath $directory.FullName -Recurse -Force
         continue
     }
 
-    $nonSatellite = @($contents | Where-Object { $_.Name -notlike "*.resources.dll" })
-    if ($nonSatellite.Count -gt 0) {
-        # Do not relocate native MUI/PRI files: WinUI resolves those through
-        # Windows resource paths rather than the managed assembly resolver.
-        Write-Host "[PACK] Keeping native locale assets at their SDK-defined path: $($directory.Name)"
-        continue
-    }
-
-    $destination = Join-Path $LocalesDir $directory.Name
-    if (Test-Path -LiteralPath $destination) {
-        Remove-Item -LiteralPath $destination -Recurse -Force
-    }
-    Move-Item -LiteralPath $directory.FullName -Destination $destination
-    $relocatedLocales++
+    # Native WinUI MUI/PRI assets must remain beside the SDK DLLs. Hide
+    # their parent folders in Explorer without changing their load paths.
+    $nativeDirectory = Get-Item -LiteralPath $directory.FullName -Force
+    $nativeDirectory.Attributes = $nativeDirectory.Attributes -bor [IO.FileAttributes]::Hidden
+    $hiddenNativeCultureFolders++
 }
+
+if (@(Get-ChildItem -LiteralPath $LocalesDir -Recurse -File -Filter "*.resources.dll" -Force).Count -eq 0) {
+    throw "No managed satellite assemblies were grouped under resources."
+}
+Write-Host "[PACK] Moved $relocatedSatelliteFiles managed satellite DLLs to resources."
+Write-Host "[PACK] Preserved $hiddenNativeCultureFolders required native language folders as hidden."
 
 Get-ChildItem -Path $AppDir -Filter "*.pdb" -File -ErrorAction SilentlyContinue |
     Remove-Item -Force
