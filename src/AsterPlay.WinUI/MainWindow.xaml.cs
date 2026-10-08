@@ -531,6 +531,7 @@ public sealed partial class MainWindow : Window
         if (PageHost.Content is not FrameworkElement page ||
             !ReferenceEquals(PageHost.Content, _startupRevealPage) ||
             !page.IsLoaded ||
+            (page is HomeView homeView && !homeView.IsInitialVisualReady) ||
             page.ActualWidth < 32 ||
             page.ActualHeight < 32 ||
             PageHost.ActualWidth < 32 ||
@@ -695,9 +696,16 @@ public sealed partial class MainWindow : Window
         view.ServerRequested += (_, _) =>
             ShowServers(returnToLogin: false, returnToNoServerHome: true);
 
+        view.InitialVisualReady += (_, _) =>
+        {
+            StartupDiagnostics.Write(
+                "ShowNoServerHome: empty home first visual arranged");
+            ScheduleStartupReveal();
+        };
+
         PageHost.Content = view;
-        StartupDiagnostics.Write("ShowNoServerHome: empty home shell assigned");
-        ScheduleStartupReveal();
+        StartupDiagnostics.Write(
+            "ShowNoServerHome: empty home shell assigned; awaiting InitialVisualReady");
     }
 
     private void ShowHome()
