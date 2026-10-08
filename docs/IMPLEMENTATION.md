@@ -121,22 +121,27 @@ build-windows.cmd
 dist/AsterPlay/
 ```
 
-Windows x64 发布采用与常见 Windows 桌面程序一致的 **根目录 EXE + resources/** 结构，便携版与未来安装版共用同一目录约定：
+Windows x64 便携版采用 **根目录真实 AsterPlay.exe + DLL，resources/ 专供语言资源** 的结构。未来安装版也应直接复用：
 
 ```text
 AsterPlay/
-├── AsterPlay.exe                 # 无控制台、带应用图标的启动入口
+├── AsterPlay.exe              # 直接启动的 WinUI 3 程序，不再额外包装
+├── AsterPlay.Core.dll
+├── LiquidGlassWinUI.dll
+├── CustomEffectRuntimeNative.dll
+├── libmpv-2.dll
+├── *.dll                       # .NET / Windows App SDK 运行库
+├── Assets/                     # 原生开屏资源与图标
+├── Info/                       # 构建说明、依赖来源和校验信息
 └── resources/
-    ├── AsterPlay.exe             # 实际 WinUI 3 主程序
-    ├── *.dll                      # .NET 8、Windows App SDK、mpv、LiquidGlass
-    ├── Assets/
-    ├── <语言资源目录>/
-    └── Info/
+    ├── zh-Hans/
+    ├── de-DE/
+    └── ...                     # 语言专用 *.resources.dll
 ```
 
-`PublishSingleFile=false`，不进行 EXE 压缩，也不解包运行时。内部实际程序和运行库保持原始相对位置，只把整套 .NET/WinUI 运行目录放进 `resources`。根目录的启动器使用 Windows PowerShell 5.1 / .NET Framework 编译成小型 Windows GUI EXE，按相对路径启动 `resources/AsterPlay.exe` 后退出，避免出现命令行窗口。当前未创建安装程序；未来安装版安装同样的目录结构，并额外提供卸载程序和快捷方式。
+发布保持 `PublishSingleFile=false` 和自包含部署，不压缩、不生成额外启动器、不在首次运行时解包。纯托管卫星资源目录会归类到 `resources/{culture}/`；程序在 XAML 初始化前注册程序集解析器以读取这些目录。WinUI 原生 MUI/PRI 等需要 SDK 固定加载位置的文件不强制移动，确保兼容性。
 
-`build-windows.cmd -Full` 强制清理并重新构建。旧参数 `-Unpacked` 保留向后兼容，但目录式 DLL 已经是默认方式。
+`build-windows.cmd -Full` 会清理旧版 `resources/AsterPlay.exe` 和多余的启动器文件并重新生成目录。旧 `-Unpacked` 参数保留兼容。安装版未来只负责复制同一目录树并创建卸载和快捷方式。
 
 CI 会验证：
 
