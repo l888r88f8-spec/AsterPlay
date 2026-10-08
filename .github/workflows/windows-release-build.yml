@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -146,48 +146,11 @@ jobs:
           Stop-Process -Id $process.Id -Force
           Write-Host "Packaged AsterPlay stayed alive and completed native splash handoff."
 
-      - name: Pin verified LiquidGlass native runtime
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        shell: pwsh
-        run: |
-          git fetch origin main
-          $remoteHead = (git rev-parse origin/main).Trim()
-          $currentHead = (git rev-parse HEAD).Trim()
-          if ($remoteHead -ne $currentHead) {
-            Write-Host "main advanced to $remoteHead while this run was executing; skipping native runtime pin from $currentHead."
-            exit 0
-          }
-
-          $source = "Native\LiquidGlassCompat\Output\x64\Release\CustomEffectRuntimeNative.dll"
-          $directory = "Native\LiquidGlassCompat\Prebuilt\win-x64"
-          $destination = Join-Path $directory "CustomEffectRuntimeNative.dll"
-          $hashFile = Join-Path $directory "SHA256.txt"
-
-          New-Item -ItemType Directory -Force -Path $directory | Out-Null
-          Copy-Item $source $destination -Force
-
-          $hash = (Get-FileHash -Algorithm SHA256 $destination).Hash.ToLowerInvariant()
-          @(
-            "CustomEffectRuntimeNative.dll"
-            "Target: Windows App SDK 2.5.1"
-            "Architecture: x64"
-            "SHA256: $hash"
-            "Verified by Windows release build + startup smoke test."
-          ) | Set-Content -Encoding UTF8 $hashFile
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- $destination $hashFile
-
-          git diff --cached --quiet
-          if ($LASTEXITCODE -eq 0) {
-            Write-Host "Pinned LiquidGlass runtime is already current."
-          }
-          else {
-            git commit -m "Pin verified SDK 2.5 LiquidGlass runtime [skip ci]"
-            git push origin HEAD:main
-          }
-
+      # The native DLL is built and tested on CI, and is included in the
+      # uploaded release artifact. Do not pin compiler-produced binaries back
+      # to main on every C# change: even identical sources can yield different
+      # DLL hashes. Update Prebuilt/win-x64 only via an intentional release.
+      #
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
