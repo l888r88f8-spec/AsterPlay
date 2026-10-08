@@ -129,81 +129,80 @@ public partial class App : Application
         if (_window is null)
             return;
 
-        _window.StartupVisualReady -=
-            MainWindow_StartupVisualReady;
-
+        _window.StartupVisualReady -= MainWindow_StartupVisualReady;
         var splash = _splash;
-        _splash = null;
 
         StartupDiagnostics.Write(
-            $"StartupVisualReady event received; nativeSplashExists={splash is not null}, " +
+            $"StartupVisualReady received; nativeSplashExists={splash is not null}, " +
             $"nativeSplashAvailable={splash?.IsAvailable == true}");
-        _window.WriteStartupVisualState(
-            "App.StartupVisualReady.received");
+        _window.WriteStartupVisualState("App.StartupVisualReady.received");
 
         try
         {
-            if (splash is not null &&
-                splash.IsAvailable)
+            if (splash is not null && splash.IsAvailable)
             {
                 if (_window.IsNoServerStartup)
                 {
-                    // The static empty Home may not paint immediately after
-                    // its native owner becomes unoccluded. Never expose it by
-                    // fading the native HWND into a collapsed XAML cover.
-                    // The XAML cover has the same theme color and icon as the
-                    // native splash, so the handoff is visually continuous.
+                    // The native HWND and WinUI HWND are different surfaces.
+                    // Keep the existing WinUI cover visible during the switch.
+                    // The cover is dismissed ONLY after the now-unoccluded
+                    // WinUI window has confirmed fresh frames and DWM S_OK.
                     StartupDiagnostics.Write(
-                        "App: empty home; retaining WinUI startup cover during native handoff");
-                    await _window.PrepareEmptyHomeCoverHandoffAsync();
+                        "App: empty-home native -> WinUI cover presentation verification");
+                    if (!await _window.PrepareEmptyHomeCoverHandoffAsync())
+                        return;
+
                     splash.Dispose();
                     _window.WriteStartupVisualState(
                         "App.emptyHome.afterNativeHandoff");
 
-                    // Now the WinUI window is really visible and composing.
-                    // Fade its own cover into the arranged empty Home page.
-                    await _window.RevealStartupCoverAsync();
+                    if (!await _window.RevealStartupCoverAsync())
+                        return;
+
                     StartupDiagnostics.Write(
-                        "Empty-home splash handoff completed through XAML cover");
+                        "App: empty-home WinUI cover faded after confirmed visible composition");
                 }
                 else
                 {
-                    // Authenticated Home and Login retain the already-working
-                    // direct native fade after their presentation barrier.
+                    // The authenticated home keeps its direct native fade,
+                    // but the underlying page must now pass a checked fence.
                     StartupDiagnostics.Write(
-                        "App: preparing Home behind native splash");
-                    await _window.PrepareHomeBehindNativeSplashAsync();
-                    _window.WriteStartupVisualState(
-                        "App.beforeNativeFade");
+                        "App: verifying final content behind native splash");
+                    if (!await _window.PrepareHomeBehindNativeSplashAsync())
+                        return;
+
+                    await splash.FadeOutAsync(durationMilliseconds: 700);
+                    _window.WriteStartupVisualState("App.afterNativeFade");
                     StartupDiagnostics.Write(
-                        "App: starting native splash fade");
-                    await splash.FadeOutAsync(
-                        durationMilliseconds: 700);
-                    _window.WriteStartupVisualState(
-                        "App.afterNativeFade");
-                    StartupDiagnostics.Write(
-                        "Native splash faded directly into presented Home");
+                        "App: native splash faded into verified startup page");
                 }
             }
             else
             {
-                splash?.Dispose();
-                await _window.RevealStartupCoverAsync();
+                // Native startup window was unavailable. The WinUI cover
+                // remains until the visible window passes the same checks.
+                if (!await _window.RevealStartupCoverAsync())
+                    return;
+
                 StartupDiagnostics.Write(
-                    "In-window startup cover used because native splash was unavailable");
+                    "App: in-window startup cover used after verified composition");
             }
 
+            _splash = null;
+            splash?.Dispose();
             _window.NotifyStartupRevealCompleted();
             StartupDiagnostics.Write(
                 "Native splash to MainWindow handoff completed");
         }
         catch (Exception ex)
         {
-            splash?.Dispose();
-            _window.NotifyStartupRevealCompleted();
+            // Never mark an unsuccessful handoff as completed or destroy an
+            // available splash in the exception path: that exposed blank HWND
+            // frames in the previous startup implementation.
             StartupDiagnostics.WriteException(
-                "MainWindow_StartupVisualReady",
-                ex);
+                "MainWindow_StartupVisualReady", ex);
+            StartupDiagnostics.Write(
+                "Startup handoff failed; startup surface retained for diagnostics");
         }
     }
 
