@@ -461,7 +461,8 @@ namespace LiquidGlassWinUI
         {
             if (CompositionBrush != null)
             {
-                if (!_effectCommitPending)
+                if (!_effectCommitPending &&
+                    PipelineState != LiquidGlassPipelineState.Failed)
                     SetPipelineState(LiquidGlassPipelineState.Connected);
                 return;
             }
