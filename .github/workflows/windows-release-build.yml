@@ -47,20 +47,20 @@ jobs:
         run: |
           $publish = Join-Path $PWD "dist\AsterPlay"
           $required = @(
-            "AsterPlay.cmd",
-            "App/AsterPlay.exe",
-            "App/AsterPlay.Core.dll",
-            "App/LiquidGlassWinUI.dll",
-            "App/CustomEffectRuntimeNative.dll",
-            "App/libmpv-2.dll",
-            "App/coreclr.dll",
-            "App/hostfxr.dll",
-            "App/hostpolicy.dll",
-            "App/Assets/AsterPlay.AppIcon.png",
-            "App/Assets/AsterPlay.ico",
-            "Info/RUNTIME-SOURCE.txt",
-            "Info/BUILD-INFO.txt",
-            "Info/LIQUIDGLASS-COMPAT.txt"
+            "AsterPlay.exe",
+            "resources/AsterPlay.exe",
+            "resources/AsterPlay.Core.dll",
+            "resources/LiquidGlassWinUI.dll",
+            "resources/CustomEffectRuntimeNative.dll",
+            "resources/libmpv-2.dll",
+            "resources/coreclr.dll",
+            "resources/hostfxr.dll",
+            "resources/hostpolicy.dll",
+            "resources/Assets/AsterPlay.AppIcon.png",
+            "resources/Assets/AsterPlay.ico",
+            "resources/Info/RUNTIME-SOURCE.txt",
+            "resources/Info/BUILD-INFO.txt",
+            "resources/Info/LIQUIDGLASS-COMPAT.txt"
           )
 
           foreach ($name in $required) {
@@ -70,7 +70,7 @@ jobs:
             }
           }
 
-          $runtime = Get-Content -Raw (Join-Path $publish "Info\RUNTIME-SOURCE.txt")
+          $runtime = Get-Content -Raw (Join-Path $publish "resources\Info\RUNTIME-SOURCE.txt")
           if ($runtime -notmatch [Regex]::Escape("mpv-dev-lgpl-x86_64-20260929-git-b4b5d69a44.7z")) {
             throw "Release package does not contain the pinned libmpv build."
           }
@@ -79,15 +79,15 @@ jobs:
             throw "Pinned libmpv checksum metadata is missing."
           }
 
-          $buildInfo = Get-Content -Raw (Join-Path $publish "Info\BUILD-INFO.txt")
+          $buildInfo = Get-Content -Raw (Join-Path $publish "resources\Info\BUILD-INFO.txt")
           if ($buildInfo -notmatch 'PublishSingleFile: false') {
             throw "Portable package must keep .NET and WinUI dependencies unpacked."
           }
-          if ($buildInfo -notmatch 'PortableLayout: App subdirectory') {
-            throw "Portable package must group application binaries under App."
+          if ($buildInfo -notmatch 'PortableLayout: root AsterPlay.exe \+ resources directory') {
+            throw "Portable package must have a root GUI launcher and unpacked resources folder."
           }
 
-          $pdbs = @(Get-ChildItem -Path (Join-Path $publish "App") -Filter '*.pdb' -File)
+          $pdbs = @(Get-ChildItem -Path (Join-Path $publish "resources") -Filter '*.pdb' -File)
           if ($pdbs.Count -gt 0) {
             throw "Debug symbols must not clutter the portable root."
           }
@@ -97,9 +97,19 @@ jobs:
       - name: Smoke start packaged app
         shell: pwsh
         run: |
-          $exe = Join-Path $PWD "dist\AsterPlay\App\AsterPlay.exe"
-          $process = Start-Process -FilePath $exe -PassThru
+          $launcher = Join-Path $PWD "dist\AsterPlay\AsterPlay.exe"
+          $exe = Join-Path $PWD "dist\AsterPlay\resources\AsterPlay.exe"
+          $launcherProcess = Start-Process -FilePath $launcher -PassThru
           Start-Sleep -Seconds 5
+          $launcherProcess.Refresh()
+          if (-not $launcherProcess.HasExited -or $launcherProcess.ExitCode -ne 0) {
+            throw "Root portable GUI launcher failed to transfer control to resources/AsterPlay.exe."
+          }
+          $process = Get-Process -Name "AsterPlay" -ErrorAction SilentlyContinue |
+            Where-Object { $_.Path -eq $exe } | Select-Object -First 1
+          if (-not $process) {
+            throw "No WinUI 3 process was created by the root portable launcher."
+          }
 
           $nativeGlassLog = Join-Path $env:LOCALAPPDATA "AsterPlay\LiquidGlassNative.log"
           if (Test-Path $nativeGlassLog) {
