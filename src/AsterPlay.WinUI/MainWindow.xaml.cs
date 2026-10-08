@@ -214,6 +214,8 @@ public sealed partial class MainWindow : Window
 
         if (_activeNavigationButton is not null)
             SetActiveNavigation(_activeNavigationButton);
+
+        RefreshDockSpotlightTheme();
     }
 
     private void ApplySystemTheme()
