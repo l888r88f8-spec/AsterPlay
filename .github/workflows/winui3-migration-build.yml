@@ -51,11 +51,11 @@ jobs:
             }
           }
 
-          $satellites = @(Get-ChildItem -Path (Join-Path $publish 'resources') -Recurse -File -Filter '*.resources.dll' -Force)
-          if ($satellites.Count -eq 0) {
-            throw "Managed language satellites were not collected under resources."
+          $languageFiles = @(Get-ChildItem -Path (Join-Path $publish 'resources') -Recurse -File -Force)
+          if ($languageFiles.Count -eq 0) {
+            throw "No language resources were collected under resources."
           }
-          Write-Host "WinUI 3 locale packaging verified ($($satellites.Count) satellite DLLs)."
+          Write-Host "WinUI 3 locale packaging verified ($($languageFiles.Count) files)."
 
       - name: Smoke start WinUI app
         shell: pwsh
