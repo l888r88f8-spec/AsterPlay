@@ -1,4 +1,4 @@
-param([switch]$Full, [switch]$Unpacked)
+param([switch]$Full)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -14,12 +14,6 @@ $Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $Project = Join-Path $Root "src\AsterPlay.WinUI\AsterPlay.WinUI.csproj"
 $Dist = Join-Path $Root "dist"
 $Publish = Join-Path $Dist "AsterPlay"
-$AppDir = $Publish
-$InfoDir = Join-Path $Publish "Info"
-$LocalesDir = Join-Path $Publish "resources"
-# The real WinUI 3 AsterPlay.exe and all DLLs live beside each other.
-# Only managed language-satellite folders move under resources/{culture}.
-# Do not relocate WinUI native PRI / MUI data required by Windows loading.
 $PortableDotnet = Join-Path $Root "tools\dotnet\dotnet.exe"
 $MpvDir = if ($env:ASTERPLAY_MPV_DIR) { $env:ASTERPLAY_MPV_DIR } else { Join-Path $Root "third_party\mpv" }
 
@@ -126,26 +120,12 @@ function Fingerprint([string[]]$Paths,[string]$Salt) {
     } finally { $hasher.Dispose() }
 }
 function Test-Output {
-    $required = @(
-        "AsterPlay.exe",
-        "AsterPlay.Core.dll",
-        "LiquidGlassWinUI.dll",
-        "CustomEffectRuntimeNative.dll",
-        "libmpv-2.dll",
-        "coreclr.dll",
-        "hostfxr.dll",
-        "hostpolicy.dll",
-        "Assets\AsterPlay.AppIcon.png",
-        "Assets\AsterPlay.ico",
-        "Info\BUILD-INFO.txt",
-        "Info\LIQUIDGLASS-COMPAT.txt",
-        "Info\RUNTIME-SOURCE.txt"
-    )
-    foreach ($n in $required) {
+    foreach ($n in @("AsterPlay.exe","AsterPlay.Core.dll","LiquidGlassWinUI.dll",
+        "CustomEffectRuntimeNative.dll","libmpv-2.dll","coreclr.dll","hostfxr.dll",
+        "hostpolicy.dll","BUILD-INFO.txt","LIQUIDGLASS-COMPAT.txt","RUNTIME-SOURCE.txt")) {
         if (-not (Test-Path (Join-Path $Publish $n) -PathType Leaf)) { return $false }
     }
-    if (-not (Test-Path $LocalesDir -PathType Container)) { return $false }
-    return @(Get-ChildItem -LiteralPath $LocalesDir -File -Recurse -Force).Count -gt 0
+    return $true
 }
 function Publish-App([bool]$Clean,[bool]$NoRestore) {
     if ($Clean) {
@@ -162,11 +142,9 @@ function Publish-App([bool]$Clean,[bool]$NoRestore) {
     } else {
         Write-Host "[BUILD] Incremental: reuse existing MSBuild/NuGet caches."
     }
-    New-Item -ItemType Directory -Force -Path $AppDir | Out-Null
+    New-Item -ItemType Directory -Force -Path $Publish | Out-Null
     $arguments = @("publish",$Project,"-c","Release","-r","win-x64","--self-contained","true",
-        "-p:Platform=x64","-p:PublishSingleFile=false",
-        "-p:PublishTrimmed=false","-p:DebugType=none","-p:DebugSymbols=false",
-        "-o",$AppDir)
+        "-p:Platform=x64","-p:PublishSingleFile=false","-o",$Publish)
     if ($NoRestore) { $arguments += "--no-restore" }
     & $Dotnet @arguments | Out-Host
     return ($LASTEXITCODE -eq 0)
@@ -188,7 +166,7 @@ $settings = @(
 $glassInput = if ($env:CI -eq "true" -or $env:ASTERPLAY_USE_SOURCE_LIQUIDGLASS -eq "1") {
     $sourceNative
 } elseif (Test-Path $prebuiltNative) { $prebuiltNative } else { $sourceNative }
-$configHash = Fingerprint ($settings + @($glassInput,$mpvDll)) "release|win-x64|$selectedSdk|$MpvDir|layout=root-dll-resources-locales-v3"
+$configHash = Fingerprint ($settings + @($glassInput,$mpvDll)) "release|win-x64|$selectedSdk|$MpvDir"
 $inputHash = Fingerprint ($src + $settings + @($glassInput,$mpvDll)) $configHash
 $state = $null
 if (Test-Path $statePath) {
@@ -217,15 +195,6 @@ if ($canIncremental) {
 }
 if (-not $ok) { throw "WinUI 3 Release build failed." }
 
-# Native startup assets remain beside the WinUI executable in Assets.
-# WinUI resource URI resolution and GDI+ expect these files in that location.
-$portableAssets = Join-Path $AppDir "Assets"
-New-Item -ItemType Directory -Force -Path $portableAssets | Out-Null
-foreach ($assetName in @("AsterPlay.AppIcon.png", "AsterPlay.ico")) {
-    Copy-Item -LiteralPath (Join-Path $Root "src\AsterPlay.WinUI\Assets\$assetName") `
-        -Destination (Join-Path $portableAssets $assetName) -Force
-}
-
 $sourceBuiltLiquidGlassNative = Join-Path $Root "Native\LiquidGlassCompat\Output\x64\Release\CustomEffectRuntimeNative.dll"
 $pinnedLiquidGlassNative = Join-Path $Root "Native\LiquidGlassCompat\Prebuilt\win-x64\CustomEffectRuntimeNative.dll"
 $liquidGlassNativeSource = $null
@@ -247,11 +216,8 @@ else {
     throw "LiquidGlass SDK 2.5.1 compatibility runtime is missing. Pull the latest main branch or build Native\LiquidGlassCompat first."
 }
 
-$liquidGlassNative = Join-Path $AppDir "CustomEffectRuntimeNative.dll"
+$liquidGlassNative = Join-Path $Publish "CustomEffectRuntimeNative.dll"
 Copy-Item $liquidGlassNativeSource $liquidGlassNative -Force
-
-$infoDirectory = $InfoDir
-New-Item -ItemType Directory -Force -Path $infoDirectory | Out-Null
 
 $liquidGlassHash = (Get-FileHash -Algorithm SHA256 $liquidGlassNative).Hash.ToLowerInvariant()
 @(
@@ -265,19 +231,19 @@ $liquidGlassHash = (Get-FileHash -Algorithm SHA256 $liquidGlassNative).Hash.ToLo
     "EffectType::GetBounds: 0x1F7D0",
     "EffectType::CalcInputBounds: 0x1EE90",
     "DirectPropertyUpdater vtable: 0x471E0"
-) | Set-Content -Encoding UTF8 (Join-Path $infoDirectory "LIQUIDGLASS-COMPAT.txt")
+) | Set-Content -Encoding UTF8 (Join-Path $Publish "LIQUIDGLASS-COMPAT.txt")
 
-Copy-Item (Join-Path $MpvDir "*.dll") $AppDir -Force
+Copy-Item (Join-Path $MpvDir "*.dll") $Publish -Force
 
 $runtimeSource = Join-Path $MpvDir "RUNTIME-SOURCE.txt"
 if (Test-Path $runtimeSource) {
-    Copy-Item $runtimeSource (Join-Path $infoDirectory "RUNTIME-SOURCE.txt") -Force
+    Copy-Item $runtimeSource (Join-Path $Publish "RUNTIME-SOURCE.txt") -Force
 } elseif ($env:ASTERPLAY_MPV_DIR) {
     @(
         "Source: external ASTERPLAY_MPV_DIR",
         "DLL: $mpvDll",
         "SHA256: $((Get-FileHash -Algorithm SHA256 $mpvDll).Hash.ToLowerInvariant())"
-    ) | Set-Content -Encoding UTF8 (Join-Path $infoDirectory "RUNTIME-SOURCE.txt")
+    ) | Set-Content -Encoding UTF8 (Join-Path $Publish "RUNTIME-SOURCE.txt")
 } else {
     throw "Pinned libmpv source manifest is missing."
 }
@@ -287,14 +253,11 @@ $requiredFiles = @(
     "AsterPlay.Core.dll",
     "LiquidGlassWinUI.dll",
     "CustomEffectRuntimeNative.dll",
+    "LIQUIDGLASS-COMPAT.txt",
     "libmpv-2.dll",
     "coreclr.dll",
     "hostfxr.dll",
-    "hostpolicy.dll",
-    "Assets\AsterPlay.AppIcon.png",
-    "Assets\AsterPlay.ico",
-    "Info\LIQUIDGLASS-COMPAT.txt",
-    "Info\RUNTIME-SOURCE.txt"
+    "hostpolicy.dll"
 )
 
 $missingFiles = @(
@@ -313,77 +276,10 @@ if ($missingFiles.Count -gt 0) {
     "RID: win-x64",
     "SelfContained: true",
     "PublishSingleFile: false",
-    "PortableLayout: root EXE and DLLs; managed locales in resources/{culture}",
     "WindowsAppSDKSelfContained: true",
     "SDK: $selectedSdk",
     "Built: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-) | Set-Content -Encoding UTF8 (Join-Path $infoDirectory "BUILD-INFO.txt")
-
-# Do not move native MUI/PRI files away from the SDK-required paths.
-# Most WinUI culture folders mix those native files with managed satellite
-# assemblies. Inspect each file instead of rejecting the whole folder.
-New-Item -ItemType Directory -Force -Path $LocalesDir | Out-Null
-$relocatedSatelliteFiles = 0
-$copiedNativeLocaleFiles = 0
-$hiddenNativeCultureFolders = 0
-foreach ($directory in @(Get-ChildItem -LiteralPath $Publish -Directory -Force)) {
-    if ($directory.Name -in @("resources", "Assets", "Info")) {
-        continue
-    }
-
-    try {
-        $culture = [System.Globalization.CultureInfo]::GetCultureInfo($directory.Name)
-        if (-not $culture.Name.Equals(
-                $directory.Name, [StringComparison]::OrdinalIgnoreCase)) {
-            continue
-        }
-    }
-    catch {
-        continue
-    }
-
-    $satellites = @(Get-ChildItem -LiteralPath $directory.FullName -Recurse -File -Filter "*.resources.dll" -Force)
-    foreach ($satellite in $satellites) {
-        $relative = $satellite.FullName.Substring($directory.FullName.Length).TrimStart([char[]]@('\', '/'))
-        $destination = Join-Path (Join-Path $LocalesDir $directory.Name) $relative
-        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destination) | Out-Null
-        Move-Item -LiteralPath $satellite.FullName -Destination $destination -Force
-        $relocatedSatelliteFiles++
-    }
-
-    $nativeFiles = @(Get-ChildItem -LiteralPath $directory.FullName -Recurse -File -Force)
-    if ($nativeFiles.Count -eq 0) {
-        Remove-Item -LiteralPath $directory.FullName -Recurse -Force
-        continue
-    }
-
-    # WinUI native language assets must remain in their SDK-required paths.
-    # Also put a copy under resources/{culture} for a complete and useful
-    # language resource collection without breaking MUI/PRI probing.
-    foreach ($native in $nativeFiles) {
-        $relative = $native.FullName.Substring($directory.FullName.Length).TrimStart([char[]]@('\', '/'))
-        $destination = Join-Path (Join-Path $LocalesDir $directory.Name) $relative
-        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destination) | Out-Null
-        Copy-Item -LiteralPath $native.FullName -Destination $destination -Force
-        $copiedNativeLocaleFiles++
-    }
-
-    # Keep the required original directory, but hide it in Explorer. This
-    # preserves the Windows loader contract while decluttering the root.
-    $nativeDirectory = Get-Item -LiteralPath $directory.FullName -Force
-    $nativeDirectory.Attributes = $nativeDirectory.Attributes -bor [IO.FileAttributes]::Hidden
-    $hiddenNativeCultureFolders++
-}
-
-if (@(Get-ChildItem -LiteralPath $LocalesDir -Recurse -File -Force).Count -eq 0) {
-    throw "No language resource files were collected under resources."
-}
-Write-Host "[PACK] Moved $relocatedSatelliteFiles managed satellite DLLs to resources."
-Write-Host "[PACK] Copied $copiedNativeLocaleFiles native locale resources without changing their load paths."
-Write-Host "[PACK] Preserved $hiddenNativeCultureFolders native locale folders as hidden."
-
-Get-ChildItem -Path $AppDir -Filter "*.pdb" -File -ErrorAction SilentlyContinue |
-    Remove-Item -Force
+) | Set-Content -Encoding UTF8 (Join-Path $Publish "BUILD-INFO.txt")
 
 Write-Host ""
 Write-Host "Publish self-check passed:"
@@ -391,8 +287,6 @@ $requiredFiles | ForEach-Object { Write-Host "  OK: $_" }
 Write-Host ""
 Write-Host "Build complete:"
 Write-Host "  Folder: $Publish"
-Write-Host "  Start:  $(Join-Path $Publish 'AsterPlay.exe')"
-Write-Host "  Locales: $LocalesDir"
 
 if (-not (Test-Output)) { throw "Final release package verification failed." }
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $statePath) | Out-Null

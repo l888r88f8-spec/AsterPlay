@@ -300,15 +300,10 @@ internal sealed class NativeStartupSplash : IDisposable
             return;
         }
 
-        // In a single-file publish AppContext.BaseDirectory can differ from
-        // the physical EXE directory. Prefer the portable Assets folder.
-        var executableDirectory = Path.GetDirectoryName(Environment.ProcessPath);
         var path = Path.Combine(
-            executableDirectory ?? AppContext.BaseDirectory,
+            AppContext.BaseDirectory,
             "Assets",
             "AsterPlay.AppIcon.png");
-        if (!File.Exists(path))
-            path = Path.Combine(AppContext.BaseDirectory, "Assets", "AsterPlay.AppIcon.png");
 
         if (!File.Exists(path))
         {

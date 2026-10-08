@@ -29,12 +29,9 @@
   <ItemGroup>
     <Content Include="Assets\AsterPlay.AppIcon.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-      <!-- The native splash requires a physical PNG beside AsterPlay.exe. -->
     </Content>
     <Content Include="Assets\AsterPlay.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
   </ItemGroup>
 

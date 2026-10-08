@@ -13,9 +13,6 @@ public partial class App : Application
 
     public App()
     {
-        // Managed satellite assemblies are grouped under resources/{culture}
-        // in portable and future installed layouts.
-        Services.SatelliteResourceLoader.Install();
         StartupDiagnostics.StartSession();
         StartupDiagnostics.Write(
             $"App constructor: entered; startupLog={StartupDiagnostics.LogPath}");
