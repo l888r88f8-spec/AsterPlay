@@ -22,6 +22,7 @@ public sealed partial class MainWindow : Window
     private bool _startupRevealScheduled;
     private bool _startupPresentationInProgress;
     private bool _startupVisualReadyRaised;
+    private bool _startupWindowClosed;
     private object? _startupRevealPage;
     private bool _authenticated;
     private string _currentSection = "home-shell";
@@ -252,6 +253,7 @@ public sealed partial class MainWindow : Window
             _lowLevelMouseHook = IntPtr.Zero;
         }
 
+        _startupWindowClosed = true;
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= FirstFrame_Rendering;
         Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= StartupReveal_Rendering;
         StopStartupHeartbeat(
@@ -505,12 +507,35 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private bool IsStartupPageReady(object? expectedPage)
+    {
+        if (_startupWindowClosed ||
+            !_startupResolutionCompleted ||
+            !RootGrid.IsLoaded ||
+            PageHost.Content is not FrameworkElement page ||
+            !ReferenceEquals(page, expectedPage) ||
+            !page.IsLoaded ||
+            page.ActualWidth < 32 ||
+            page.ActualHeight < 32 ||
+            PageHost.ActualWidth < 32 ||
+            PageHost.ActualHeight < 32)
+        {
+            return false;
+        }
+
+        return page is not HomeView homeView || homeView.HasReadyStartupVisual;
+    }
+
     private void ScheduleStartupReveal()
     {
-        if (_startupVisualReadyRaised ||
-            _startupRevealScheduled ||
-            _startupPresentationInProgress)
+        if (_startupVisualReadyRaised || _startupPresentationInProgress)
+            return;
+
+        if (_startupRevealScheduled)
         {
+            // A login/session fallback may replace a page while its old
+            // rendering callback is queued. Always track the current page.
+            _startupRevealPage = PageHost.Content;
             return;
         }
 
@@ -534,13 +559,7 @@ public sealed partial class MainWindow : Window
         // first XAML Rendering callback is executing. Never hide the native
         // splash on that callback alone.
         if (PageHost.Content is not FrameworkElement page ||
-            !ReferenceEquals(PageHost.Content, _startupRevealPage) ||
-            !page.IsLoaded ||
-            (page is HomeView homeView && !homeView.IsInitialVisualReady) ||
-            page.ActualWidth < 32 ||
-            page.ActualHeight < 32 ||
-            PageHost.ActualWidth < 32 ||
-            PageHost.ActualHeight < 32)
+            !IsStartupPageReady(_startupRevealPage))
         {
             return;
         }
@@ -558,49 +577,57 @@ public sealed partial class MainWindow : Window
                 $"size={page.ActualWidth:0}x{page.ActualHeight:0}, " +
                 $"host={PageHost.ActualWidth:0}x{PageHost.ActualHeight:0}");
 
-            var liquidGlassReady =
-                await EnsureLiquidGlassWarmupAsync();
+            var liquidGlassReady = await EnsureLiquidGlassWarmupAsync();
             StartupDiagnostics.Write(
                 $"Startup reveal glass prerequisite completed; ready={liquidGlassReady}");
-
-            // First allow new layout, decoded images, and custom Composition
-            // brushes to be submitted on subsequent XAML rendering passes.
-            var initialFrames = await WaitForCompositionFramesAsync(3, 650);
-
-            // DwmFlush is synchronous. Run it off the WinUI dispatcher so the
-            // UI keeps composing while DWM processes the queued frame.
-            var flush = Task.Run(DwmFlush);
-            var completed = await Task.WhenAny(
-                flush,
-                Task.Delay(TimeSpan.FromSeconds(2)));
-
-            if (ReferenceEquals(completed, flush))
+            if (!liquidGlassReady)
             {
                 StartupDiagnostics.Write(
-                    $"Startup DWM presentation barrier completed; hr=0x{(uint)await flush:X8}");
-            }
-            else
-            {
-                // Remote / headless sessions can have no timely DWM fence.
-                // Keep the splash up through the additional composition passes.
-                StartupDiagnostics.Write(
-                    "Startup DWM presentation barrier timed out; awaiting further XAML frames");
+                    "Startup readiness rejected: no connected glass or usable fallback");
+                return;
             }
 
-            var settledFrames = await WaitForCompositionFramesAsync(2, 500);
+            // Rendering callbacks are pre-present. Require complete counts,
+            // then DWM S_OK after the actual page has been arranged. Timeout
+            // and nonzero HRESULTs are NOT evidence of a presented frame.
+            var initialFrames = await WaitForCompositionFramesAsync(3, 1000);
+            if (initialFrames < 3)
+            {
+                StartupDiagnostics.Write(
+                    $"Startup readiness rejected: initial frames={initialFrames}/3");
+                return;
+            }
+
+            var settledFrames = await WaitForCompositionFramesAsync(2, 1000);
+            if (settledFrames < 2)
+            {
+                StartupDiagnostics.Write(
+                    $"Startup readiness rejected: settled frames={settledFrames}/2");
+                return;
+            }
+
+            if (!IsStartupPageReady(targetPage))
+            {
+                StartupDiagnostics.Write(
+                    "Startup readiness rejected: page changed or visible content became unready");
+                return;
+            }
+
+            if (!await WaitForStartupDwmFenceAsync("page-presented", 2000))
+            {
+                StartupDiagnostics.Write(
+                    "Startup readiness rejected: DWM has not confirmed this page presentation");
+                return;
+            }
+
             StartupDiagnostics.Write(
-                $"Startup presentation barrier: frames={initialFrames}+{settledFrames}; " +
+                $"Startup presentation verified: frames={initialFrames}+{settledFrames}; " +
                 $"page={page.GetType().Name}, size={page.ActualWidth:0}x{page.ActualHeight:0}");
-            // Do not withdraw the opaque native splash while the UI dispatcher
-            // is still processing a burst of initial bitmap and shader work.
-            await Task.Delay(120);
 
-            if (_startupVisualReadyRaised ||
-                !ReferenceEquals(PageHost.Content, targetPage) ||
-                !page.IsLoaded)
+            if (_startupVisualReadyRaised || !IsStartupPageReady(targetPage))
             {
                 StartupDiagnostics.Write(
-                    "Startup page changed before presentation barrier; reveal postponed");
+                    "Startup page changed after presentation fence; reveal postponed");
                 return;
             }
 
@@ -622,8 +649,16 @@ public sealed partial class MainWindow : Window
         finally
         {
             _startupPresentationInProgress = false;
-            if (!_startupVisualReadyRaised && PageHost.Content is FrameworkElement)
-                ScheduleStartupReveal();
+            if (!_startupVisualReadyRaised &&
+                !_startupWindowClosed &&
+                PageHost.Content is FrameworkElement)
+            {
+                // Retry verification; a timeout is not a signal to dismiss
+                // the splash. Back off to avoid a busy loop on DWM failures.
+                await Task.Delay(180);
+                if (!_startupVisualReadyRaised && !_startupWindowClosed)
+                    ScheduleStartupReveal();
+            }
         }
     }
 
