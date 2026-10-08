@@ -149,7 +149,7 @@ public sealed partial class MainWindow
         object sender, PointerRoutedEventArgs e)
     {
         // Unlike mouse hover, a touch contact ends as soon as the finger lifts.
-        if (e.Pointer.PointerDeviceType == Windows.Devices.Input.PointerDeviceType.Touch)
+        if (e.Pointer.PointerDeviceType.Equals(Windows.Devices.Input.PointerDeviceType.Touch))
             FadeDockSpotlight();
     }
 
