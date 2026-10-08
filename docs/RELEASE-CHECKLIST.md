@@ -15,15 +15,15 @@ dist\AsterPlay\AsterPlay.exe
 
 Pass criteria:
 
-- Only the root `AsterPlay.exe` and `resources/` appear at the portable root.
-- `resources/AsterPlay.exe` is the real .NET 8 / WinUI 3 executable.
-- `resources/AsterPlay.Core.dll`, `resources/LiquidGlassWinUI.dll`, `resources/coreclr.dll`, `resources/CustomEffectRuntimeNative.dll` and `resources/libmpv-2.dll` exist.
-- Required culture directories and `resources/Assets/AsterPlay.AppIcon.png` remain beside the real executable.
-- `resources/Info/BUILD-INFO.txt` records `PublishSingleFile: false` and the root-launcher / resources layout.
-- `resources/Info/RUNTIME-SOURCE.txt` contains the pinned libmpv release, commit, and checksum.
-- Starting the root `AsterPlay.exe` launches `resources/AsterPlay.exe` without a visible command window.
-- Copying the whole portable directory to another drive preserves startup and media playback. No additional .NET 8 or Windows App SDK installation is required.
-- Future installer should deploy this same directory structure; it may add an uninstaller but should not relocate runtime DLLs.
+- The **real** `AsterPlay.exe` is at the portable root and starts WinUI 3 directly (no helper launcher or CMD window).
+- `AsterPlay.Core.dll`, `LiquidGlassWinUI.dll`, `coreclr.dll`, `CustomEffectRuntimeNative.dll`, and `libmpv-2.dll` remain beside the executable.
+- `Assets/AsterPlay.AppIcon.png` remains at the executable-relative location required by the native splash.
+- `resources/{culture}/*.resources.dll` contains managed satellite assemblies where applicable; those resources are resolved by the in-app satellite resolver.
+- Native WinUI localization assets that require fixed DLL-relative locations are not moved.
+- `Info/BUILD-INFO.txt` records `PublishSingleFile: false` and `PortableLayout: root EXE and DLLs; managed locales in resources`.
+- `Info/RUNTIME-SOURCE.txt` contains the pinned libmpv release and checksum.
+- The program starts on a clean Windows x64 computer, and works after copying the portable directory to another disk.
+- After the portable version is verified, a future installer can deploy the same folder layout.
 
 ## 2. Login and session
 
