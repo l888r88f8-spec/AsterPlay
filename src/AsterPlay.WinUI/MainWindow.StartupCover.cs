@@ -24,30 +24,9 @@ public sealed partial class MainWindow
             $"In-window startup cover icon failed: {e.ErrorMessage}");
     }
 
-    // Both startup paths use the same verified presentation fence. In the
-    // empty-home case the in-window cover remains visible while the native
-    // splash is removed, so the first unoccluded HWND frame cannot be blank.
-    internal async Task<bool> PrepareEmptyHomeCoverHandoffAsync()
-    {
-        WriteStartupVisualState("PrepareEmptyHomeCoverHandoff.before");
-
-        StartupCover.Visibility = Visibility.Visible;
-        StartupCover.IsHitTestVisible = true;
-        StartupCover.Opacity = 0.999;
-        StartupCover.UpdateLayout();
-
-        var ready = await WaitForVerifiedStartupPresentationAsync(
-            "empty-home XAML cover behind native splash", 3);
-        if (ready)
-        {
-            WriteStartupVisualState("PrepareEmptyHomeCoverHandoff.verified");
-            StartupDiagnostics.Write(
-                $"Empty-home XAML cover presentation confirmed; iconReady={_startupCoverImageReady}");
-        }
-
-        return ready;
-    }
-
+    // The native splash stays on screen while the REAL startup page is
+    // composed. This applies to both the no-server Home and authenticated
+    // Home, avoiding an intermediate cover-to-page transition.
     internal async Task<bool> PrepareHomeBehindNativeSplashAsync()
     {
         WriteStartupVisualState("PrepareHomeBehindNativeSplash.beforeCollapse");
