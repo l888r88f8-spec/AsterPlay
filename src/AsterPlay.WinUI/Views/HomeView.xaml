@@ -1006,7 +1006,7 @@
                            FontSize="15"
                            Foreground="{ThemeResource AsterSecondaryTextBrush}"
                            HorizontalAlignment="Center"/>
-                <Button Content="添加服务器"
+                <Button Content="前往服务器页面"
                         Margin="0,10,0,0"
                         Padding="24,11"
                         CornerRadius="18"
