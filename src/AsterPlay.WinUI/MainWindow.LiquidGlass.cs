@@ -29,7 +29,7 @@ public sealed partial class MainWindow
                 TintB = 244,
                 ShapeRadius = 0.99,
                 ShapeRoundness = 4.0,
-                SpotlightRadius = 128,
+                SpotlightRadius = 104,
                 SpotlightStrength = 0
             };
 
