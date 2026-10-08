@@ -145,7 +145,7 @@ function Test-Output {
         if (-not (Test-Path (Join-Path $Publish $n) -PathType Leaf)) { return $false }
     }
     if (-not (Test-Path $LocalesDir -PathType Container)) { return $false }
-    return @(Get-ChildItem -LiteralPath $LocalesDir -Filter "*.resources.dll" -File -Recurse).Count -gt 0
+    return @(Get-ChildItem -LiteralPath $LocalesDir -File -Recurse -Force).Count -gt 0
 }
 function Publish-App([bool]$Clean,[bool]$NoRestore) {
     if ($Clean) {
@@ -188,7 +188,7 @@ $settings = @(
 $glassInput = if ($env:CI -eq "true" -or $env:ASTERPLAY_USE_SOURCE_LIQUIDGLASS -eq "1") {
     $sourceNative
 } elseif (Test-Path $prebuiltNative) { $prebuiltNative } else { $sourceNative }
-$configHash = Fingerprint ($settings + @($glassInput,$mpvDll)) "release|win-x64|$selectedSdk|$MpvDir|layout=root-dll-resources-locales-v2"
+$configHash = Fingerprint ($settings + @($glassInput,$mpvDll)) "release|win-x64|$selectedSdk|$MpvDir|layout=root-dll-resources-locales-v3"
 $inputHash = Fingerprint ($src + $settings + @($glassInput,$mpvDll)) $configHash
 $state = $null
 if (Test-Path $statePath) {
@@ -324,6 +324,7 @@ if ($missingFiles.Count -gt 0) {
 # assemblies. Inspect each file instead of rejecting the whole folder.
 New-Item -ItemType Directory -Force -Path $LocalesDir | Out-Null
 $relocatedSatelliteFiles = 0
+$copiedNativeLocaleFiles = 0
 $hiddenNativeCultureFolders = 0
 foreach ($directory in @(Get-ChildItem -LiteralPath $Publish -Directory -Force)) {
     if ($directory.Name -in @("resources", "Assets", "Info")) {
@@ -356,18 +357,30 @@ foreach ($directory in @(Get-ChildItem -LiteralPath $Publish -Directory -Force))
         continue
     }
 
-    # Native WinUI MUI/PRI assets must remain beside the SDK DLLs. Hide
-    # their parent folders in Explorer without changing their load paths.
+    # WinUI native language assets must remain in their SDK-required paths.
+    # Also put a copy under resources/{culture} for a complete and useful
+    # language resource collection without breaking MUI/PRI probing.
+    foreach ($native in $nativeFiles) {
+        $relative = $native.FullName.Substring($directory.FullName.Length).TrimStart([char[]]@('\', '/'))
+        $destination = Join-Path (Join-Path $LocalesDir $directory.Name) $relative
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destination) | Out-Null
+        Copy-Item -LiteralPath $native.FullName -Destination $destination -Force
+        $copiedNativeLocaleFiles++
+    }
+
+    # Keep the required original directory, but hide it in Explorer. This
+    # preserves the Windows loader contract while decluttering the root.
     $nativeDirectory = Get-Item -LiteralPath $directory.FullName -Force
     $nativeDirectory.Attributes = $nativeDirectory.Attributes -bor [IO.FileAttributes]::Hidden
     $hiddenNativeCultureFolders++
 }
 
-if (@(Get-ChildItem -LiteralPath $LocalesDir -Recurse -File -Filter "*.resources.dll" -Force).Count -eq 0) {
-    throw "No managed satellite assemblies were grouped under resources."
+if (@(Get-ChildItem -LiteralPath $LocalesDir -Recurse -File -Force).Count -eq 0) {
+    throw "No language resource files were collected under resources."
 }
 Write-Host "[PACK] Moved $relocatedSatelliteFiles managed satellite DLLs to resources."
-Write-Host "[PACK] Preserved $hiddenNativeCultureFolders required native language folders as hidden."
+Write-Host "[PACK] Copied $copiedNativeLocaleFiles native locale resources without changing their load paths."
+Write-Host "[PACK] Preserved $hiddenNativeCultureFolders native locale folders as hidden."
 
 Get-ChildItem -Path $AppDir -Filter "*.pdb" -File -ErrorAction SilentlyContinue |
     Remove-Item -Force
