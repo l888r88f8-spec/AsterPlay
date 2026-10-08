@@ -8,7 +8,10 @@ on:
     paths:
       - "src/AsterPlay.Core/**"
       - "src/AsterPlay.WinUI/**"
-      - "build-winui.ps1"
+      - "build-windows.cmd"
+      - "build-windows.ps1"
+      - "bootstrap-dotnet.ps1"
+      - "bootstrap-mpv.ps1"
       - ".github/workflows/winui3-migration-build.yml"
   workflow_dispatch:
 
