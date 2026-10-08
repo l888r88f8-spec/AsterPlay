@@ -29,6 +29,7 @@ public sealed partial class MainWindow : Window
     private HomeView? _retainedHomeView;
     private string _retainedHomeSessionKey = "";
     private bool? _homeCaptionUseDarkGlyphs;
+    private bool? _lastAppliedNativeTitleBarLight;
     private Button? _activeNavigationButton;
     private readonly IntPtr _hwnd;
     private readonly HookProc _lowLevelMouseHookProc;
@@ -238,6 +239,13 @@ public sealed partial class MainWindow : Window
 
     private void ConfigureNativeTitleBar(bool isLight)
     {
+        // Scroll/resize events can report the same Hero contrast many times.
+        // AppWindow title-bar writes are native window operations; avoid
+        // resubmitting identical colors while maximize/restore is in flight.
+        if (_lastAppliedNativeTitleBarLight == isLight)
+            return;
+
+        _lastAppliedNativeTitleBarLight = isLight;
         var transparent = Windows.UI.Color.FromArgb(0, 0, 0, 0);
         var foreground = isLight
             ? Windows.UI.Color.FromArgb(255, 18, 22, 30)
