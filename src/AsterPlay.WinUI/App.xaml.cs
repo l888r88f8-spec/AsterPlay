@@ -146,22 +146,44 @@ public partial class App : Application
             if (splash is not null &&
                 splash.IsAvailable)
             {
-                // Keep the native surface visible while the in-window cover is
-                // removed and the already-ready Home tree is committed to DWM.
-                // Only then fade the one visible splash directly into Home.
-                StartupDiagnostics.Write(
-                    "App: preparing Home behind native splash");
-                await _window.PrepareHomeBehindNativeSplashAsync();
-                _window.WriteStartupVisualState(
-                    "App.beforeNativeFade");
-                StartupDiagnostics.Write(
-                    "App: starting native splash fade");
-                await splash.FadeOutAsync(
-                    durationMilliseconds: 700);
-                _window.WriteStartupVisualState(
-                    "App.afterNativeFade");
-                StartupDiagnostics.Write(
-                    "Native splash faded directly into presented Home");
+                if (_window.IsNoServerStartup)
+                {
+                    // The static empty Home may not paint immediately after
+                    // its native owner becomes unoccluded. Never expose it by
+                    // fading the native HWND into a collapsed XAML cover.
+                    // The XAML cover has the same theme color and icon as the
+                    // native splash, so the handoff is visually continuous.
+                    StartupDiagnostics.Write(
+                        "App: empty home; retaining WinUI startup cover during native handoff");
+                    await _window.PrepareEmptyHomeCoverHandoffAsync();
+                    splash.Dispose();
+                    _window.WriteStartupVisualState(
+                        "App.emptyHome.afterNativeHandoff");
+
+                    // Now the WinUI window is really visible and composing.
+                    // Fade its own cover into the arranged empty Home page.
+                    await _window.RevealStartupCoverAsync();
+                    StartupDiagnostics.Write(
+                        "Empty-home splash handoff completed through XAML cover");
+                }
+                else
+                {
+                    // Authenticated Home and Login retain the already-working
+                    // direct native fade after their presentation barrier.
+                    StartupDiagnostics.Write(
+                        "App: preparing Home behind native splash");
+                    await _window.PrepareHomeBehindNativeSplashAsync();
+                    _window.WriteStartupVisualState(
+                        "App.beforeNativeFade");
+                    StartupDiagnostics.Write(
+                        "App: starting native splash fade");
+                    await splash.FadeOutAsync(
+                        durationMilliseconds: 700);
+                    _window.WriteStartupVisualState(
+                        "App.afterNativeFade");
+                    StartupDiagnostics.Write(
+                        "Native splash faded directly into presented Home");
+                }
             }
             else
             {
