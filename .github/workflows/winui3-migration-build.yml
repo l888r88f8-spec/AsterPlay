@@ -36,9 +36,11 @@ jobs:
           $publish = Join-Path $PWD "dist\AsterPlay"
           $required = @(
             "AsterPlay.exe",
-            "AsterPlay.Core.dll",
-                    "libmpv-2.dll",
-            "RUNTIME-SOURCE.txt"
+            "CustomEffectRuntimeNative.dll",
+            "libmpv-2.dll",
+            "Assets/AsterPlay.AppIcon.png",
+            "Info/RUNTIME-SOURCE.txt",
+            "Info/BUILD-INFO.txt"
           )
 
           foreach ($name in $required) {
