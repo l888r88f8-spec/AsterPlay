@@ -24,10 +24,10 @@ public sealed partial class MainWindow
             $"In-window startup cover icon failed: {e.ErrorMessage}");
     }
 
-    // Keep the in-window cover visible during the native -> WinUI handoff for
-    // first-run/empty Home. It is painted by WinUI and shields any delayed
-    // first visible compositor frame after the native HWND is withdrawn.
-    internal async Task PrepareEmptyHomeCoverHandoffAsync()
+    // Both startup paths use the same verified presentation fence. In the
+    // empty-home case the in-window cover remains visible while the native
+    // splash is removed, so the first unoccluded HWND frame cannot be blank.
+    internal async Task<bool> PrepareEmptyHomeCoverHandoffAsync()
     {
         WriteStartupVisualState("PrepareEmptyHomeCoverHandoff.before");
 
@@ -36,72 +36,70 @@ public sealed partial class MainWindow
         StartupCover.Opacity = 0.999;
         StartupCover.UpdateLayout();
 
-        var frames = await WaitForStartupCoverFramesAsync(3, 1000);
-        var flush = Task.Run(DwmFlush);
-        var completed = await Task.WhenAny(flush, Task.Delay(1000));
+        var ready = await WaitForVerifiedStartupPresentationAsync(
+            "empty-home XAML cover behind native splash", 3);
+        if (ready)
+        {
+            WriteStartupVisualState("PrepareEmptyHomeCoverHandoff.verified");
+            StartupDiagnostics.Write(
+                $"Empty-home XAML cover presentation confirmed; iconReady={_startupCoverImageReady}");
+        }
 
-        StartupDiagnostics.Write(
-            $"Empty-home native-to-XAML cover handoff ready; " +
-            $"coverImageReady={_startupCoverImageReady}; frames={frames}; " +
-            $"dwmFlushed={ReferenceEquals(completed, flush)}");
-        WriteStartupVisualState("PrepareEmptyHomeCoverHandoff.after");
+        return ready;
     }
 
-    internal async Task PrepareHomeBehindNativeSplashAsync()
+    internal async Task<bool> PrepareHomeBehindNativeSplashAsync()
     {
-        WriteStartupVisualState(
-            "PrepareHomeBehindNativeSplash.beforeCollapse");
-        // The native splash remains the only visible startup surface. Remove
-        // the XAML cover behind it, then require fresh composition frames and a
-        // DWM fence before the native surface begins fading.
+        WriteStartupVisualState("PrepareHomeBehindNativeSplash.beforeCollapse");
+
+        // The native splash still covers the real window. Submit the final
+        // content without the in-window cover, and wait for an actual DWM S_OK
+        // before fading the native HWND into that content.
         StartupCover.IsHitTestVisible = false;
         StartupCover.Opacity = 0;
         StartupCover.Visibility = Visibility.Collapsed;
 
-        var frames = await WaitForStartupCoverFramesAsync(3, 1000);
-        var flush = Task.Run(DwmFlush);
-        var completed = await Task.WhenAny(
-            flush,
-            Task.Delay(1000));
+        var ready = await WaitForVerifiedStartupPresentationAsync(
+            "content after XAML cover removal", 3);
+        if (ready)
+            WriteStartupVisualState("PrepareHomeBehindNativeSplash.verified");
 
-        StartupDiagnostics.Write(
-            $"Home prepared behind native splash; frames={frames}, " +
-            $"dwmFlushed={ReferenceEquals(completed, flush)}");
-        WriteStartupVisualState(
-            "PrepareHomeBehindNativeSplash.afterFence");
+        return ready;
     }
 
-    internal async Task RevealStartupCoverAsync()
+    internal async Task<bool> RevealStartupCoverAsync()
     {
-        if (_startupCoverRevealStarted ||
-            StartupCover.Visibility != Visibility.Visible)
+        if (_startupCoverRevealStarted)
+            return false;
+
+        if (StartupCover.Visibility != Visibility.Visible)
         {
-            return;
+            StartupDiagnostics.Write(
+                "In-window startup cover is already collapsed; no fade needed");
+            return true;
         }
 
         _startupCoverRevealStarted = true;
-
         try
         {
-            WriteStartupVisualState(
-                "RevealStartupCover.beforeFade");
+            WriteStartupVisualState("RevealStartupCover.beforeFence");
+
+            // Do not equate a delayed or timed-out fence with success.
+            // This check runs AFTER the native splash is removed, with the
+            // WinUI HWND actually unoccluded and presenting its own frames.
+            if (!await WaitForVerifiedStartupPresentationAsync(
+                    "visible WinUI window before XAML cover fade", 3))
+            {
+                return false;
+            }
+
             StartupDiagnostics.Write(
-                $"Home visual ready; fading in-window startup cover; iconReady={_startupCoverImageReady}");
-
-            // Now that the top-level native splash is gone, these frames are
-            // real visible MainWindow composition frames. Give LiquidGlass and
-            // decoded Home textures a final chance to settle before revealing.
-            await WaitForStartupCoverFramesAsync(3, 700);
-
-            var flush = Task.Run(DwmFlush);
-            await Task.WhenAny(
-                flush,
-                Task.Delay(700));
+                $"Visible WinUI frames confirmed; fading XAML cover; iconReady={_startupCoverImageReady}");
 
             const int durationMilliseconds = 560;
             var start = DateTime.UtcNow;
 
-            while (true)
+            while (!_startupWindowClosed)
             {
                 var progress = Math.Clamp(
                     (DateTime.UtcNow - start).TotalMilliseconds /
@@ -118,19 +116,123 @@ public sealed partial class MainWindow
                 await Task.Delay(16);
             }
 
+            if (_startupWindowClosed)
+                return false;
+
             StartupCover.Opacity = 0;
             StartupCover.IsHitTestVisible = false;
             StartupCover.Visibility = Visibility.Collapsed;
 
             StartupDiagnostics.Write(
-                "In-window startup cover removed; Home is now directly visible");
-            WriteStartupVisualState(
-                "RevealStartupCover.afterCollapse");
+                "In-window startup cover removed after verified presentation");
+            WriteStartupVisualState("RevealStartupCover.afterCollapse");
+            return true;
         }
         finally
         {
             _startupCoverRevealStarted = false;
         }
+    }
+
+    // DwmFlush is a rendering fence, not a proof that XAML text/images were
+    // loaded. The page-geometry and InitialVisualReady guards are separately
+    // checked before and after each fence.
+    private Task<int>? _pendingStartupDwmFlush;
+
+    private async Task<bool> WaitForStartupDwmFenceAsync(
+        string phase, int timeoutMilliseconds)
+    {
+        if (_startupWindowClosed)
+            return false;
+
+        // Do not spawn overlapping blocked DwmFlush threads on remote or
+        // headless desktops. Retry the outstanding fence instead.
+        if (_pendingStartupDwmFlush is null ||
+            _pendingStartupDwmFlush.IsCompleted)
+        {
+            _pendingStartupDwmFlush = Task.Run(DwmFlush);
+        }
+
+        var pending = _pendingStartupDwmFlush;
+        var completed = await Task.WhenAny(
+            pending, Task.Delay(timeoutMilliseconds));
+
+        if (!ReferenceEquals(completed, pending))
+        {
+            StartupDiagnostics.Write(
+                $"Startup DWM fence pending; phase={phase}; timeout={timeoutMilliseconds}ms");
+            return false;
+        }
+
+        try
+        {
+            var hr = await pending;
+            if (hr == 0)
+            {
+                StartupDiagnostics.Write(
+                    $"Startup DWM fence confirmed; phase={phase}; hr=S_OK");
+                return true;
+            }
+
+            StartupDiagnostics.Write(
+                $"Startup DWM fence rejected; phase={phase}; hr=0x{(uint)hr:X8}");
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.WriteException(
+                $"Startup DWM fence failure; phase={phase}", ex);
+        }
+
+        return false;
+    }
+
+    private async Task<bool> WaitForVerifiedStartupPresentationAsync(
+        string phase, int targetFrames)
+    {
+        var targetPage = PageHost.Content;
+        var attempt = 0;
+
+        while (!_startupWindowClosed &&
+               ReferenceEquals(PageHost.Content, targetPage))
+        {
+            attempt++;
+
+            if (!IsStartupPageReady(targetPage))
+            {
+                StartupDiagnostics.Write(
+                    $"Startup presentation waiting for page; phase={phase}; attempt={attempt}");
+            }
+            else
+            {
+                var frames = await WaitForStartupCoverFramesAsync(
+                    targetFrames, 1200);
+
+                if (frames >= targetFrames &&
+                    IsStartupPageReady(targetPage) &&
+                    await WaitForStartupDwmFenceAsync(phase, 1800) &&
+                    IsStartupPageReady(targetPage))
+                {
+                    StartupDiagnostics.Write(
+                        $"Startup presentation confirmed; phase={phase}; " +
+                        $"attempt={attempt}; frames={frames}/{targetFrames}");
+                    return true;
+                }
+
+                StartupDiagnostics.Write(
+                    $"Startup presentation not confirmed; phase={phase}; " +
+                    $"attempt={attempt}; frames={frames}/{targetFrames}");
+            }
+
+            // This is a retry backoff, not a deadline that forces dismissal.
+            // No deadline may silently turn failed presentation into ready.
+            await Task.Delay(200);
+        }
+
+        StartupDiagnostics.Write(
+            $"Startup presentation abandoned; phase={phase}; " +
+            $"windowClosed={_startupWindowClosed}; pageChanged=" +
+            $"{!ReferenceEquals(PageHost.Content, targetPage)}");
+        return false;
     }
 
     private static async Task<int> WaitForStartupCoverFramesAsync(
