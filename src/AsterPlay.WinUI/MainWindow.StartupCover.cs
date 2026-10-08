@@ -179,9 +179,17 @@ public sealed partial class MainWindow
         var completed = await Task.WhenAny(task, Task.Delay(5000));
         if (!ReferenceEquals(task, completed))
         {
+            var remaining = LiquidGlassWinUI.LiquidGlassBrush.PendingEffectCommitCount;
             StartupDiagnostics.Write(
-                $"Startup shader effect commit timeout; phase={phase}; " +
-                $"remaining={LiquidGlassWinUI.LiquidGlassBrush.PendingEffectCommitCount}");
+                $"Startup shader effect commit timeout; phase={phase}; remaining={remaining}");
+
+            // Avoid an indefinite native splash on GPU/driver combinations
+            // that never acknowledge Effect commit batches. Clear only the
+            // pending glass effects, preserving all Home XAML and controls.
+            var recovered =
+                LiquidGlassWinUI.LiquidGlassBrush.FallBackPendingEffectCommits();
+            StartupDiagnostics.Write(
+                $"Startup shader timeout: transparent fallback for {recovered} pending glass brushes");
             return false;
         }
 
