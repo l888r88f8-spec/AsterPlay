@@ -9,7 +9,6 @@ Run from a clean clone:
 ```bat
 git clone https://github.com/l888r88f8-spec/AsterPlay.git
 cd AsterPlay
-bootstrap-dotnet.cmd
 build-windows.cmd
 dist\AsterPlay\AsterPlay.exe
 ```
