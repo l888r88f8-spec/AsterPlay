@@ -11,9 +11,12 @@ public sealed partial class SettingsView : UserControl
     public event EventHandler? LogoutRequested;
     public event EventHandler<string>? ThemeModeChanged;
 
-    public SettingsView()
+    public SettingsView(bool isAuthenticated)
     {
         InitializeComponent();
+        AccountSection.Visibility = isAuthenticated
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         LoadSettings();
     }
 
