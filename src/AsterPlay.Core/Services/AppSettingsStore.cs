@@ -7,6 +7,10 @@ public sealed record AppSettings
 {
     public bool RestoreSessionOnStartup { get; init; } = true;
     public int PlayerControlsAutoHideSeconds { get; init; } = 3;
+
+    // System is the default for existing settings.json files.
+    // Accepted values: system, light, dark.
+    public string ThemeMode { get; init; } = "system";
 }
 
 public static class AppSettingsStore
