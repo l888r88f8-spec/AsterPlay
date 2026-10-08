@@ -17,12 +17,15 @@ Pass criteria:
 
 - No system-wide .NET installation is required to run `dist\AsterPlay\AsterPlay.exe`.
 - `dist\AsterPlay\AsterPlay.exe` starts and remains running.
-- `dist\AsterPlay\libmpv-2.dll` exists.
-- `BUILD-INFO.txt` exists.
-- `RUNTIME-SOURCE.txt` contains:
+- `dist\AsterPlay\libmpv-2.dll` and `dist\AsterPlay\CustomEffectRuntimeNative.dll` exist.
+- `dist\AsterPlay\Assets\AsterPlay.AppIcon.png` exists and the native splash displays it.
+- `dist\AsterPlay\Info\BUILD-INFO.txt` records `PublishSingleFile: true`.
+- `dist\AsterPlay\Info\RUNTIME-SOURCE.txt` contains:
   - release `2026-09-29-b4b5d69a44`
   - mpv commit `b4b5d69a44e240e4a95c230bb7f018c381f0c5ae`
   - SHA-256 `8c80c506cf95f403d8a2b9d672d5f88d965885666f25c850f711a06b9510dfc8`
+- The compact portable app starts on a clean Windows x64 desktop; first launch may take longer while .NET dependencies extract to a temporary per-user cache.
+- If the single-file build fails, compare with `build-windows.cmd -Unpacked -Full`; do not move core WinUI or native DLLs into arbitrary subfolders.
 
 ## 2. Login and session
 
