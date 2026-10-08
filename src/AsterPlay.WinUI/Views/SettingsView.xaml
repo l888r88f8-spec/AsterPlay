@@ -110,7 +110,9 @@
                 </Grid>
             </Border>
 
-            <Border Padding="26" CornerRadius="28">
+            <Border x:Name="AccountSection"
+                    Padding="26"
+                    CornerRadius="28">
                 <Border.Background>
                     <AcrylicBrush TintColor="#F0F2F8"
                                   TintOpacity="0.045"
