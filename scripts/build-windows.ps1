@@ -213,6 +213,16 @@ if ($canIncremental) {
 }
 if (-not $ok) { throw "WinUI 3 Release build failed." }
 
+# WinUI URI loading needs assets inside the extracted bundle, while the
+# native GDI+ splash and AppWindow icon need physical files by the EXE.
+# Ship the two tiny assets beside the EXE as well as inside the bundle.
+$portableAssets = Join-Path $Publish "Assets"
+New-Item -ItemType Directory -Force -Path $portableAssets | Out-Null
+foreach ($assetName in @("AsterPlay.AppIcon.png", "AsterPlay.ico")) {
+    Copy-Item -LiteralPath (Join-Path $Root "src\AsterPlay.WinUI\Assets\$assetName") `
+        -Destination (Join-Path $portableAssets $assetName) -Force
+}
+
 $sourceBuiltLiquidGlassNative = Join-Path $Root "Native\LiquidGlassCompat\Output\x64\Release\CustomEffectRuntimeNative.dll"
 $pinnedLiquidGlassNative = Join-Path $Root "Native\LiquidGlassCompat\Prebuilt\win-x64\CustomEffectRuntimeNative.dll"
 $liquidGlassNativeSource = $null
