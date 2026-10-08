@@ -36,53 +36,34 @@ AsterPlay is a native Windows desktop client for Emby built with **C# / .NET 8 /
 - Build: local Windows build, no Qt/CMake/MSYS2 required
 
 
-## Development build
+## Build on Windows x64
 
-For normal code/XAML iteration, use the incremental developer build:
-
-~~~bat
-bootstrap-dotnet.cmd
-build-dev.cmd
-~~~
-
-After the first build, `build-dev.cmd` keeps `bin/obj`, skips NuGet restore when project/package metadata has not changed, and lets MSBuild reuse unchanged C# projects and targets. It builds Debug without ReadyToRun or the self-contained Windows App SDK payload, so repeated builds are substantially faster than a release publish.
-
-If package references or project metadata were changed and you want to force a restore:
+AsterPlay has **one build entry point**. On Windows, run:
 
 ~~~bat
-build-dev.cmd -ForceRestore
-~~~
-
-## Release build
-
-Only use the full release build when you need a distributable self-contained package:
-
-~~~bat
-bootstrap-dotnet.cmd
 build-windows.cmd
 ~~~
 
-The portable bootstrap installs the pinned .NET SDK 8.0.425 only when it is missing. The release build publishes the WinUI 3 application, includes the Windows App SDK runtime, LiquidGlass native runtime and the pinned Windows x64 LGPL libmpv package.
+The script detects missing build dependencies and installs them only when needed:
 
-Output:
+- Reuses an existing .NET 8 SDK; otherwise installs the pinned .NET 8.0.425 SDK into tools/dotnet.
+- Uses the repository's pinned LiquidGlass native runtime. If it is missing or source rebuilding is requested, uses the Visual Studio 2026 C++ v145 toolchain (installing Build Tools if necessary).
+- Reuses the pinned Windows x64 libmpv package, or downloads and verifies it (and its extractor) on first use.
+- Restores Microsoft.WindowsAppSDK, Microsoft.Windows.SDK.BuildTools, and other NuGet package dependencies as part of a full build.
 
-~~~text
-dist/AsterPlay/
+No Qt, CMake, MSYS2, full Visual Studio IDE, or separate Windows App SDK installation is required for a normal Release build. The first setup requires Internet access. Administrator approval may be necessary only if the C++ Build Tools installer runs.
+
+**Automatic build selection:** the script hashes source files and dependency metadata and stores the last successful build state under obj/. On the first build, missing/invalid caches, or a dependency change, it runs a clean Release publish. With unchanged dependencies and modified source files it runs an incremental Release publish while retaining bin/obj and NuGet assets. An incremental failure automatically triggers one full clean rebuild. If nothing changed and the package is complete, compilation is skipped.
+
+To manually force a clean build for troubleshooting:
+
+~~~bat
+build-windows.cmd -Full
 ~~~
 
-The published folder is self-contained and does not require .NET or the Windows App SDK runtime to be installed separately on the target PC.
+Output: dist/AsterPlay/ (self-contained Windows x64). The script checks that the release contains AsterPlay.exe, AsterPlay.Core.dll, LiquidGlassWinUI.dll, CustomEffectRuntimeNative.dll, libmpv-2.dll, coreclr.dll, hostfxr.dll and hostpolicy.dll, and writes BUILD-INFO.txt / RUNTIME-SOURCE.txt.
 
-The build verifies that the release contains at least:
-
-- AsterPlay.exe
-- AsterPlay.Core.dll
-- libmpv-2.dll
-- coreclr.dll
-- hostfxr.dll
-- hostpolicy.dll
-
-It also writes BUILD-INFO.txt and copies RUNTIME-SOURCE.txt into the publish folder.
-
+The .ps1 helpers for SDK and media-runtime provisioning are internal implementation details; build-windows.cmd is the only .cmd entry point for users and CI.
 
 ## Acknowledgements
 
