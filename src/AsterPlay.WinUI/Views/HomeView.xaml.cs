@@ -333,6 +333,78 @@ public sealed partial class HomeView : UserControl
                LoadingState.ActualWidth > 100 &&
                LoadingState.ActualHeight > 100));
 
+    // Loaded/ActualWidth and DwmFlush do not establish that the first-run
+    // content has rasterized. Probe the actual nonempty no-server XAML
+    // subtree before allowing the native splash to become transparent.
+    internal async Task<bool> VerifyNoServerRasterAsync()
+    {
+        if (!_noServerMode)
+            return true;
+
+        if (!HasReadyStartupVisual)
+            return false;
+
+        try
+        {
+            var bitmap =
+                new Microsoft.UI.Xaml.Media.Imaging.RenderTargetBitmap();
+            await bitmap.RenderAsync(NoServerContent);
+            var buffer = await bitmap.GetPixelsAsync();
+
+            if (bitmap.PixelWidth <= 0 ||
+                bitmap.PixelHeight <= 0 ||
+                buffer.Length < 4)
+            {
+                StartupDiagnostics.Write(
+                    "No-server raster probe: empty bitmap");
+                return false;
+            }
+
+            // RenderTargetBitmap pixels are BGRA8. Read only in memory;
+            // never persist screenshots or application content to logs.
+            var pixels = new byte[checked((int)buffer.Length)];
+            using (var reader = Windows.Storage.Streams.DataReader.FromBuffer(buffer))
+                reader.ReadBytes(pixels);
+
+            var visibleSamples = 0;
+            var minBrightness = 255;
+            var maxBrightness = 0;
+
+            // Sample every fourth pixel: first-run artwork consists of
+            // readable text and a bordered glyph on a transparent panel.
+            for (var i = 0; i + 3 < pixels.Length; i += 16)
+            {
+                if (pixels[i + 3] < 32)
+                    continue;
+
+                visibleSamples++;
+                var brightness =
+                    (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+                minBrightness = Math.Min(minBrightness, brightness);
+                maxBrightness = Math.Max(maxBrightness, brightness);
+            }
+
+            var hasVisibleRaster =
+                visibleSamples >= 32 &&
+                maxBrightness - minBrightness >= 18;
+
+            StartupDiagnostics.Write(
+                $"No-server raster probe: rendered={hasVisibleRaster}; " +
+                $"size={bitmap.PixelWidth}x{bitmap.PixelHeight}; " +
+                $"visibleSamples={visibleSamples}; " +
+                $"brightnessRange={maxBrightness - minBrightness}");
+            return hasVisibleRaster;
+        }
+        catch (Exception ex)
+        {
+            // A failed readback must be distinguishable from a genuinely
+            // empty render. The presentation fence owns retry/fallback.
+            StartupDiagnostics.WriteException(
+                "No-server raster probe failed", ex);
+            return false;
+        }
+    }
+
     private void RaiseInitialVisualReady()
     {
         if (_initialVisualReadyRaised)
