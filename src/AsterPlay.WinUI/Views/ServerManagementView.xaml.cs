@@ -20,26 +20,17 @@ public sealed partial class ServerManagementView : UserControl
     private bool _sortDescending;
     private bool _compactLayout;
 
-    public event EventHandler? DoneRequested;
     public event EventHandler<ServerProfile>? ServerSwitchRequested;
 
     public ServerManagementView()
-        : this(
-            ResolveMainClient(),
-            showBackButton: ResolveShowBackButton())
+        : this(ResolveMainClient())
     {
     }
 
-    public ServerManagementView(
-        EmbyClient client,
-        bool showBackButton = false)
+    public ServerManagementView(EmbyClient client)
     {
         _client = client;
         InitializeComponent();
-
-        BackButton.Visibility = showBackButton
-            ? Visibility.Visible
-            : Visibility.Collapsed;
 
         ServerCards.ItemsSource = _servers;
         Reload();
@@ -60,11 +51,6 @@ public sealed partial class ServerManagementView : UserControl
 
         return client;
     }
-
-    private static bool ResolveShowBackButton() =>
-        Application.Current is not App app ||
-        app.HostWindow is null ||
-        app.HostWindow.ServerManagementNeedsBackButton;
 
     private async void ServerManagementView_Loaded(
         object sender,
@@ -514,13 +500,6 @@ public sealed partial class ServerManagementView : UserControl
             item.CardHeight = cardHeight;
         }
     }
-
-    private void Back_Click(
-        object sender,
-        RoutedEventArgs e) =>
-        DoneRequested?.Invoke(
-            this,
-            EventArgs.Empty);
 
     private void Root_SizeChanged(
         object sender,
