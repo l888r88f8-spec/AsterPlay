@@ -28,8 +28,9 @@
 // effect registration/layout is unchanged and this file is a drop-in preview for the
 // Studio harness. Semantics that differ: ShapeRadius is a 0..1 corner-radius
 // fraction of the shorter half-side; ShapeWidth/Height are UNUSED (the glass fills
-// the brush rect = the control, sized by res at any DPI). ShowShape1/MergeRate/
-// BlurEdge/SpringSizeFactor/BgType/Step are unused (BlurAmount drives the upstream
+// the brush rect = the control, sized by res at any DPI). Reserved cbuffer slots
+// are reused for an optional pointer-following spotlight (disabled by default).
+// Remaining legacy fields are unused (BlurAmount drives the upstream
 // GaussianBlur). dpr is read from cbuffer slot 124 (the brush sets it from the
 // window DPI) and scales the band widths (RefThickness / fresnel / glare) so slider
 // values read as logical px; the refraction magnitude is DPI-neutral on its own.
@@ -64,12 +65,12 @@ cbuffer LiquidGlassParams : register(b0)
     float ShadowFactor;        // offset 76  (unused)
     float ShadowPosX;          // offset 80  (unused)
     float ShadowPosY;          // offset 84  (unused)
-    float ShapeWidth;          // offset 88  (unused; glass fills the brush rect via res*0.5)
-    float ShapeHeight;         // offset 92  (unused)
+    float SpotlightX;          // offset 88  (normalized control-local x, 0..1)
+    float SpotlightY;          // offset 92  (normalized control-local y, 0..1)
     float ShapeRadius;         // offset 96  (repurposed: 0..1 corner-radius fraction of the shorter half-side)
     float ShapeRoundness;      // offset 100 (superellipse exponent n; ~5 = Apple squircle)
-    float MergeRate;           // offset 104 (unused; no merge)
-    float ShowShape1;          // offset 108 (unused; no circle)
+    float SpotlightStrength;   // offset 104 (0 disables the extra glare)
+    float SpotlightRadius;     // offset 108 (logical px)
     float SpringSizeFactor;    // offset 112 (unused)
     float DispersionRange;     // offset 116 (0=no dispersion, 1=full; default 1)
     float Step;                // offset 120 (unused)
@@ -415,6 +416,25 @@ float4 LiquidGlassBody(float2 uv, float4 samplerDataExt, float4 samplerData)
             float3 glareColor = lerp(glareBase, float3(1.0, 1.0, 1.0), clamp(g, 0.0, 1.0));
             float glareCoverage = smoothstep(0.0, 2.0, GlareRange * dpr);
             outColor = lerp(outColor, float4(glareColor, 1.0), saturate(g * gnLen) * glareCoverage);
+        }
+
+        // Pointer-driven reflection. Use existing cbuffer slots and keep the
+        // branch inactive for every other glass control (strength defaults to 0).
+        // Coordinates are local to this brush; radius remains DPI-independent.
+        if (SpotlightStrength > 0.001)
+        {
+            float2 deltaDp = (localUv - float2(SpotlightX, SpotlightY)) * res / dpr;
+            float radius = max(SpotlightRadius, 1.0);
+            float2 scaled = deltaDp / float2(radius, radius * 0.68);
+            float falloff = saturate(1.0 - dot(scaled, scaled));
+            float softLight = falloff * falloff * (3.0 - 2.0 * falloff);
+            // The glass rim reflects a little more than the flat interior.
+            float edgeDistanceDp = max(-merged * res.y / dpr, 0.0);
+            float edgeLight = 1.0 - smoothstep(0.0, 14.0, edgeDistanceDp);
+            float reflectance = SpotlightStrength * softLight *
+                (0.25 + 0.20 * edgeLight);
+            outColor.rgb = lerp(outColor.rgb, float3(1.0, 1.0, 1.0),
+                                saturate(reflectance));
         }
     }
     else
