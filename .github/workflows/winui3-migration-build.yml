@@ -25,13 +25,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Bootstrap pinned portable .NET 8 SDK
+      - name: Automatically prepare and build Windows x64 package
         shell: cmd
-        run: bootstrap-dotnet.cmd
-
-      - name: Build WinUI 3 x64 package
-        shell: pwsh
-        run: .\build-windows.ps1
+        run: build-windows.cmd
 
       - name: Verify WinUI migration package
         shell: pwsh
