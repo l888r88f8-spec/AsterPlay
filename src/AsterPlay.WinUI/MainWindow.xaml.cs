@@ -1133,6 +1133,10 @@ public sealed partial class MainWindow : Window
                 fullscreen
                     ? AppWindowPresenterKind.FullScreen
                     : AppWindowPresenterKind.Default);
+
+            // A presenter switch can recreate the native caption surface.
+            // Apply its theme colors again when the caption becomes visible.
+            _lastAppliedNativeTitleBarLight = null;
         }
         catch (Exception ex)
         {
