@@ -1033,19 +1033,15 @@ public sealed partial class MainWindow : Window
 
     private void ShowSettings()
     {
+        // Local settings must be available without an Emby session.
         ExitPlayerChrome();
-        if (!_authenticated)
-        {
-            ShowLogin();
-            return;
-        }
 
         _currentSection = "settings";
         NavigationDock.Visibility = Visibility.Visible;
         PageTitleBlock.Text = "设置";
         SetActiveNavigation(SettingsButton);
 
-        var view = new SettingsView();
+        var view = new SettingsView(isAuthenticated: _authenticated);
         view.ThemeModeChanged += (_, mode) => ApplyThemePreference(mode);
         view.LogoutRequested += (_, _) =>
         {
