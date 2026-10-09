@@ -165,10 +165,11 @@ public sealed partial class MainWindow
         object sender,
         PointerRoutedEventArgs e)
     {
-        // PointerExited also bubbles while crossing child buttons. IsPointerOver
-        // distinguishes those child transitions from leaving the Dock itself and
-        // avoids treating an exit coordinate exactly on the edge as still inside.
-        if (NavigationDock.IsPointerOver)
+        // PointerExited also bubbles while crossing child buttons. Keep those
+        // transitions, but treat a coordinate on the outer edge as outside. The
+        // old inclusive comparison (<= Width / Height) left the shimmer latched
+        // when WinUI reported the real exit exactly on that edge.
+        if (IsInsideDock(e))
             return;
 
         FadeDockShimmer();
@@ -193,8 +194,17 @@ public sealed partial class MainWindow
         object sender,
         PointerRoutedEventArgs e)
     {
-        if (!NavigationDock.IsPointerOver)
+        if (!IsInsideDock(e))
             FadeDockShimmer();
+    }
+
+    private bool IsInsideDock(PointerRoutedEventArgs e)
+    {
+        var point = e.GetCurrentPoint(NavigationDock).Position;
+        const double edgeInset = 0.5;
+        return point.X > edgeInset && point.Y > edgeInset &&
+            point.X < NavigationDock.ActualWidth - edgeInset &&
+            point.Y < NavigationDock.ActualHeight - edgeInset;
     }
 
     private void RefreshDockShimmerTheme()
