@@ -19,7 +19,8 @@ namespace LiquidGlassWinUI
     /// <para>
     /// The brush owns the pipeline
     /// <c>backdrop -&gt; BlurH -&gt; BlurV -&gt; LiquidGlassEffect</c> (two 1D
-    /// separable blur passes + glass) and exposes every material parameter of the
+    /// separable blur passes + glass), followed by an optional isolated shimmer
+    /// pass, and exposes every material parameter of the
     /// glass effect as a <see cref="DependencyProperty"/>, so each one can be bound
     /// — and animated — directly from XAML with no code-behind. Set it as any
     /// element's <c>Fill</c>/<c>Background</c> (or use a <c>Rectangle</c> overlay)
@@ -60,6 +61,11 @@ namespace LiquidGlassWinUI
         // Maps each parameter's DependencyProperty to its KEY (also the effect property
         // name). The full animatable path is <EffectName>.<key>.
         private static readonly Dictionary<DependencyProperty, string> s_paramKeys = new();
+        private static readonly Dictionary<DependencyProperty, string> s_shimmerParamKeys = new();
+        private static readonly HashSet<string> s_shimmerKeys = new()
+        {
+            "ShimmerX", "ShimmerY", "ShimmerStrength", "ShimmerRadius",
+        };
 
         // Post-processing parameter keys — routed to PostProcessingEffect instead of the glass brush.
         private static readonly HashSet<string> s_postProcessKeys = new()
@@ -81,6 +87,19 @@ namespace LiquidGlassWinUI
         {
             float defaultVal = LiquidGlassEffect.Params.First(p => p.Key == key).Default;
             return RegisterParam(key, defaultVal);
+        }
+
+        private static DependencyProperty RegisterShimmerParam(
+            string key,
+            double defaultValue)
+        {
+            var dp = DependencyProperty.Register(
+                key,
+                typeof(double),
+                typeof(LiquidGlassBrush),
+                new PropertyMetadata(defaultValue, OnShimmerParamChanged));
+            s_shimmerParamKeys[dp] = key;
+            return dp;
         }
 
         // ---- dependency properties: one per material parameter ----
@@ -158,6 +177,45 @@ namespace LiquidGlassWinUI
         public static readonly DependencyProperty GlareAngleProperty = RegisterGlassParam("GlareAngle");
         /// <summary>Direction of the glare streak, in degrees (default -45).</summary>
         public double GlareAngle { get => (double)GetValue(GlareAngleProperty); set => SetValue(GlareAngleProperty, value); }
+
+        // ---- Optional pointer-following shimmer ----
+
+        public static readonly DependencyProperty IsShimmerEnabledProperty =
+            DependencyProperty.Register(
+                nameof(IsShimmerEnabled),
+                typeof(bool),
+                typeof(LiquidGlassBrush),
+                new PropertyMetadata(false, OnShimmerEnabledChanged));
+
+        /// <summary>
+        /// Enables the isolated pointer-following reflection pass. It is disabled by
+        /// default, so ordinary glass controls keep the original pipeline and cost.
+        /// </summary>
+        public bool IsShimmerEnabled
+        {
+            get => (bool)GetValue(IsShimmerEnabledProperty);
+            set => SetValue(IsShimmerEnabledProperty, value);
+        }
+
+        public static readonly DependencyProperty ShimmerXProperty =
+            RegisterShimmerParam("ShimmerX", 0.5);
+        /// <summary>Horizontal reflection center normalized to the brush (0..1).</summary>
+        public double ShimmerX { get => (double)GetValue(ShimmerXProperty); set => SetValue(ShimmerXProperty, value); }
+
+        public static readonly DependencyProperty ShimmerYProperty =
+            RegisterShimmerParam("ShimmerY", 0.5);
+        /// <summary>Vertical reflection center normalized to the brush (0..1).</summary>
+        public double ShimmerY { get => (double)GetValue(ShimmerYProperty); set => SetValue(ShimmerYProperty, value); }
+
+        public static readonly DependencyProperty ShimmerStrengthProperty =
+            RegisterShimmerParam("ShimmerStrength", 0.0);
+        /// <summary>Reflection intensity. Zero keeps the pass visually neutral.</summary>
+        public double ShimmerStrength { get => (double)GetValue(ShimmerStrengthProperty); set => SetValue(ShimmerStrengthProperty, value); }
+
+        public static readonly DependencyProperty ShimmerRadiusProperty =
+            RegisterShimmerParam("ShimmerRadius", 104.0);
+        /// <summary>Horizontal reflection radius in device-independent pixels.</summary>
+        public double ShimmerRadius { get => (double)GetValue(ShimmerRadiusProperty); set => SetValue(ShimmerRadiusProperty, value); }
 
         // ---- Blur ----
 
@@ -265,6 +323,7 @@ namespace LiquidGlassWinUI
         private static CompositionEffectFactory s_vBlurFactory;
         private static CompositionEffectFactory s_glassFactory;
         private static CompositionEffectFactory s_postProcessFactory;
+        private static CompositionEffectFactory s_shimmerFactory;
         private static readonly object s_poolLock = new();
 
         private Compositor _compositor;
@@ -272,8 +331,16 @@ namespace LiquidGlassWinUI
         private CompositionEffectBrush _hBlurBrush;   // separable blur (H pass)
         private CompositionEffectBrush _vBlurBrush;   // separable blur (V pass)
         private CompositionEffectBrush _postProcessBrush; // bloom + colour adjustments
+        private CompositionEffectBrush _shimmerBrush; // optional isolated reflection pass
         private CompositionBrush _backdropBrush;        // raw backdrop source (tracked for disposal on toggle)
         private bool _blurBypassed;                   // true when BlurAmount <= 0 (blur chain disconnected)
+        private float _effectiveDpr = 1.0f;
+
+        /// <summary>Error raised while constructing the optional shimmer pass.</summary>
+        public string ShimmerError { get; private set; }
+
+        /// <summary>Whether this instance currently routes through the shimmer pass.</summary>
+        public bool IsShimmerActive => IsShimmerEnabled && _shimmerBrush != null;
 
         // Creating a CompositionEffectBrush is not equivalent to having its
         // custom shaders processed by the compositor. Track EFFECT commit
@@ -401,7 +468,8 @@ namespace LiquidGlassWinUI
 
             if (connected &&
                 PipelineState == LiquidGlassPipelineState.Connecting &&
-                ReferenceEquals(CompositionBrush, _glassBrush))
+                (ReferenceEquals(CompositionBrush, _glassBrush) ||
+                 ReferenceEquals(CompositionBrush, _shimmerBrush)))
             {
                 SetPipelineState(LiquidGlassPipelineState.Connected);
             }
@@ -468,12 +536,14 @@ namespace LiquidGlassWinUI
             }
 
             LastError = null;
+            ShimmerError = null;
             SetPipelineState(
                 LiquidGlassPipelineState.Connecting);
 
             try
             {
                 _compositor = CompositionTarget.GetCompositorForCurrentThread();
+                _effectiveDpr = Dpr > 0 ? Dpr : MeasureDpr();
 
                 CompositionEffectFactory hFactory, vFactory, gFactory, postProcessFactory;
                 lock (s_poolLock)
@@ -490,7 +560,7 @@ namespace LiquidGlassWinUI
 
                         var glassEffect = new LiquidGlassEffect
                         {
-                            Dpr = Dpr > 0 ? Dpr : MeasureDpr()
+                            Dpr = _effectiveDpr
                         }.Create();
                         List<string> glassPaths = LiquidGlassEffect.Params
                             .Select(p => LiquidGlassEffect.EffectNameValue + "." + p.Key)
@@ -550,11 +620,14 @@ namespace LiquidGlassWinUI
                     ApplyValue(pair.Value, (float)(double)GetValue(pair.Key));
                 }
 
+                if (IsShimmerEnabled)
+                    TryEnsureShimmerBrush();
+
                 // The shader may be queued for DWM processing long after
                 // the effect graph is constructed. Do not emit Connected until
                 // its first Effect commit has completed.
                 TrackFirstEffectCommit();
-                CompositionBrush = _glassBrush;
+                CompositionBrush = _shimmerBrush ?? _glassBrush;
             }
             catch (Exception e)
             {
@@ -564,6 +637,7 @@ namespace LiquidGlassWinUI
                 _hBlurBrush?.Dispose();
                 _vBlurBrush?.Dispose();
                 _postProcessBrush?.Dispose();
+                _shimmerBrush?.Dispose();
                 _backdropBrush?.Dispose();
                 _glassBrush?.Dispose();
 
@@ -590,17 +664,20 @@ namespace LiquidGlassWinUI
             _postProcessBrush?.Dispose();
             _backdropBrush?.Dispose();
 
-            // Normal path: CompositionBrush == _glassBrush. The GPU-timeout
-            // fallback uses a separate transparent color brush; dispose both
-            // without double-disposing the original glass graph.
+            // The active brush is either the optional shimmer output or the base
+            // glass output. The GPU-timeout fallback uses a separate transparent
+            // color brush; dispose every owned brush without double-disposing.
             var activeBrush = CompositionBrush;
             activeBrush?.Dispose();
+            if (!ReferenceEquals(activeBrush, _shimmerBrush))
+                _shimmerBrush?.Dispose();
             if (!ReferenceEquals(activeBrush, _glassBrush))
                 _glassBrush?.Dispose();
 
             CompositionBrush = null;
             _glassBrush = null;
             _postProcessBrush = null;
+            _shimmerBrush = null;
             _hBlurBrush = null;
             _vBlurBrush = null;
             _backdropBrush = null;
@@ -617,6 +694,99 @@ namespace LiquidGlassWinUI
             {
                 brush.ApplyValue(key, (float)(double)e.NewValue);
             }
+        }
+
+        private static void OnShimmerParamChanged(
+            DependencyObject d,
+            DependencyPropertyChangedEventArgs e)
+        {
+            var brush = (LiquidGlassBrush)d;
+            if (s_shimmerParamKeys.TryGetValue(e.Property, out string key))
+                brush.ApplyShimmerValue(key, (float)(double)e.NewValue);
+        }
+
+        private static void OnShimmerEnabledChanged(
+            DependencyObject d,
+            DependencyPropertyChangedEventArgs e)
+        {
+            ((LiquidGlassBrush)d).UpdateShimmerPipeline();
+        }
+
+        private static CompositionEffectFactory GetOrCreateShimmerFactory(
+            Compositor compositor)
+        {
+            lock (s_poolLock)
+            {
+                if (s_shimmerFactory == null)
+                {
+                    s_shimmerFactory = compositor.CreateEffectFactory(
+                        new ShimmerEffect().Create(),
+                        new List<string>
+                        {
+                            ShimmerEffect.XPropertyPath,
+                            ShimmerEffect.YPropertyPath,
+                            ShimmerEffect.StrengthPropertyPath,
+                            ShimmerEffect.RadiusPropertyPath,
+                            ShimmerEffect.DprPropertyPath,
+                        });
+                }
+
+                return s_shimmerFactory;
+            }
+        }
+
+        private bool TryEnsureShimmerBrush()
+        {
+            if (_shimmerBrush != null)
+                return true;
+            if (_compositor == null || _glassBrush == null)
+                return false;
+
+            try
+            {
+                var factory = GetOrCreateShimmerFactory(_compositor);
+                var shimmerBrush = factory.CreateBrush();
+                _shimmerBrush = shimmerBrush;
+                shimmerBrush.SetSourceParameter("Source", _glassBrush);
+
+                foreach (var pair in s_shimmerParamKeys)
+                {
+                    ApplyShimmerValue(
+                        pair.Value,
+                        (float)(double)GetValue(pair.Key));
+                }
+                _shimmerBrush.Properties.InsertScalar(
+                    ShimmerEffect.DprPropertyPath,
+                    _effectiveDpr);
+
+                ShimmerError = null;
+                return true;
+            }
+            catch (Exception e)
+            {
+                ShimmerError = e.Message + "\n" + e.StackTrace;
+                _shimmerBrush?.Dispose();
+                _shimmerBrush = null;
+                return false;
+            }
+        }
+
+        private void UpdateShimmerPipeline()
+        {
+            if (_compositor == null || _glassBrush == null)
+                return;
+
+            if (IsShimmerEnabled && TryEnsureShimmerBrush())
+                CompositionBrush = _shimmerBrush;
+            else
+                CompositionBrush = _glassBrush;
+        }
+
+        private void ApplyShimmerValue(string key, float value)
+        {
+            _shimmerBrush?.Properties.InsertScalar(
+                ShimmerEffect.EffectNameValue + "." + key,
+                value);
         }
 
         // Route one parameter to the right effect brush. Post-processing params
@@ -686,6 +856,20 @@ namespace LiquidGlassWinUI
         public void AnimateScalar(string key, float to, double durationMs)
         {
             if (_compositor == null) return;
+
+            if (s_shimmerKeys.Contains(key))
+            {
+                if (_shimmerBrush == null) return;
+                var path = ShimmerEffect.EffectNameValue + "." + key;
+                var anim = _compositor.CreateScalarKeyFrameAnimation();
+                anim.Duration = TimeSpan.FromMilliseconds(durationMs);
+                anim.InsertKeyFrame(1.0f, to,
+                    _compositor.CreateCubicBezierEasingFunction(
+                        new System.Numerics.Vector2(0.215f, 0.61f),
+                        new System.Numerics.Vector2(0.355f, 1.0f)));
+                _shimmerBrush.Properties.StartAnimation(path, anim);
+                return;
+            }
 
             // Post-processing keys animate on the PostProcessingEffect brush.
             if (s_postProcessKeys.Contains(key))

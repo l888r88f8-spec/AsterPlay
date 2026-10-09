@@ -24,5 +24,6 @@
     <EmbeddedResource Include="Effects\Shaders\BlurH.hlsl" />
     <EmbeddedResource Include="Effects\Shaders\BlurV.hlsl" />
     <EmbeddedResource Include="Effects\Shaders\PostProcessing.hlsl" />
+    <EmbeddedResource Include="Effects\Shaders\Shimmer.hlsl" />
   </ItemGroup>
 </Project>

@@ -125,6 +125,7 @@ public sealed partial class MainWindow : Window
         RootGrid.ActualThemeChanged += RootGrid_ActualThemeChanged;
 
         Closed += MainWindow_Closed;
+        InitializeDockShimmer();
         PageTitleBlock.Text = "首页";
         SetActiveNavigation(HomeButton);
 
@@ -217,6 +218,7 @@ public sealed partial class MainWindow : Window
         if (_activeNavigationButton is not null)
             SetActiveNavigation(_activeNavigationButton);
 
+        RefreshDockShimmerTheme();
         RefreshStandardTitleBarBackground();
     }
 
@@ -332,6 +334,7 @@ public sealed partial class MainWindow : Window
         if (_uiSettings is not null)
             _uiSettings.ColorValuesChanged -= SystemColorValuesChanged;
 
+        DetachDockShimmer();
         RootGrid.ActualThemeChanged -= RootGrid_ActualThemeChanged;
     }
 
