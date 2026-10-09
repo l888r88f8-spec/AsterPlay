@@ -12,32 +12,29 @@ public sealed partial class MainWindow
     private long _lastDockShimmerUpdate;
     private long _dockVisibilityCallbackToken;
 
-    // handledEventsToo receives pointer moves over the Button children. The Dock
-    // therefore drives the library's shader directly; no hit-test or light overlay
-    // is added to the XAML tree.
+    // Observe the whole content root instead of relying on NavigationDock's
+    // PointerExited event. Child buttons can capture/handle the pointer and make
+    // that event unreliable. The root always sees the next move after the pointer
+    // crosses the Dock boundary and can deterministically fade the shader.
     private void InitializeDockShimmer()
     {
-        NavigationDock.AddHandler(
-            UIElement.PointerEnteredEvent,
-            new PointerEventHandler(DockShimmer_PointerEntered),
-            true);
-        NavigationDock.AddHandler(
+        RootGrid.AddHandler(
             UIElement.PointerMovedEvent,
             new PointerEventHandler(DockShimmer_PointerMoved),
             true);
-        NavigationDock.AddHandler(
+        RootGrid.AddHandler(
             UIElement.PointerExitedEvent,
             new PointerEventHandler(DockShimmer_PointerExited),
             true);
-        NavigationDock.AddHandler(
+        RootGrid.AddHandler(
             UIElement.PointerReleasedEvent,
             new PointerEventHandler(DockShimmer_PointerReleased),
             true);
-        NavigationDock.AddHandler(
+        RootGrid.AddHandler(
             UIElement.PointerCanceledEvent,
             new PointerEventHandler(DockShimmer_PointerCanceled),
             true);
-        NavigationDock.AddHandler(
+        RootGrid.AddHandler(
             UIElement.PointerCaptureLostEvent,
             new PointerEventHandler(DockShimmer_PointerCaptureLost),
             true);
@@ -53,22 +50,19 @@ public sealed partial class MainWindow
 
     private void DetachDockShimmer()
     {
-        NavigationDock.RemoveHandler(
-            UIElement.PointerEnteredEvent,
-            new PointerEventHandler(DockShimmer_PointerEntered));
-        NavigationDock.RemoveHandler(
+        RootGrid.RemoveHandler(
             UIElement.PointerMovedEvent,
             new PointerEventHandler(DockShimmer_PointerMoved));
-        NavigationDock.RemoveHandler(
+        RootGrid.RemoveHandler(
             UIElement.PointerExitedEvent,
             new PointerEventHandler(DockShimmer_PointerExited));
-        NavigationDock.RemoveHandler(
+        RootGrid.RemoveHandler(
             UIElement.PointerReleasedEvent,
             new PointerEventHandler(DockShimmer_PointerReleased));
-        NavigationDock.RemoveHandler(
+        RootGrid.RemoveHandler(
             UIElement.PointerCanceledEvent,
             new PointerEventHandler(DockShimmer_PointerCanceled));
-        NavigationDock.RemoveHandler(
+        RootGrid.RemoveHandler(
             UIElement.PointerCaptureLostEvent,
             new PointerEventHandler(DockShimmer_PointerCaptureLost));
         NavigationDock.UnregisterPropertyChangedCallback(
@@ -79,13 +73,15 @@ public sealed partial class MainWindow
         _dockGlassBrush = null;
     }
 
-    private void DockShimmer_PointerEntered(
-        object sender,
-        PointerRoutedEventArgs e) => UpdateDockShimmer(e);
-
     private void DockShimmer_PointerMoved(
         object sender,
-        PointerRoutedEventArgs e) => UpdateDockShimmer(e);
+        PointerRoutedEventArgs e)
+    {
+        if (NavigationDock.Visibility == Visibility.Visible && IsInsideDock(e))
+            UpdateDockShimmer(e);
+        else
+            FadeDockShimmer();
+    }
 
     private void UpdateDockShimmer(PointerRoutedEventArgs e)
     {
@@ -114,14 +110,6 @@ public sealed partial class MainWindow
         }
 
         var point = e.GetCurrentPoint(NavigationDock).Position;
-        if (point.X < 0 || point.Y < 0 ||
-            point.X > NavigationDock.ActualWidth ||
-            point.Y > NavigationDock.ActualHeight)
-        {
-            FadeDockShimmer();
-            return;
-        }
-
         var x = (float)Math.Clamp(point.X / NavigationDock.ActualWidth, 0, 1);
         var y = (float)Math.Clamp(point.Y / NavigationDock.ActualHeight, 0, 1);
 
@@ -165,14 +153,10 @@ public sealed partial class MainWindow
         object sender,
         PointerRoutedEventArgs e)
     {
-        // PointerExited also bubbles while crossing child buttons. Keep those
-        // transitions, but treat a coordinate on the outer edge as outside. The
-        // old inclusive comparison (<= Width / Height) left the shimmer latched
-        // when WinUI reported the real exit exactly on that edge.
-        if (IsInsideDock(e))
-            return;
-
-        FadeDockShimmer();
+        // Ignore routed exits from individual Dock children. A real Dock/window
+        // exit reports a point outside these bounds and is faded immediately.
+        if (!IsInsideDock(e))
+            FadeDockShimmer();
     }
 
     private void DockShimmer_PointerReleased(
