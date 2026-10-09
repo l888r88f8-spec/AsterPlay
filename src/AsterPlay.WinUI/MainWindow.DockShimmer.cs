@@ -126,7 +126,7 @@ public sealed partial class MainWindow
             brush.ShimmerY = y;
             brush.AnimateScalar(
                 "ShimmerStrength",
-                RootGrid.ActualTheme == ElementTheme.Light ? 0.68f : 0.90f,
+                RootGrid.ActualTheme == ElementTheme.Light ? 0.58f : 0.82f,
                 110);
 
             if (!_dockShimmerActivatedLogged)
@@ -141,7 +141,8 @@ public sealed partial class MainWindow
         }
 
         // Limit property animation submissions to about 60 Hz. The compositor
-        // interpolates the 75 ms ease-out between UI-thread pointer samples.
+        // interpolates a short ease-out between UI-thread pointer samples so the
+        // highlight stays fluid without visibly trailing the pointer.
         if (Stopwatch.GetElapsedTime(_lastDockShimmerUpdate) <
             TimeSpan.FromMilliseconds(16))
         {
@@ -149,8 +150,8 @@ public sealed partial class MainWindow
         }
 
         _lastDockShimmerUpdate = Stopwatch.GetTimestamp();
-        brush.AnimateScalar("ShimmerX", x, 75);
-        brush.AnimateScalar("ShimmerY", y, 75);
+        brush.AnimateScalar("ShimmerX", x, 55);
+        brush.AnimateScalar("ShimmerY", y, 55);
     }
 
     private void DockShimmer_PointerExited(
@@ -191,7 +192,7 @@ public sealed partial class MainWindow
         {
             brush.AnimateScalar(
                 "ShimmerStrength",
-                RootGrid.ActualTheme == ElementTheme.Light ? 0.68f : 0.90f,
+                RootGrid.ActualTheme == ElementTheme.Light ? 0.58f : 0.82f,
                 120);
         }
     }

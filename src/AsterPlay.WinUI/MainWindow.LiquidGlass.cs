@@ -30,7 +30,7 @@ public sealed partial class MainWindow
                 ShapeRadius = 0.99,
                 ShapeRoundness = 4.0,
                 IsShimmerEnabled = true,
-                ShimmerRadius = 104,
+                ShimmerRadius = 112,
                 ShimmerStrength = 0
             };
 
