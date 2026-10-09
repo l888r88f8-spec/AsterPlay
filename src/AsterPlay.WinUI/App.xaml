@@ -108,8 +108,8 @@
                 </ResourceDictionary>
 
                 <ResourceDictionary x:Key="Light">
-                    <SolidColorBrush x:Key="AsterPageBackgroundBrush" Color="#F4F6F9"/>
-                    <SolidColorBrush x:Key="AsterTitleBarBrush" Color="#FFF4F6F9"/>
+                    <SolidColorBrush x:Key="AsterPageBackgroundBrush" Color="#EEF1F5"/>
+                    <SolidColorBrush x:Key="AsterTitleBarBrush" Color="#FFEEF1F5"/>
                     <SolidColorBrush x:Key="AsterPrimaryTextBrush" Color="#151820"/>
                     <SolidColorBrush x:Key="AsterSecondaryTextBrush" Color="#5F6876"/>
                     <SolidColorBrush x:Key="AsterTertiaryTextBrush" Color="#7A8492"/>
@@ -193,11 +193,11 @@
                     <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="AccentButtonForegroundDisabled" Color="#7A8492"/>
-                    <Color x:Key="AsterHeroFadeMidColor">#72F4F6F9</Color>
-                    <Color x:Key="AsterHeroFadeEndColor">#FFF4F6F9</Color>
-                    <Color x:Key="AsterAmbientOverlayTopColor">#22F4F6F9</Color>
-                    <Color x:Key="AsterAmbientOverlayMidColor">#66F4F6F9</Color>
-                    <Color x:Key="AsterAmbientOverlayBottomColor">#B0F4F6F9</Color>
+                    <Color x:Key="AsterHeroFadeMidColor">#72EEF1F5</Color>
+                    <Color x:Key="AsterHeroFadeEndColor">#FFEEF1F5</Color>
+                    <Color x:Key="AsterAmbientOverlayTopColor">#22EEF1F5</Color>
+                    <Color x:Key="AsterAmbientOverlayMidColor">#66EEF1F5</Color>
+                    <Color x:Key="AsterAmbientOverlayBottomColor">#B0EEF1F5</Color>
                 </ResourceDictionary>
 
                 <ResourceDictionary x:Key="HighContrast">
