@@ -236,8 +236,10 @@
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
-            <FontFamily x:Key="AsterUiFontFamily">Microsoft YaHei UI</FontFamily>
-            <FontFamily x:Key="ContentControlThemeFontFamily">Microsoft YaHei UI</FontFamily>
+            <!-- Bundled so typography is consistent even when HarmonyOS Sans is not
+                 installed system-wide. Keep icon controls on Segoe MDL2 Assets. -->
+            <FontFamily x:Key="AsterUiFontFamily">ms-appx:///Assets/Fonts/HarmonyOS_Sans_SC_Medium.ttf#HarmonyOS Sans SC</FontFamily>
+            <FontFamily x:Key="ContentControlThemeFontFamily">ms-appx:///Assets/Fonts/HarmonyOS_Sans_SC_Medium.ttf#HarmonyOS Sans SC</FontFamily>
 
             <!-- Shared high-transparency glass material. Reuse one brush across
                  ordinary action buttons so the visual matches the navigation dock

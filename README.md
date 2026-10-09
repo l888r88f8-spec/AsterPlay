@@ -57,3 +57,8 @@ Copyright © 2026 [l888r88f8-spec](https://github.com/l888r88f8-spec)。
 - **[mpv](https://github.com/mpv-player/mpv)**：媒体播放核心。Windows 版 libmpv 使用 [zhongfly/mpv-winbuild](https://github.com/zhongfly/mpv-winbuild) 提供的构建产物，并遵循相应 LGPL 许可要求；具体版本和来源记录于构建产物的 `RUNTIME-SOURCE.txt`。
 
 以上引用用于注明第三方技术、组件及设计参考，不代表上述项目与 AsterPlay 存在官方关联或背书。
+
+## 第三方字体
+
+AsterPlay 内嵌使用 HarmonyOS Sans SC（鸿蒙黑体）。字体版权归 Huawei Device Co., Ltd. 所有，并依据仓库内的 `Assets/Fonts/LICENSE_HarmonyOS_Sans.txt` 授权使用。
+
