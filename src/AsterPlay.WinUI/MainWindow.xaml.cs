@@ -432,7 +432,9 @@ public sealed partial class MainWindow : Window
 
             if (!state.RestoreSession || state.Session is null)
             {
-                ShowLogin();
+                ShowServers(
+                    returnToLogin: false,
+                    returnToNoServerHome: true);
                 return;
             }
 
@@ -449,7 +451,9 @@ public sealed partial class MainWindow : Window
             EnsureDeferredServices();
             InvalidateRetainedHome();
             _client.Reset();
-            ShowLogin(UserError.GetMessage(ex, "恢复登录"));
+            ShowServers(
+                returnToLogin: false,
+                returnToNoServerHome: true);
         }
         finally
         {
@@ -786,28 +790,6 @@ public sealed partial class MainWindow : Window
         bool RestoreSession,
         EmbySession? Session);
 
-    private void ShowLogin(
-        string? message = null,
-        string? preferredServerUrl = null)
-    {
-        ExitPlayerChrome();
-        _authenticated = false;
-        _currentSection = "login";
-        NavigationDock.Visibility = Visibility.Collapsed;
-        PageTitleBlock.Text = "登录";
-
-        var view = new LoginView(_client, message, preferredServerUrl);
-        view.LoginSucceeded += (_, _) =>
-        {
-            _authenticated = true;
-            ShowHome();
-        };
-        view.ManageServersRequested += (_, _) => ShowServers(returnToLogin: true);
-
-        PageHost.Content = view;
-        ScheduleStartupReveal();
-    }
-
     // All Home variants raise the same first-viewport-ready signal.
     // Server count determines what the view loads, never how the splash exits.
     private void HomeInitialVisualReady(HomeView view)
@@ -858,7 +840,9 @@ public sealed partial class MainWindow : Window
         ExitPlayerChrome();
         if (!_client.IsAuthenticated)
         {
-            ShowLogin();
+            ShowServers(
+                returnToLogin: false,
+                returnToNoServerHome: true);
             return;
         }
 
@@ -925,7 +909,9 @@ public sealed partial class MainWindow : Window
                 InvalidateRetainedHome();
                 _client.Reset();
                 _authenticated = false;
-                ShowLogin("登录状态已失效，请重新登录。");
+                ShowServers(
+                    returnToLogin: false,
+                    returnToNoServerHome: true);
             };
             view.InitialVisualReady += (_, _) => HomeInitialVisualReady(view);
         }
@@ -961,7 +947,9 @@ public sealed partial class MainWindow : Window
         ExitPlayerChrome();
         if (!_client.IsAuthenticated)
         {
-            ShowLogin();
+            ShowServers(
+                returnToLogin: false,
+                returnToNoServerHome: true);
             return;
         }
 
@@ -981,12 +969,6 @@ public sealed partial class MainWindow : Window
     private void ShowFavorites()
     {
         ExitPlayerChrome();
-        if (!_client.IsAuthenticated)
-        {
-            ShowLogin();
-            return;
-        }
-
         _currentSection = "favorites";
         NavigationDock.Visibility = Visibility.Visible;
         PageTitleBlock.Text = "收藏";
@@ -1002,7 +984,9 @@ public sealed partial class MainWindow : Window
         ExitPlayerChrome();
         if (!_client.IsAuthenticated)
         {
-            ShowLogin();
+            ShowServers(
+                returnToLogin: false,
+                returnToNoServerHome: true);
             return;
         }
 
@@ -1021,14 +1005,13 @@ public sealed partial class MainWindow : Window
         var current = (_client.ServerUrl ?? "").Trim().TrimEnd('/');
         var target = (profile.Url ?? "").Trim().TrimEnd('/');
 
-        if (string.Equals(current, target, StringComparison.OrdinalIgnoreCase))
+        if (_client.IsAuthenticated &&
+            string.Equals(current, target, StringComparison.OrdinalIgnoreCase))
+        {
             return;
+        }
 
-        AppStateStore.Clear();
-        InvalidateRetainedHome();
-        _client.Reset();
-        _authenticated = false;
-        ShowLogin(preferredServerUrl: profile.Url);
+        _ = ShowServerLoginAsync(profile);
     }
 
     private void ShowServers(
@@ -1037,16 +1020,18 @@ public sealed partial class MainWindow : Window
     {
         ExitPlayerChrome();
         _currentSection = "servers";
-        NavigationDock.Visibility =
-            (_authenticated && !returnToLogin) || returnToNoServerHome
-                ? Visibility.Visible
-                : Visibility.Collapsed;
+        NavigationDock.Visibility = Visibility.Visible;
         PageTitleBlock.Text = "服务器";
 
         if (NavigationDock.Visibility == Visibility.Visible)
             SetActiveNavigation(ServersButton);
 
         PageHost.Content = new ServerManagementView();
+
+        // The former LoginView scheduled the first startup reveal itself. The
+        // server page now replaces it when no reusable session exists.
+        if (!_startupVisualReadyRaised)
+            ScheduleStartupReveal();
     }
 
     private void ShowSettings()
@@ -1067,7 +1052,9 @@ public sealed partial class MainWindow : Window
             InvalidateRetainedHome();
             _client.Reset();
             _authenticated = false;
-            ShowLogin();
+            ShowServers(
+                returnToLogin: false,
+                returnToNoServerHome: true);
         };
 
         PageHost.Content = view;
@@ -1079,7 +1066,9 @@ public sealed partial class MainWindow : Window
 
         if (!_client.IsAuthenticated)
         {
-            ShowLogin();
+            ShowServers(
+                returnToLogin: false,
+                returnToNoServerHome: true);
             return;
         }
 
@@ -1102,7 +1091,9 @@ public sealed partial class MainWindow : Window
     {
         if (!_client.IsAuthenticated)
         {
-            ShowLogin();
+            ShowServers(
+                returnToLogin: false,
+                returnToNoServerHome: true);
             return;
         }
 

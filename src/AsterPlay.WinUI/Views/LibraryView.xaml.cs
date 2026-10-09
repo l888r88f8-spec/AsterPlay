@@ -11,6 +11,7 @@ public sealed partial class LibraryView : UserControl
 {
     private readonly LibraryViewModel _viewModel;
     private readonly bool _favoriteOnlyMode;
+    private readonly bool _canLoadFromServer;
 
     public event EventHandler<EmbyItem>? MediaRequested;
 
@@ -18,6 +19,7 @@ public sealed partial class LibraryView : UserControl
     {
         _viewModel = new LibraryViewModel(client);
         _favoriteOnlyMode = favoriteOnly;
+        _canLoadFromServer = client.IsAuthenticated;
         _viewModel.FavoriteOnly = favoriteOnly;
         InitializeComponent();
 
@@ -46,7 +48,26 @@ public sealed partial class LibraryView : UserControl
     private async void LibraryView_Loaded(object sender, RoutedEventArgs e)
     {
         Loaded -= LibraryView_Loaded;
+
+        if (_favoriteOnlyMode && !_canLoadFromServer)
+        {
+            ShowDisconnectedFavoritesState();
+            return;
+        }
+
         await InitializeAsync();
+    }
+
+    private void ShowDisconnectedFavoritesState()
+    {
+        SetLoading(false);
+        ResultLabelBlock.Text = "尚未连接服务器";
+        EmptyTitleBlock.Text = "尚未连接服务器";
+        EmptyDescriptionBlock.Text = "连接服务器后，收藏内容会显示在这里。";
+        FilterRow.Visibility = Visibility.Collapsed;
+        RefreshButton.Visibility = Visibility.Collapsed;
+        PagingPanel.Visibility = Visibility.Collapsed;
+        EmptyPanel.Visibility = Visibility.Visible;
     }
 
     private async Task InitializeAsync()

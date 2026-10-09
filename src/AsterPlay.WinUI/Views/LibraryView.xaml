@@ -34,13 +34,15 @@
                                    FontSize="12"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
-                    <Button Content="刷新"
+                    <Button x:Name="RefreshButton"
+                            Content="刷新"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
                             Click="Apply_Click"/>
                 </Grid>
 
-                <StackPanel Orientation="Horizontal"
+                <StackPanel x:Name="FilterRow"
+                            Orientation="Horizontal"
                             Spacing="10">
                     <ComboBox x:Name="LibraryBox"
                               Width="190"
@@ -127,7 +129,8 @@
             </StackPanel>
         </Grid>
 
-        <Border Grid.Row="4"
+        <Border x:Name="PagingPanel"
+                Grid.Row="4"
                 Padding="16,10"
                 HorizontalAlignment="Center"
                 CornerRadius="22">
