@@ -113,10 +113,10 @@ public sealed partial class MainWindow
         var x = (float)Math.Clamp(point.X / NavigationDock.ActualWidth, 0, 1);
         var rawY = (float)Math.Clamp(point.Y / NavigationDock.ActualHeight, 0, 1);
 
-        // The reference highlight travels primarily along the Dock rather than
-        // sticking rigidly to the pointer in two dimensions. Keep it near the
-        // optical center and retain only a small amount of vertical response.
-        var y = 0.5f + ((rawY - 0.5f) * 0.22f);
+        // Preserve most of the vertical pointer travel so the light visibly
+        // follows the cursor. A little damping keeps the bright core away from
+        // the clipped extreme edge and prevents a cursor-locked white spot.
+        var y = 0.5f + ((rawY - 0.5f) * 0.72f);
 
         if (!_dockPointerInside)
         {
@@ -142,8 +142,7 @@ public sealed partial class MainWindow
 
         // Limit property animation submissions to about 60 Hz. The longer
         // horizontal ease produces the visible mass/inertia in the reference;
-        // vertical movement is both damped and slower to avoid a cursor-locked
-        // white spot.
+        // vertical movement keeps lighter damping to remain visibly responsive.
         if (Stopwatch.GetElapsedTime(_lastDockShimmerUpdate) <
             TimeSpan.FromMilliseconds(16))
         {
@@ -152,7 +151,7 @@ public sealed partial class MainWindow
 
         _lastDockShimmerUpdate = Stopwatch.GetTimestamp();
         brush.AnimateScalar("ShimmerX", x, 125);
-        brush.AnimateScalar("ShimmerY", y, 165);
+        brush.AnimateScalar("ShimmerY", y, 105);
     }
 
     private void DockShimmer_PointerExited(
