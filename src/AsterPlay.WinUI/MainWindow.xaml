@@ -132,7 +132,7 @@
                                       FontSize="19"
                                       Foreground="{Binding Foreground, ElementName=LibraryButton}"
                                       HorizontalAlignment="Center"/>
-                            <TextBlock Text="媒体库"
+                            <TextBlock Text="收藏"
                                        FontSize="12"
                                        FontWeight="SemiBold"
                                        Foreground="{Binding Foreground, ElementName=LibraryButton}"
