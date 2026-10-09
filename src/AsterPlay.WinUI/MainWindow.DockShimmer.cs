@@ -37,6 +37,10 @@ public sealed partial class MainWindow
             UIElement.PointerCanceledEvent,
             new PointerEventHandler(DockShimmer_PointerCanceled),
             true);
+        NavigationDock.AddHandler(
+            UIElement.PointerCaptureLostEvent,
+            new PointerEventHandler(DockShimmer_PointerCaptureLost),
+            true);
 
         _dockVisibilityCallbackToken = NavigationDock.RegisterPropertyChangedCallback(
             UIElement.VisibilityProperty,
@@ -64,6 +68,9 @@ public sealed partial class MainWindow
         NavigationDock.RemoveHandler(
             UIElement.PointerCanceledEvent,
             new PointerEventHandler(DockShimmer_PointerCanceled));
+        NavigationDock.RemoveHandler(
+            UIElement.PointerCaptureLostEvent,
+            new PointerEventHandler(DockShimmer_PointerCaptureLost));
         NavigationDock.UnregisterPropertyChangedCallback(
             UIElement.VisibilityProperty,
             _dockVisibilityCallbackToken);
@@ -158,15 +165,11 @@ public sealed partial class MainWindow
         object sender,
         PointerRoutedEventArgs e)
     {
-        // PointerExited also bubbles while crossing child buttons. Fade only when
-        // the pointer actually leaves the Dock bounds.
-        var point = e.GetCurrentPoint(NavigationDock).Position;
-        if (point.X >= 0 && point.Y >= 0 &&
-            point.X <= NavigationDock.ActualWidth &&
-            point.Y <= NavigationDock.ActualHeight)
-        {
+        // PointerExited also bubbles while crossing child buttons. IsPointerOver
+        // distinguishes those child transitions from leaving the Dock itself and
+        // avoids treating an exit coordinate exactly on the edge as still inside.
+        if (NavigationDock.IsPointerOver)
             return;
-        }
 
         FadeDockShimmer();
     }
@@ -185,6 +188,14 @@ public sealed partial class MainWindow
     private void DockShimmer_PointerCanceled(
         object sender,
         PointerRoutedEventArgs e) => FadeDockShimmer();
+
+    private void DockShimmer_PointerCaptureLost(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (!NavigationDock.IsPointerOver)
+            FadeDockShimmer();
+    }
 
     private void RefreshDockShimmerTheme()
     {
