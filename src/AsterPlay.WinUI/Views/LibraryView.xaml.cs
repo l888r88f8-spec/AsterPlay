@@ -10,13 +10,25 @@ namespace AsterPlay.WinUI.Views;
 public sealed partial class LibraryView : UserControl
 {
     private readonly LibraryViewModel _viewModel;
+    private readonly bool _favoriteOnlyMode;
 
     public event EventHandler<EmbyItem>? MediaRequested;
 
-    public LibraryView(EmbyClient client)
+    public LibraryView(EmbyClient client, bool favoriteOnly = false)
     {
         _viewModel = new LibraryViewModel(client);
+        _favoriteOnlyMode = favoriteOnly;
+        _viewModel.FavoriteOnly = favoriteOnly;
         InitializeComponent();
+
+        FavoriteOnlyBox.IsChecked = favoriteOnly;
+        if (favoriteOnly)
+        {
+            ViewTitleBlock.Text = "收藏";
+            FavoriteOnlyBox.Visibility = Visibility.Collapsed;
+            EmptyTitleBlock.Text = "还没有收藏内容";
+            EmptyDescriptionBlock.Text = "收藏的电影和剧集会显示在这里。";
+        }
 
         ItemsGrid.ItemsSource = _viewModel.Items;
         Loaded += LibraryView_Loaded;
@@ -128,7 +140,8 @@ public sealed partial class LibraryView : UserControl
         _viewModel.SelectedSort = SortBox.SelectedItem as LibrarySortChoice;
         _viewModel.SearchText = SearchBox.Text;
         _viewModel.YearText = YearBox.Text;
-        _viewModel.FavoriteOnly = FavoriteOnlyBox.IsChecked == true;
+        _viewModel.FavoriteOnly =
+            _favoriteOnlyMode || FavoriteOnlyBox.IsChecked == true;
     }
 
     private async Task RunAsync(Func<Task> action)

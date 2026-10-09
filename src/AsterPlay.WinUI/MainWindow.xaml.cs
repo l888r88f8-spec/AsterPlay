@@ -978,6 +978,25 @@ public sealed partial class MainWindow : Window
             view.FocusSearch();
     }
 
+    private void ShowFavorites()
+    {
+        ExitPlayerChrome();
+        if (!_client.IsAuthenticated)
+        {
+            ShowLogin();
+            return;
+        }
+
+        _currentSection = "favorites";
+        NavigationDock.Visibility = Visibility.Visible;
+        PageTitleBlock.Text = "收藏";
+        SetActiveNavigation(LibraryButton);
+
+        var view = new LibraryView(_client, favoriteOnly: true);
+        view.MediaRequested += (_, item) => ShowDetails(item, "favorites");
+        PageHost.Content = view;
+    }
+
     private void ShowSearch()
     {
         ExitPlayerChrome();
@@ -1126,6 +1145,12 @@ public sealed partial class MainWindow : Window
 
     private void NavigateBackFrom(string returnSection)
     {
+        if (string.Equals(returnSection, "favorites", StringComparison.Ordinal))
+        {
+            ShowFavorites();
+            return;
+        }
+
         if (string.Equals(returnSection, "library", StringComparison.Ordinal))
         {
             ShowLibrary();
@@ -1232,7 +1257,7 @@ public sealed partial class MainWindow : Window
         if (!_startupResolutionCompleted)
             return;
 
-        ShowLibrary();
+        ShowFavorites();
     }
 
     private void Servers_Click(object sender, RoutedEventArgs e)

@@ -201,10 +201,16 @@ public sealed class LibraryViewModel : INotifyPropertyChanged
         }
     }
 
-    public string ResultLabel =>
-        string.IsNullOrWhiteSpace(SearchText)
-            ? "完整媒体库"
-            : $"搜索：{SearchText.Trim()}";
+    public string ResultLabel
+    {
+        get
+        {
+            var scope = FavoriteOnly ? "收藏" : "完整媒体库";
+            return string.IsNullOrWhiteSpace(SearchText)
+                ? scope
+                : $"{scope} · 搜索：{SearchText.Trim()}";
+        }
+    }
 
     public async Task InitializeAsync()
     {

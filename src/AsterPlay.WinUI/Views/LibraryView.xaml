@@ -24,7 +24,8 @@
             <StackPanel Spacing="14">
                 <Grid>
                     <StackPanel>
-                        <TextBlock Text="媒体库"
+                        <TextBlock x:Name="ViewTitleBlock"
+                                   Text="媒体库"
                                    Foreground="{ThemeResource AsterPrimaryTextBrush}"
                                    FontSize="30"
                                    FontWeight="SemiBold"/>
@@ -114,12 +115,14 @@
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Spacing="8">
-                <TextBlock Text="这里暂时没有媒体"
+                <TextBlock x:Name="EmptyTitleBlock"
+                           Text="这里暂时没有媒体"
                            Foreground="{ThemeResource AsterPrimaryTextBrush}"
                            FontSize="23"
                            FontWeight="SemiBold"
                            HorizontalAlignment="Center"/>
-                <TextBlock Text="调整筛选或搜索条件后再试。"
+                <TextBlock x:Name="EmptyDescriptionBlock"
+                           Text="调整筛选或搜索条件后再试。"
                            Foreground="{ThemeResource AsterSecondaryTextBrush}"/>
             </StackPanel>
         </Grid>
