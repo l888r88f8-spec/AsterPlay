@@ -34,25 +34,15 @@ float4 ShimmerCore(float2 uv, float4 samplerDataExt)
     float radiusPx = max(ShimmerRadius * max(Dpr, 0.01), 1.0);
     float2 deltaPx = (uv - float2(ShimmerX, ShimmerY)) * sizePx;
 
-    // Elliptical area light: a soft bloom, a bright center and a narrow
-    // horizontal glint. Polynomial falloff avoids the flat, overexposed disc
-    // produced by the previous smoothstep curve while keeping this fragment
-    // comfortably below DWM's shader-linking budget.
+    // Elliptical area light driven by one continuous falloff. Keeping the center
+    // and halo on the same curve prevents a visible ring where separately shaped
+    // core/halo/glint layers used to meet, and remains comfortably below DWM's
+    // shader-linking budget.
     float2 haloUv = deltaPx / float2(radiusPx, radiusPx * 0.76);
     float haloDistance2 = dot(haloUv, haloUv);
-    float halo = saturate(1.0 - haloDistance2 / 1.65);
-    halo *= halo;
-    float core = saturate(1.0 - haloDistance2 / 0.18);
-    core *= core;
-
-    float horizontal = 1.0 - smoothstep(0.18, 1.0,
-        abs(deltaPx.x) / (radiusPx * 1.20));
-    float vertical = 1.0 - smoothstep(0.10, 1.0,
-        abs(deltaPx.y) / (radiusPx * 0.24));
-    float glint = horizontal * vertical;
-
-    float reflection = saturate(
-        ShimmerStrength * (0.38 * halo + 0.42 * core + 0.07 * glint));
+    float falloff = saturate(1.0 - haloDistance2 / 1.65);
+    float smoothBloom = falloff * falloff * (0.38 + 0.62 * falloff);
+    float reflection = saturate(ShimmerStrength * 0.92 * smoothBloom);
 
     // White in premultiplied-alpha space is alpha.xxx, not 1.xxx.
     source.rgb = lerp(
