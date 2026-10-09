@@ -111,7 +111,12 @@ public sealed partial class MainWindow
 
         var point = e.GetCurrentPoint(NavigationDock).Position;
         var x = (float)Math.Clamp(point.X / NavigationDock.ActualWidth, 0, 1);
-        var y = (float)Math.Clamp(point.Y / NavigationDock.ActualHeight, 0, 1);
+        var rawY = (float)Math.Clamp(point.Y / NavigationDock.ActualHeight, 0, 1);
+
+        // The reference highlight travels primarily along the Dock rather than
+        // sticking rigidly to the pointer in two dimensions. Keep it near the
+        // optical center and retain only a small amount of vertical response.
+        var y = 0.5f + ((rawY - 0.5f) * 0.22f);
 
         if (!_dockPointerInside)
         {
@@ -121,8 +126,8 @@ public sealed partial class MainWindow
             brush.ShimmerY = y;
             brush.AnimateScalar(
                 "ShimmerStrength",
-                RootGrid.ActualTheme == ElementTheme.Light ? 0.58f : 0.82f,
-                110);
+                RootGrid.ActualTheme == ElementTheme.Light ? 0.54f : 0.78f,
+                145);
 
             if (!_dockShimmerActivatedLogged)
             {
@@ -135,9 +140,10 @@ public sealed partial class MainWindow
             return;
         }
 
-        // Limit property animation submissions to about 60 Hz. The compositor
-        // interpolates a short ease-out between UI-thread pointer samples so the
-        // highlight stays fluid without visibly trailing the pointer.
+        // Limit property animation submissions to about 60 Hz. The longer
+        // horizontal ease produces the visible mass/inertia in the reference;
+        // vertical movement is both damped and slower to avoid a cursor-locked
+        // white spot.
         if (Stopwatch.GetElapsedTime(_lastDockShimmerUpdate) <
             TimeSpan.FromMilliseconds(16))
         {
@@ -145,8 +151,8 @@ public sealed partial class MainWindow
         }
 
         _lastDockShimmerUpdate = Stopwatch.GetTimestamp();
-        brush.AnimateScalar("ShimmerX", x, 55);
-        brush.AnimateScalar("ShimmerY", y, 55);
+        brush.AnimateScalar("ShimmerX", x, 125);
+        brush.AnimateScalar("ShimmerY", y, 165);
     }
 
     private void DockShimmer_PointerExited(
@@ -197,7 +203,7 @@ public sealed partial class MainWindow
         {
             brush.AnimateScalar(
                 "ShimmerStrength",
-                RootGrid.ActualTheme == ElementTheme.Light ? 0.58f : 0.82f,
+                RootGrid.ActualTheme == ElementTheme.Light ? 0.54f : 0.78f,
                 120);
         }
     }
@@ -209,6 +215,6 @@ public sealed partial class MainWindow
 
         _dockPointerInside = false;
         _lastDockShimmerUpdate = 0;
-        _dockGlassBrush?.AnimateScalar("ShimmerStrength", 0, 240);
+        _dockGlassBrush?.AnimateScalar("ShimmerStrength", 0, 260);
     }
 }

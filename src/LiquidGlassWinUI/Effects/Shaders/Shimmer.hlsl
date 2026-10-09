@@ -38,21 +38,21 @@ float4 ShimmerCore(float2 uv, float4 samplerDataExt)
     // horizontal glint. Polynomial falloff avoids the flat, overexposed disc
     // produced by the previous smoothstep curve while keeping this fragment
     // comfortably below DWM's shader-linking budget.
-    float2 haloUv = deltaPx / float2(radiusPx, radiusPx * 0.68);
+    float2 haloUv = deltaPx / float2(radiusPx, radiusPx * 0.76);
     float haloDistance2 = dot(haloUv, haloUv);
     float halo = saturate(1.0 - haloDistance2 / 1.65);
     halo *= halo;
-    float core = saturate(1.0 - haloDistance2 / 0.24);
+    float core = saturate(1.0 - haloDistance2 / 0.18);
     core *= core;
 
     float horizontal = 1.0 - smoothstep(0.18, 1.0,
         abs(deltaPx.x) / (radiusPx * 1.20));
     float vertical = 1.0 - smoothstep(0.10, 1.0,
-        abs(deltaPx.y) / (radiusPx * 0.26));
+        abs(deltaPx.y) / (radiusPx * 0.24));
     float glint = horizontal * vertical;
 
     float reflection = saturate(
-        ShimmerStrength * (0.38 * halo + 0.44 * core + 0.10 * glint));
+        ShimmerStrength * (0.38 * halo + 0.42 * core + 0.07 * glint));
 
     // White in premultiplied-alpha space is alpha.xxx, not 1.xxx.
     source.rgb = lerp(
