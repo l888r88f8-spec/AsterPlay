@@ -63,6 +63,51 @@
             <Setter Property="FontSize" Value="15"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
+
+        <Style x:Key="ServerEditorFieldStyle"
+               TargetType="TextBox">
+            <Setter Property="MinHeight" Value="64"/>
+            <Setter Property="Padding" Value="18,12"/>
+            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="{ThemeResource AsterControlFillBrush}"/>
+            <Setter Property="Foreground" Value="{ThemeResource AsterPrimaryTextBrush}"/>
+            <Setter Property="FontSize" Value="18"/>
+        </Style>
+
+        <Style x:Key="ServerEditorPasswordStyle"
+               TargetType="PasswordBox">
+            <Setter Property="MinHeight" Value="64"/>
+            <Setter Property="Padding" Value="18,12"/>
+            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="{ThemeResource AsterControlFillBrush}"/>
+            <Setter Property="Foreground" Value="{ThemeResource AsterPrimaryTextBrush}"/>
+            <Setter Property="FontSize" Value="18"/>
+        </Style>
+
+        <Style x:Key="ServerEditorProtocolStyle"
+               TargetType="ComboBox">
+            <Setter Property="MinHeight" Value="64"/>
+            <Setter Property="Padding" Value="18,8"/>
+            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource AsterDockBorderBrush}"/>
+            <Setter Property="Background" Value="{ThemeResource AsterCardBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{ThemeResource AsterPrimaryTextBrush}"/>
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        </Style>
+
+        <Style x:Key="ServerEditorHeaderButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource CircleActionButtonStyle}">
+            <Setter Property="Width" Value="54"/>
+            <Setter Property="Height" Value="54"/>
+            <Setter Property="MinWidth" Value="54"/>
+            <Setter Property="MinHeight" Value="54"/>
+            <Setter Property="CornerRadius" Value="27"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid x:Name="Root"
@@ -290,6 +335,212 @@
                        TextAlignment="Center"
                        TextWrapping="Wrap"
                        Margin="24,0"/>
+        </Grid>
+
+        <!-- Full-page server sign-in editor, modeled after the supplied mobile
+             layout while retaining responsive desktop margins. -->
+        <Grid x:Name="ServerEditor"
+              Background="{ThemeResource AsterPageBackgroundBrush}"
+              Visibility="Collapsed"
+              Canvas.ZIndex="20">
+            <ScrollViewer VerticalScrollMode="Auto"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollMode="Disabled"
+                          HorizontalScrollBarVisibility="Disabled"
+                          ZoomMode="Disabled">
+                <Grid MaxWidth="820"
+                      HorizontalAlignment="Center"
+                      Padding="34,28,34,128">
+                    <StackPanel Spacing="0">
+                        <Grid Margin="0,0,0,42">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Button x:Name="EditorBackButton"
+                                    Style="{StaticResource ServerEditorHeaderButtonStyle}"
+                                    Click="EditorBack_Click"
+                                    ToolTipService.ToolTip="返回服务器列表">
+                                <FontIcon Glyph="&#xE72B;"
+                                          FontSize="25"
+                                          Foreground="{ThemeResource AsterPrimaryTextBrush}"/>
+                            </Button>
+
+                            <TextBlock x:Name="EditorTitle"
+                                       Grid.Column="1"
+                                       Text="登录服务器"
+                                       FontSize="38"
+                                       FontWeight="SemiBold"
+                                       Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                                       VerticalAlignment="Center"
+                                       Margin="24,0"/>
+
+                            <Button x:Name="EditorSaveButton"
+                                    Grid.Column="2"
+                                    Style="{StaticResource ServerEditorHeaderButtonStyle}"
+                                    Click="EditorSave_Click"
+                                    ToolTipService.ToolTip="保存并登录">
+                                <Grid Width="26"
+                                      Height="26">
+                                    <FontIcon x:Name="EditorSaveIcon"
+                                              Glyph="&#xE74E;"
+                                              FontSize="24"
+                                              Foreground="{ThemeResource AsterPrimaryTextBrush}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                                    <ProgressRing x:Name="EditorSaveProgress"
+                                                  Width="24"
+                                                  Height="24"
+                                                  IsActive="False"
+                                                  Visibility="Collapsed"/>
+                                </Grid>
+                            </Button>
+                        </Grid>
+
+                        <StackPanel Spacing="10">
+                            <TextBlock FontSize="18">
+                                <Run Text="服务器名称"/>
+                                <Run Text="（可选）"
+                                     Foreground="{ThemeResource AsterTertiaryTextBrush}"/>
+                            </TextBlock>
+                            <TextBox x:Name="EditorNameBox"
+                                     Style="{StaticResource ServerEditorFieldStyle}"
+                                     PlaceholderText="为服务器起个名字"/>
+                        </StackPanel>
+
+                        <StackPanel Margin="0,28,0,0"
+                                    Spacing="10">
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="6">
+                                <TextBlock Text="服务器地址"
+                                           FontSize="18"/>
+                                <TextBlock Text="*"
+                                           FontSize="18"
+                                           Foreground="#F04B36"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="9"
+                                        Margin="2,4,0,0">
+                                <FontIcon Glyph="&#xE80F;"
+                                          FontSize="17"
+                                          Foreground="{ThemeResource AsterSecondaryTextBrush}"/>
+                                <TextBlock Text="主机地址"
+                                           FontSize="16"
+                                           Foreground="{ThemeResource AsterSecondaryTextBrush}"/>
+                            </StackPanel>
+                            <TextBox x:Name="EditorHostBox"
+                                     Style="{StaticResource ServerEditorFieldStyle}"
+                                     PlaceholderText="例如：192.168.1.100 或 emby.example.com"
+                                     InputScope="Url"/>
+
+                            <Grid Margin="0,6,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="24"/>
+                                    <ColumnDefinition Width="3*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Spacing="10">
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="9"
+                                                Margin="2,0,0,0">
+                                        <FontIcon Glyph="&#xE72E;"
+                                                  FontSize="17"
+                                                  Foreground="{ThemeResource AsterSecondaryTextBrush}"/>
+                                        <TextBlock Text="协议"
+                                                   FontSize="16"
+                                                   Foreground="{ThemeResource AsterSecondaryTextBrush}"/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="EditorProtocolBox"
+                                              Style="{StaticResource ServerEditorProtocolStyle}"
+                                              SelectedIndex="0"
+                                              SelectionChanged="EditorProtocol_SelectionChanged">
+                                        <ComboBoxItem Content="http://"/>
+                                        <ComboBoxItem Content="https://"/>
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2"
+                                            Spacing="10">
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="9"
+                                                Margin="2,0,0,0">
+                                        <FontIcon Glyph="&#xE946;"
+                                                  FontSize="17"
+                                                  Foreground="{ThemeResource AsterSecondaryTextBrush}"/>
+                                        <TextBlock FontSize="16">
+                                            <Run Text="端口"/>
+                                            <Run Text="（可选）"
+                                                 Foreground="{ThemeResource AsterTertiaryTextBrush}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <TextBox x:Name="EditorPortBox"
+                                             Style="{StaticResource ServerEditorFieldStyle}"
+                                             PlaceholderText="8096"
+                                             InputScope="Number"
+                                             MaxLength="5"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="9"
+                                        Margin="2,10,0,0">
+                                <FontIcon Glyph="&#xE8B7;"
+                                          FontSize="17"
+                                          Foreground="{ThemeResource AsterSecondaryTextBrush}"/>
+                                <TextBlock FontSize="16">
+                                    <Run Text="路径"/>
+                                    <Run Text="（可选）"
+                                         Foreground="{ThemeResource AsterTertiaryTextBrush}"/>
+                                </TextBlock>
+                            </StackPanel>
+                            <TextBox x:Name="EditorPathBox"
+                                     Style="{StaticResource ServerEditorFieldStyle}"
+                                     PlaceholderText="/emby 或 /jellyfin"
+                                     InputScope="Url"/>
+                        </StackPanel>
+
+                        <StackPanel Margin="0,28,0,0"
+                                    Spacing="10">
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="6">
+                                <TextBlock Text="用户名"
+                                           FontSize="18"/>
+                                <TextBlock Text="*"
+                                           FontSize="18"
+                                           Foreground="#F04B36"/>
+                            </StackPanel>
+                            <TextBox x:Name="EditorUserNameBox"
+                                     Style="{StaticResource ServerEditorFieldStyle}"
+                                     PlaceholderText="账号用户名"/>
+                        </StackPanel>
+
+                        <StackPanel Margin="0,28,0,0"
+                                    Spacing="10">
+                            <TextBlock FontSize="18">
+                                <Run Text="密码"/>
+                                <Run Text="（可选）"
+                                     Foreground="{ThemeResource AsterTertiaryTextBrush}"/>
+                            </TextBlock>
+                            <PasswordBox x:Name="EditorPasswordBox"
+                                         Style="{StaticResource ServerEditorPasswordStyle}"
+                                         PlaceholderText="账号密码"
+                                         PasswordRevealMode="Peek"/>
+                        </StackPanel>
+
+                        <TextBlock x:Name="EditorValidationText"
+                                   Text=""
+                                   Foreground="#D64848"
+                                   FontSize="14"
+                                   TextWrapping="Wrap"
+                                   Visibility="Collapsed"
+                                   Margin="2,18,2,0"/>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
         </Grid>
     </Grid>
 </UserControl>

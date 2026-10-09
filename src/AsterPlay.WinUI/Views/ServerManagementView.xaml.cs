@@ -19,6 +19,8 @@ public sealed partial class ServerManagementView : UserControl
     private bool _refreshing;
     private bool _sortDescending;
     private bool _compactLayout;
+    private bool _editorSaving;
+    private ServerCardItem? _editingItem;
 
     public event EventHandler<ServerProfile>? ServerSwitchRequested;
 
@@ -301,111 +303,291 @@ public sealed partial class ServerManagementView : UserControl
     private async Task ShowEditorAsync(
         ServerCardItem? item)
     {
-        var nameBox = new TextBox
+        _editingItem = item;
+        _editorSaving = false;
+
+        EditorTitle.Text = item is null
+            ? "登录服务器"
+            : "编辑服务器";
+        EditorNameBox.Text = item?.CustomName ?? "";
+        EditorHostBox.Text = "";
+        EditorPortBox.Text = "";
+        EditorPathBox.Text = "";
+        EditorPasswordBox.Password = "";
+        EditorUserNameBox.Text =
+            item?.IsCurrent == true
+                ? _client.UserName
+                : "";
+        EditorProtocolBox.SelectedIndex = 0;
+        EditorValidationText.Text = "";
+        EditorValidationText.Visibility = Visibility.Collapsed;
+
+        if (item is not null)
+            PopulateServerAddressFields(item.Url);
+
+        SetEditorEnabled(true);
+        ServerEditor.Visibility = Visibility.Visible;
+        SetHostEditorMode(true);
+        EditorHostBox.Focus(FocusState.Programmatic);
+
+        await Task.CompletedTask;
+    }
+
+    private void PopulateServerAddressFields(string value)
+    {
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri))
         {
-            Header = "名称（可选）",
-            PlaceholderText = "留空时自动使用服务器名称",
-            Text = item?.CustomName ?? ""
-        };
-
-        var urlBox = new TextBox
-        {
-            Header = "服务器地址",
-            PlaceholderText = "https://example.com",
-            Text = item?.Url ?? "http://127.0.0.1:8096"
-        };
-
-        var validation = new TextBlock
-        {
-            Text = "",
-            Foreground = new SolidColorBrush(
-                Color.FromArgb(255, 214, 72, 72)),
-            FontSize = 12,
-            Visibility = Visibility.Collapsed
-        };
-
-        var content = new StackPanel
-        {
-            Spacing = 12,
-            MinWidth = 380
-        };
-        content.Children.Add(nameBox);
-        content.Children.Add(urlBox);
-        content.Children.Add(validation);
-
-        var dialog = new ContentDialog
-        {
-            XamlRoot = XamlRoot,
-            Title = item is null
-                ? "添加服务器"
-                : "编辑服务器",
-            Content = content,
-            PrimaryButtonText = "保存",
-            CloseButtonText = "取消",
-            DefaultButton = ContentDialogButton.Primary
-        };
-
-        var acceptedUrl = "";
-        var acceptedName = "";
-
-        dialog.PrimaryButtonClick += (_, args) =>
-        {
-            if (!TryNormalizeServerUrl(
-                    urlBox.Text,
-                    out var normalized))
-            {
-                args.Cancel = true;
-                validation.Text =
-                    "请输入以 http:// 或 https:// 开头的有效服务器地址。";
-                validation.Visibility = Visibility.Visible;
-                return;
-            }
-
-            acceptedUrl = normalized;
-            acceptedName = nameBox.Text.Trim();
-        };
-
-        var result = await dialog.ShowAsync();
-        if (result != ContentDialogResult.Primary ||
-            string.IsNullOrWhiteSpace(acceptedUrl))
-        {
+            EditorHostBox.Text = value;
             return;
         }
 
-        if (item is not null &&
-            !string.Equals(
-                NormalizeUrl(item.Url),
-                acceptedUrl,
-                StringComparison.OrdinalIgnoreCase))
+        EditorProtocolBox.SelectedIndex =
+            uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+                ? 1
+                : 0;
+        EditorHostBox.Text = uri.Host;
+        EditorPortBox.Text = uri.IsDefaultPort
+            ? ""
+            : uri.Port.ToString();
+        EditorPathBox.Text = uri.AbsolutePath == "/"
+            ? ""
+            : Uri.UnescapeDataString(uri.AbsolutePath);
+    }
+
+    private void EditorBack_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_editorSaving)
+            return;
+
+        CloseEditor();
+    }
+
+    private void CloseEditor()
+    {
+        ServerEditor.Visibility = Visibility.Collapsed;
+        SetHostEditorMode(false);
+        _editingItem = null;
+        EditorPasswordBox.Password = "";
+        AddButton.Focus(FocusState.Programmatic);
+    }
+
+    private void SetHostEditorMode(bool enabled)
+    {
+        if (Application.Current is App app &&
+            app.HostWindow is { } mainWindow)
         {
-            ServerProfileStore.Remove(item.Url);
+            mainWindow.SetServerEditorMode(enabled);
+        }
+    }
+
+    private void EditorProtocol_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (EditorPortBox is null)
+            return;
+
+        EditorPortBox.PlaceholderText =
+            EditorProtocolBox.SelectedIndex == 1
+                ? "8920"
+                : "8096";
+    }
+
+    private async void EditorSave_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_editorSaving)
+            return;
+
+        EditorValidationText.Visibility = Visibility.Collapsed;
+
+        if (!TryBuildServerUrl(out var serverUrl, out var validationMessage))
+        {
+            ShowEditorValidation(validationMessage);
+            return;
         }
 
-        ServerProfileStore.AddOrUpdate(
-            acceptedUrl,
-            acceptedName);
+        var userName = EditorUserNameBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(userName))
+        {
+            ShowEditorValidation("请输入用户名。");
+            EditorUserNameBox.Focus(FocusState.Programmatic);
+            return;
+        }
+
+        _editorSaving = true;
+        SetEditorEnabled(false);
 
         try
         {
-            using var timeout = new CancellationTokenSource(
-                TimeSpan.FromSeconds(4));
-            var serverName =
-                await _serverLookupClient.GetServerNameAsync(
-                    acceptedUrl,
-                    timeout.Token);
-            ServerProfileStore.UpdateServerName(
-                acceptedUrl,
-                serverName);
+            var candidate = new EmbyClient();
+            var session = await candidate.AuthenticateAsync(
+                serverUrl,
+                userName,
+                EditorPasswordBox.Password);
+
+            string? serverName = null;
+            try
+            {
+                serverName = await candidate.GetServerNameAsync();
+            }
+            catch (Exception ex)
+            {
+                PlaybackLog.Error("ServerNameLookup", ex);
+            }
+
+            if (_editingItem is not null &&
+                !string.Equals(
+                    NormalizeUrl(_editingItem.Url),
+                    serverUrl,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                ServerProfileStore.Remove(_editingItem.Url);
+            }
+
+            ServerProfileStore.AddOrUpdate(
+                serverUrl,
+                EditorNameBox.Text.Trim());
+
+            if (!string.IsNullOrWhiteSpace(serverName))
+            {
+                ServerProfileStore.UpdateServerName(
+                    serverUrl,
+                    serverName);
+            }
+
+            _client.Restore(session);
+            CloseEditor();
+
+            if (Application.Current is App app &&
+                app.HostWindow is { } mainWindow)
+            {
+                mainWindow.CompleteServerLoginFromManagement(session);
+                return;
+            }
+
+            Reload();
+            await RefreshAllServersAsync();
         }
         catch (Exception ex)
         {
-            PlaybackLog.Error(
-                "ServerNameLookup",
-                ex);
+            PlaybackLog.Error("ServerEditorLogin", ex);
+            ShowEditorValidation(UserError.GetMessage(ex, "登录"));
+        }
+        finally
+        {
+            _editorSaving = false;
+            SetEditorEnabled(true);
+        }
+    }
+
+    private void SetEditorEnabled(bool enabled)
+    {
+        EditorBackButton.IsEnabled = enabled;
+        EditorSaveButton.IsEnabled = enabled;
+        EditorNameBox.IsEnabled = enabled;
+        EditorHostBox.IsEnabled = enabled;
+        EditorProtocolBox.IsEnabled = enabled;
+        EditorPortBox.IsEnabled = enabled;
+        EditorPathBox.IsEnabled = enabled;
+        EditorUserNameBox.IsEnabled = enabled;
+        EditorPasswordBox.IsEnabled = enabled;
+        EditorSaveIcon.Visibility = enabled
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        EditorSaveProgress.Visibility = enabled
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        EditorSaveProgress.IsActive = !enabled;
+    }
+
+    private void ShowEditorValidation(string message)
+    {
+        EditorValidationText.Text = message;
+        EditorValidationText.Visibility = Visibility.Visible;
+    }
+
+    private bool TryBuildServerUrl(
+        out string normalized,
+        out string validationMessage)
+    {
+        normalized = "";
+        validationMessage = "";
+
+        var hostInput = EditorHostBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(hostInput))
+        {
+            validationMessage = "请输入服务器主机地址。";
+            EditorHostBox.Focus(FocusState.Programmatic);
+            return false;
         }
 
-        Reload();
-        await RefreshAllServersAsync();
+        var scheme = EditorProtocolBox.SelectedIndex == 1
+            ? Uri.UriSchemeHttps
+            : Uri.UriSchemeHttp;
+        var host = hostInput;
+        var path = EditorPathBox.Text.Trim();
+        int? embeddedPort = null;
+
+        if (Uri.TryCreate(hostInput, UriKind.Absolute, out var pastedUri) &&
+            (pastedUri.Scheme == Uri.UriSchemeHttp ||
+             pastedUri.Scheme == Uri.UriSchemeHttps))
+        {
+            scheme = pastedUri.Scheme;
+            host = pastedUri.Host;
+            embeddedPort = pastedUri.IsDefaultPort
+                ? null
+                : pastedUri.Port;
+
+            if (string.IsNullOrWhiteSpace(path) &&
+                pastedUri.AbsolutePath != "/")
+            {
+                path = Uri.UnescapeDataString(pastedUri.AbsolutePath);
+            }
+        }
+
+        if (Uri.CheckHostName(host) == UriHostNameType.Unknown)
+        {
+            validationMessage = "主机地址格式不正确。";
+            EditorHostBox.Focus(FocusState.Programmatic);
+            return false;
+        }
+
+        int? port = embeddedPort;
+        var portText = EditorPortBox.Text.Trim();
+        if (!string.IsNullOrWhiteSpace(portText))
+        {
+            if (!int.TryParse(portText, out var parsedPort) ||
+                parsedPort is < 1 or > 65535)
+            {
+                validationMessage = "端口必须是 1 到 65535 之间的数字。";
+                EditorPortBox.Focus(FocusState.Programmatic);
+                return false;
+            }
+
+            port = parsedPort;
+        }
+
+        path = path.Trim('/');
+
+        try
+        {
+            var builder = new UriBuilder(scheme, host)
+            {
+                Port = port ?? -1,
+                Path = path
+            };
+            normalized = builder.Uri.AbsoluteUri.TrimEnd('/');
+            return true;
+        }
+        catch (UriFormatException)
+        {
+            validationMessage = "无法组合服务器地址，请检查主机、端口和路径。";
+            return false;
+        }
     }
 
     private async Task DeleteServerAsync(
@@ -525,24 +707,6 @@ public sealed partial class ServerManagementView : UserControl
 
         ApplyCardMetrics(
             e.NewSize.Width);
-    }
-
-    private static bool TryNormalizeServerUrl(
-        string? value,
-        out string normalized)
-    {
-        normalized = NormalizeUrl(value);
-
-        if (!Uri.TryCreate(
-                normalized,
-                UriKind.Absolute,
-                out var uri))
-        {
-            return false;
-        }
-
-        return uri.Scheme == Uri.UriSchemeHttp ||
-               uri.Scheme == Uri.UriSchemeHttps;
     }
 
     private static string NormalizeUrl(
